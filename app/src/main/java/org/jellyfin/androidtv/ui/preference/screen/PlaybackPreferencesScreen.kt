@@ -135,6 +135,13 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 				depends { userPreferences[UserPreferences.videoPlayer] == PreferredVideoPlayer.EXTERNAL }
 			}
 
+			checkbox {
+				setTitle(R.string.pref_use_zidoo_player_title)
+				setContent(R.string.pref_use_zidoo_player_text)
+				bind(userPreferences, UserPreferences.zidooPlayerEnabled)
+				depends { userPreferences[UserPreferences.videoPlayer] == PreferredVideoPlayer.EXTERNAL && userPreferences[UserPreferences.externalVideoPlayerSendPath] }
+			}
+
 			enum<RefreshRateSwitchingBehavior> {
 				setTitle(R.string.lbl_refresh_switching)
 				bind(userPreferences, UserPreferences.refreshRateSwitchingBehavior)
