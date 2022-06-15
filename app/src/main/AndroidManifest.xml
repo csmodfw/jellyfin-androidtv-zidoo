@@ -104,6 +104,8 @@
             android:name=".ui.startup.StartupActivity"
             android:exported="true"
             android:noHistory="true"
+            android:clearTaskOnLaunch="true"
+            android:launchMode="singleInstance"
             android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustNothing">
             <intent-filter>
@@ -187,7 +189,9 @@
             android:name=".ui.playback.AudioNowPlayingActivity"
             android:screenOrientation="landscape" />
 
-        <activity android:name=".ui.playback.ExternalPlayerActivity" />
+        <activity
+            android:name=".ui.playback.ExternalPlayerActivity"
+            android:screenOrientation="landscape" />
 
         <activity
             android:name=".ui.playback.nextup.NextUpActivity"

@@ -244,6 +244,8 @@
     <string name="lbl_song_title">Song Title</string>
     <string name="pref_use_direct_path_title">Pass Direct Path for external player</string>
     <string name="pref_use_direct_path_summary">Pass the file system path instead of streaming URL</string>
+    <string name="pref_use_zidoo_player_title">Use Zidoo player with direct path</string>
+    <string name="pref_use_zidoo_player_text">Hint: The Jellyfin username, password is optionally used as smb credentials!</string>
     <string name="pref_acra_category">Crash reporting</string>
     <string name="pref_enable_acra">Send crash reports to developers</string>
     <string name="pref_acra_enabled">You will be prompted to submit crash reports</string>
@@ -306,6 +308,8 @@
     <string name="mark_watched_message">The item didn\'t appear to play as long as its duration. Mark watched?</string>
     <string name="no_player">No Player</string>
     <string name="no_player_message">It doesn\'t appear you have a video capable app installed.  This option requires you install a 3rd party application for playing video content.</string>
+    <string name="zidoo_player_error">Zidoo Player Failed</string>
+    <string name="zidoo_player_error_message">Detected Zidoo playback error, check if your server libraries have correctly setup network paths or use path substitution via the \'Shared network folder:\' option on the server.\n\nFormats:\n smb://smb_user:smb_password@server_ip/share/folder\n nfs://server_ip/folder\n\nExamples:\n smb://andy:1234@192.168.1.101/htpc-share/series</string>
     <string name="lbl_clear">Clear</string>
     <string name="clear_expanded">Clear current video queue?</string>
     <string name="delete_warning">This will PERMANENTLY DELETE %1$s from your library. Are you VERY sure?</string>

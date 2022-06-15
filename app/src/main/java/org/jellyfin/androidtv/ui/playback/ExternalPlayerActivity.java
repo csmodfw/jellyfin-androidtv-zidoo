@@ -2,6 +2,8 @@ package org.jellyfin.androidtv.ui.playback;
 
 import static org.koin.java.KoinJavaComponent.inject;
 
+import static java.util.Locale.US;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
@@ -9,9 +11,11 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 
+import androidx.core.util.Pair;
 import androidx.fragment.app.FragmentActivity;
 
 import org.jellyfin.androidtv.R;
@@ -34,11 +38,19 @@ import org.jellyfin.apiclient.model.dto.BaseItemDto;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.dto.UserItemDataDto;
 import org.jellyfin.apiclient.model.session.PlayMethod;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.koin.java.KoinJavaComponent;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import kotlin.Lazy;
 import timber.log.Timber;
@@ -51,11 +63,19 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     Handler mHandler = new Handler();
     Runnable mReportLoop;
+    static final int REPORT_LOOP_INTERVAL = 15000; // interval between playback report ticks
 
     long mLastPlayerStart = 0;
-    Long mPosition = 0l;
+    int mPosition = 0;
+    int mInitialSeekPosition = 0;
     boolean isLiveTv;
     boolean noPlayerError;
+
+    Runnable mZidooTask;
+    private static HttpURLConnection connZidooApi;
+    boolean useZidoo;
+    boolean mZidooStartupOK;
+    int mZidooReportTaskErrorCount = 0;
 
     private Lazy<ApiClient> apiClient = inject(ApiClient.class);
     private Lazy<UserPreferences> userPreferences = inject(UserPreferences.class);
@@ -92,10 +112,43 @@ public class ExternalPlayerActivity extends FragmentActivity {
     static final int API_VIMU_RESULT_PLAYBACK_COMPLETED = 1;
     static final int API_VIMU_RESULT_PLAYBACK_INTERRUPTED = 0;
 
+    // www.zidoo.tv
+    static final int API_ZIDOO_REQUEST_CODE = 99;
+    static final String API_ZIDOO_PACKAGE = "com.android.gallery3d";
+    static final String API_ZIDOO_ACTIVITY_NAME_ZDMC = "com.android.gallery3d.app.ZDMCActivity";
+    static final String API_ZIDOO_ACTIVITY_NAME_MOVIE = "com.android.gallery3d.app.MovieActivity";
+    static final String API_ZIDOO_SOURCEFROM = "SourceFrom";
+    static final String API_ZIDOO_SOURCEFROM_LOCAL = "Local";
+    static final String API_ZIDOO_PLAY_MODE = "play_mode";
+    static final String API_ZIDOO_PLAY_MODE_ZDMC = "zdmc";
+    static final String API_ZIDOO_NET_MODE = "net_mode";
+    static final String API_ZIDOO_NET_MODE_LOCAL = "local";
+    static final String API_ZIDOO_NET_MODE_SMB = "smb";
+    static final String API_ZIDOO_NET_MODE_NFS = "nfs";
+    static final String API_ZIDOO_NET_NFS_ROOT = "nfs_root";
+    static final String API_ZIDOO_NET_SMB_USERNAME = "smb_username";
+    static final String API_ZIDOO_NET_SMB_PASSWORD = "smb_password";
+    static final String API_ZIDOO_PLAY_BROADCAST_STATUS = "android.intent.playback.broadcast.status";
+    static final String API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER = "MEDIA_BROWSER_USE_RT_MEDIA_PLAYER";
+    static final String API_ZIDOO_SEEK_POSITION = "currentPosition";
+    static final String API_ZIDOO_PLAYMODEL = "playModel";
+    static final String API_ZIDOO_HTTP_API_IP = "127.0.0.1:9529";
+    static final String API_ZIDOO_HTTP_API_TARGET_VIDEOPLAY = "ZidooVideoPlay";
+    static final String API_ZIDOO_HTTP_API_JSON_STATUS = "status";
+    static final int API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING = 1;
+    static final int API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE = 0;
+    static final int API_ZIDOO_HTTP_API_SUCCESS = 200;
+    static final int API_ZIDOO_HTTP_API_NORESOURCE = 806;
+    static final int API_ZIDOO_STARTUP_TIMEOUT = 16000; // allow Zidoo player to trigger wake + hdd spinup + smb mount and start playback
+    static final int API_ZIDOO_STARTUP_RETRY_INTERVAL = 500; // interval between startup detection try's
+    static final int API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL = 30000; // interval between playback report ticks
+    static final int API_ZIDOO_HTTP_API_MAX_ERROR_COUNT = 4; // maximum http errors, before we fail
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        Timber.d("onCreate");
         backgroundService.getValue().attach(this);
 
         mItemsToPlay = mediaManager.getValue().getCurrentVideoQueue();
@@ -106,18 +159,103 @@ public class ExternalPlayerActivity extends FragmentActivity {
             return;
         }
 
-        mPosition = (long) getIntent().getIntExtra("Position", 0);
+        mPosition = getIntent().getIntExtra("Position", 0);
+        mInitialSeekPosition = mPosition;
+        mLastPlayerStart = 0;
+
+        useZidoo = false;
+        if (userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
+            if (userPreferences.getValue().get(UserPreferences.Companion.getZidooPlayerEnabled())) {
+                useZidoo = true;
+            }
+        }
+        mZidooStartupOK = false;
 
         launchExternalPlayer(0);
+    }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Timber.d("onNewIntent");
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Timber.d("onStart");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Timber.d("onDestroy");
+        stopReportLoop();
+        stopZidooTask();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Timber.d("onPause");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Timber.d("onStop");
+    }
+
+    @Override
+    protected void onRestart() {
+        super.onRestart();
+        Timber.d("onRestart");
+        stopReportLoop();
+        stopZidooTask();
+        mLastPlayerStart = 0;
+        mZidooStartupOK = false;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Timber.d("onResume");
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        long playerFinishedTime = System.currentTimeMillis();
-        Timber.d("Returned from player, result <%d>, extra data <%s>", resultCode, data);
+        Timber.i("Returned from player request <%d>, result <%d>, extra data <%s>", requestCode, resultCode, data);
+        long activityPlayTime = System.currentTimeMillis() - mLastPlayerStart;
+        mLastPlayerStart = 0;
+        stopReportLoop();
+        stopZidooTask();
+
+        // handle Zidoo player failures
+        if (requestCode == API_ZIDOO_REQUEST_CODE) {
+            if (!mZidooStartupOK) {
+                handleZidooPlayerError();
+                return;
+            }
+        } else if (activityPlayTime < 2000) { // Check against a total failure (no apps installed)
+            // probably no player explain the option
+            Timber.e("Playback took less than two seconds - assuming it failed");
+            if (!noPlayerError) {
+                handlePlayerError();
+            } else {
+                finish();
+            }
+            return;
+        } else if (activityPlayTime < REPORT_LOOP_INTERVAL) { // ignore "quick" play starts < than looptime
+            Timber.i("Playback took less than 10 seconds - ignoring.");
+            return;
+        }
+
+        if (mItemsToPlay == null || mItemsToPlay.size() == 0) {
+            finish();
+            return;
+        }
         BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         long runtime = item.getRunTimeTicks() != null ? item.getRunTimeTicks() / RUNTIME_TICKS_TO_MS : 0;
         int pos = 0;
@@ -151,58 +289,76 @@ public class ExternalPlayerActivity extends FragmentActivity {
             }
         }
 
-        if (pos > 0) Timber.i("Player returned position: %d", pos);
-        Long reportPos = (long) pos * RUNTIME_TICKS_TO_MS;
+        if (requestCode == API_ZIDOO_REQUEST_CODE && mZidooStartupOK) {
+            pos = mPosition; // Zidoo Activity does not have results, use the last ZidooReportTask pos
+        }
 
-        stopReportLoop();
-        ReportingHelper.reportStopped(item, mCurrentStreamInfo, reportPos);
-
-        //Check against a total failure (no apps installed)
-        if (playerFinishedTime - mLastPlayerStart < 1000) {
-            // less than a second - probably no player explain the option
-            Timber.i("Playback took less than a second - assuming it failed");
-            if (!noPlayerError) handlePlayerError();
-            return;
+        // only report on pos > 0, prevent reset old valid/seek position
+        if (pos > 0) {
+            Timber.i("Player returned position: %d ms, <%s>",pos,getMillisecondsFormated(pos));
+            ReportingHelper.reportStopped(item, mCurrentStreamInfo, (long) pos * RUNTIME_TICKS_TO_MS);
+        } else {
+            ReportingHelper.reportStopped(item, mCurrentStreamInfo, (long) activityPlayTime * RUNTIME_TICKS_TO_MS); // use playtime as fallback
         }
 
         if (pos == 0) {
             //If item didn't play as long as its duration - confirm we want to mark watched
-            if (!isLiveTv && playerFinishedTime - mLastPlayerStart < runtime * .9) {
-                new AlertDialog.Builder(this)
-                        .setTitle(R.string.mark_watched)
-                        .setMessage(R.string.mark_watched_message)
-                        .setPositiveButton(R.string.lbl_yes, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                markPlayed(mItemsToPlay.get(mCurrentNdx).getId());
-                                playNext();
-                            }
-                        })
-                        .setNegativeButton(R.string.lbl_no, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                if (!mediaManager.getValue().isVideoQueueModified()) {
-                                    mediaManager.getValue().clearVideoQueue();
-                                } else {
-                                    mItemsToPlay.remove(0);
+            if (!isLiveTv && activityPlayTime < runtime * 0.9) {
+                // only show dialog if played for at least 30%.
+                if (activityPlayTime > runtime * 0.3) {
+                    new AlertDialog.Builder(this)
+                            .setTitle(R.string.mark_watched)
+                            .setMessage(R.string.mark_watched_message)
+                            .setPositiveButton(R.string.lbl_yes, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    markPlayed(item.getId());
+                                    playNext();
                                 }
-                                finish();
-                            }
-                        })
-                        .show();
+                            })
+                            .setNegativeButton(R.string.lbl_no, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    if (!mediaManager.getValue().isVideoQueueModified()) {
+                                        mediaManager.getValue().clearVideoQueue();
+                                    } else {
+                                        mItemsToPlay.remove(0);
+                                    }
+                                    finish();
+                                }
+                            })
+                            .show();
+                } else {
+                    mItemsToPlay.remove(0);
+                    finish();
+                }
             } else {
-                markPlayed(mItemsToPlay.get(mCurrentNdx).getId());
+                markPlayed(item.getId());
                 playNext();
             }
-
         } else {
-            if (!isLiveTv && pos > (runtime * .9)) {
+            if (!isLiveTv && pos > (runtime * 0.9)) {
                 playNext();
             } else {
                 mItemsToPlay.remove(0);
                 finish();
             }
         }
+    }
+
+    private void handleZidooPlayerError() {
+        if (!mediaManager.getValue().isVideoQueueModified()) mediaManager.getValue().clearVideoQueue();
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.zidoo_player_error)
+                .setMessage(R.string.zidoo_player_error_message)
+                .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        finish();
+                    }
+                })
+                .show();
     }
 
     private void handlePlayerError() {
@@ -233,23 +389,174 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     }
 
+    private JSONObject getFromZidooHTTP_API(String url_api_target, String url_cmd, String url_parameter, String json_obj) {
+        if (url_api_target.isEmpty() || url_cmd.isEmpty()) {
+            Timber.e("getFromZidooHTTP_API failed, empty input parameters.");
+            return null;
+        }
+
+        BufferedReader reader;
+        String line;
+        StringBuilder responseContent = new StringBuilder();
+
+        try {
+            String url_string = "http://" + API_ZIDOO_HTTP_API_IP + "/" + url_api_target + "/" + url_cmd;
+            if (!url_parameter.isEmpty()) {
+                url_string += "?" + url_parameter;
+            }
+            URL url = new URL(url_string);
+
+            connZidooApi = (HttpURLConnection) url.openConnection();
+            // Request setup
+            connZidooApi.setRequestMethod("GET");
+            connZidooApi.setConnectTimeout(2000);
+            connZidooApi.setReadTimeout(2000);
+
+            // Test if the response from the server is successful
+            int http_status = connZidooApi.getResponseCode();
+            if (http_status == 200) {
+                reader = new BufferedReader(new InputStreamReader(connZidooApi.getInputStream()));
+                while ((line = reader.readLine()) != null) {
+                    responseContent.append(line);
+                }
+                reader.close();
+                // try parse json, only return if valid status
+                JSONObject zidoo_obj = new JSONObject(responseContent.toString());
+                if (zidoo_obj.optInt(API_ZIDOO_HTTP_API_JSON_STATUS) == API_ZIDOO_HTTP_API_SUCCESS) {
+                    if (!json_obj.isEmpty()) {
+                        zidoo_obj = zidoo_obj.getJSONObject(json_obj);
+                    }
+                   return zidoo_obj;
+                }
+            }
+        } catch (JSONException | IOException e) {
+            Timber.d("getFromZidooHTTP_API failed, could not reach target or status error.");
+        } finally {
+            if (connZidooApi != null) {
+                connZidooApi.disconnect();
+            }
+        }
+
+        return null;
+    }
+
+    //GET/ZidooVideoPlay/seekTo?positon=300000
+    private boolean setZidooSeekPosition() {
+        JSONObject zidoo_obj = getFromZidooHTTP_API(API_ZIDOO_HTTP_API_TARGET_VIDEOPLAY, "seekTo", "positon=" + mInitialSeekPosition, "");
+        return zidoo_obj != null;
+    }
+
+    //GET/ZidooVideoPlay/getPlayStatus
+    // returns Video<status, position>
+    private Pair<Integer, Integer> getZidooPlayStatus() {
+        JSONObject video_obj = getFromZidooHTTP_API(API_ZIDOO_HTTP_API_TARGET_VIDEOPLAY, "getPlayStatus", "", "video");
+        if (video_obj != null) {
+            int duration = video_obj.optInt("duration");
+            if (duration > 0) { // sanity check if we have valid data
+                return new Pair<Integer, Integer>(video_obj.optInt("status", -1), video_obj.optInt("currentPosition", -1));
+            }
+        }
+        return new Pair<Integer, Integer>(-1,-1);
+    }
+
+    private class ZidooStartupTask implements Runnable {
+        @Override
+        public void run() {
+            // Network task need run in background see: strictMode
+            AsyncTask.execute(() -> {
+                Timber.d("zidooStartupTask testing via Zidoo http/api");
+                if (!mZidooStartupOK) {
+                    if (getZidooPlayStatus().first >= API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE) {
+                        mZidooStartupOK = true;
+                        if (mInitialSeekPosition > 0) {
+                            if (!setZidooSeekPosition()) {
+                                Timber.e("zidooStartupTask setZidooSeekPosition failed!");
+                            }
+                        }
+                    }
+                }
+
+                long activityPlayTime = System.currentTimeMillis() - mLastPlayerStart;
+                if (mZidooStartupOK) {
+                    Timber.d("zidooStartupTask detected ZidooPlayer running!");
+                    stopZidooTask();
+                    ReportingHelper.reportStart(mItemsToPlay.get(mCurrentNdx), (long) mInitialSeekPosition * RUNTIME_TICKS_TO_MS);
+                    startReportLoop();
+                    mZidooTask = new ZidooReportTask();
+                    mHandler.postDelayed(mZidooTask, REPORT_LOOP_INTERVAL);
+                } else if (activityPlayTime < API_ZIDOO_STARTUP_TIMEOUT) {
+                    Timber.d("zidooStartupTask testing failed, try again in %d ms", API_ZIDOO_STARTUP_RETRY_INTERVAL);
+                    mHandler.postDelayed(this, API_ZIDOO_STARTUP_RETRY_INTERVAL); // try again
+                } else {
+                    Timber.e("zidooStartupTask timeout reached, giving-up!");
+                    finish();
+                }
+            });
+        }
+    }
+
+    private class ZidooReportTask implements Runnable {
+        @Override
+        public void run() {
+            // Network task need run in background see: strictMode
+            AsyncTask.execute(() -> {
+                if (mZidooStartupOK) {
+                    Pair<Integer, Integer> status = getZidooPlayStatus();
+                    if (status.first == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING && status.second > 0) { // only update
+                        mPosition = status.second;
+                    }
+                    Timber.d("ZidooReportTask status: <%s> Position: %d ms, <%s>",status.first,mPosition,getMillisecondsFormated(mPosition));
+
+                    if (status.first == -1) {
+                        mZidooReportTaskErrorCount++;
+                        if (mZidooReportTaskErrorCount > API_ZIDOO_HTTP_API_MAX_ERROR_COUNT) { // ended/error, allow for some hiccups since its a http api
+                            Timber.e("ZidooReportTask detected invalid Zidoo player status, ending Activity!");
+                            finish();
+                        } else {
+                            mHandler.postDelayed(this, 1000); // try again in a second
+                            Timber.d("ZidooReportTask detected Zidoo player http status error, trying again in 1000 ms.");
+                        }
+                    } else {
+                        mHandler.postDelayed(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
+                    }
+                }
+            });
+        }
+    }
+
+    private String getMillisecondsFormated(int milliseconds) {
+        long HH = TimeUnit.MILLISECONDS.toHours(milliseconds);
+        long MM = TimeUnit.MILLISECONDS.toMinutes(milliseconds) % 60;
+        long SS = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60;
+        return String.format(US,"%02d:%02d:%02d", HH, MM, SS);
+    }
+
     private void startReportLoop() {
-        // FIXME: Don't use the getApplication method..
         PlaybackController playbackController = playbackControllerContainer.getValue().getPlaybackController();
-        ReportingHelper.reportProgress(playbackController, mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, null, false);
+        ReportingHelper.reportStart(mItemsToPlay.get(mCurrentNdx), (long) mPosition * RUNTIME_TICKS_TO_MS);
         mReportLoop = new Runnable() {
             @Override
             public void run() {
-                ReportingHelper.reportProgress(playbackController, mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, mPosition * RUNTIME_TICKS_TO_MS, false);
-                mHandler.postDelayed(this, 15000);
+                // TODO: is mPosition always 0 for external players? Use activityPlayTime instead?
+                ReportingHelper.reportProgress(playbackController, mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS, false);
+                Timber.d("startReportLoop Position: %d ms, <%s>",mPosition,getMillisecondsFormated(mPosition));
+                mHandler.postDelayed(this, REPORT_LOOP_INTERVAL);
             }
         };
-        mHandler.postDelayed(mReportLoop, 15000);
+        mHandler.postDelayed(mReportLoop, REPORT_LOOP_INTERVAL);
     }
 
     private void stopReportLoop() {
         if (mHandler != null && mReportLoop != null) {
             mHandler.removeCallbacks(mReportLoop);
+            mReportLoop = null;
+        }
+    }
+
+    private void stopZidooTask() {
+        if (mHandler != null && mZidooTask != null) {
+            mHandler.removeCallbacks(mZidooTask);
+            mZidooTask = null;
         }
     }
 
@@ -270,7 +577,6 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 startActivity(intent);
                 finishAfterTransition();
             } else {
-                mPosition = 0L; // reset for next item
                 launchExternalPlayer(0);
             }
         } else {
@@ -280,69 +586,74 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     protected void launchExternalPlayer(int ndx) {
         if (ndx >= mItemsToPlay.size()) {
-            Timber.e("Attempt to play index beyond items: %s", ndx);
-            finish();
-            return;
-        }
-
-        //Get playback info for current item
-        mCurrentNdx = ndx;
-        BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
-        isLiveTv = item.getBaseItemType() == BaseItemType.TvChannel;
-
-        if (!isLiveTv && userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
-            // Just pass the path directly
-            mCurrentStreamInfo = new StreamInfo();
-            mCurrentStreamInfo.setPlayMethod(PlayMethod.DirectPlay);
-            startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
+            Timber.e("Attempt to play index beyond items: %s",ndx);
         } else {
-            //Build options for player
-            VideoOptions options = new VideoOptions();
-            options.setItemId(item.getId());
-            options.setMediaSources(item.getMediaSources());
-            options.setMaxBitrate(Utils.getMaxBitrate());
-            options.setProfile(new ExternalPlayerProfile());
+            //Get playback info for current item
+            mCurrentNdx = ndx;
+            final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
+            isLiveTv = item.getBaseItemType() == BaseItemType.TvChannel;
 
-            // Get playback info for each player and then decide on which one to use
-            KoinJavaComponent.<PlaybackManager>get(PlaybackManager.class).getVideoStreamInfo(api.getValue().getDeviceInfo(), options, item.getResumePositionTicks(), apiClient.getValue(), new Response<StreamInfo>() {
-                @Override
-                public void onResponse(StreamInfo response) {
-                    mCurrentStreamInfo = response;
-
-                    //Construct a static URL to sent to player
-                    //String url = KoinJavaComponent.<ApiClient>get(ApiClient.class).getApiUrl() + "/videos/" + response.getItemId() + "/stream?static=true&mediaSourceId=" + response.getMediaSourceId();
-
-                    String url = response.getMediaUrl();
-                    //And request an activity to play it
-                    startExternalActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
+            if (!isLiveTv && userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
+                // Just pass the path directly
+                mCurrentStreamInfo = new StreamInfo();
+                mCurrentStreamInfo.setPlayMethod(PlayMethod.DirectPlay);
+                if (useZidoo) {
+                    startExternalZidooZDMCActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
+                } else {
+                    startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
                 }
+            } else {
+                //Build options for player
+                VideoOptions options = new VideoOptions();
+                options.setItemId(item.getId());
+                options.setMediaSources(item.getMediaSources());
+                options.setMaxBitrate(Utils.getMaxBitrate());
+                options.setProfile(new ExternalPlayerProfile());
 
-                @Override
-                public void onError(Exception exception) {
-                    Timber.e(exception, "Error getting playback stream info");
-                    if (exception instanceof PlaybackException) {
-                        PlaybackException ex = (PlaybackException) exception;
-                        switch (ex.getErrorCode()) {
-                            case NotAllowed:
-                                Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_not_allowed));
-                                break;
-                            case NoCompatibleStream:
-                                Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_incompatible));
-                                break;
-                            case RateLimitExceeded:
-                                Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_restricted));
-                                break;
+                // Get playback info for each player and then decide on which one to use
+                KoinJavaComponent.<PlaybackManager>get(PlaybackManager.class).getVideoStreamInfo(api.getValue().getDeviceInfo(), options, item.getResumePositionTicks(), apiClient.getValue(), new Response<StreamInfo>() {
+                    @Override
+                    public void onResponse(StreamInfo response) {
+                        mCurrentStreamInfo = response;
+
+                        //Construct a static URL to sent to player
+                        //String url = KoinJavaComponent.<ApiClient>get(ApiClient.class).getApiUrl() + "/videos/" + response.getItemId() + "/stream?static=true&mediaSourceId=" + response.getMediaSourceId();
+
+                        String url = response.getMediaUrl();
+                        //And request an activity to play it
+                        if (useZidoo) {
+                            startExternalZidooZDMCActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
+                        } else {
+                            startExternalActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
                         }
                     }
-                }
 
-            });
+                    @Override
+                    public void onError(Exception exception) {
+                        Timber.e(exception, "Error getting playback stream info");
+                        if (exception instanceof PlaybackException) {
+                            PlaybackException ex = (PlaybackException) exception;
+                            switch (ex.getErrorCode()) {
+                                case NotAllowed:
+                                    Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_not_allowed));
+                                    break;
+                                case NoCompatibleStream:
+                                    Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_incompatible));
+                                    break;
+                                case RateLimitExceeded:
+                                    Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_restricted));
+                                    break;
+                            }
+                        }
+                    }
+
+                });
+            }
         }
     }
 
-
     protected String preparePath(String rawPath) {
-        if (rawPath == null || rawPath.isEmpty() || rawPath.trim().isEmpty()) return "";
+        if (rawPath == null) return "";
         if (!rawPath.contains("://")) {
             rawPath = rawPath.replace("\\\\",""); // remove UNC prefix if there
             //prefix with smb
@@ -353,19 +664,14 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     protected void startExternalActivity(String path, String container) {
-        if (path == null || path.isEmpty() || path.trim().isEmpty()) {
-            Timber.e("Error playback path is null/empty.");
-            finish();
-            return;
-        }
         BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         if (item == null) {
             Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
-            finish();
             return;
         }
 
         Intent external = new Intent(Intent.ACTION_VIEW);
+        external.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         external.setDataAndType(Uri.parse(path), "video/"+container);
 
         // build full title string
@@ -382,7 +688,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
 
         //Start player API params
-        int pos = mPosition.intValue();
+        int pos = mPosition;
         external.putExtra(API_MX_SEEK_POSITION, pos);
         external.putExtra(API_VIMU_SEEK_POSITION, pos);
         if (pos == 0) {
@@ -395,7 +701,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             external.putExtra(API_VIMU_TITLE, full_title);
         }
         String filepath = item.getPath();
-        if (filepath != null && !filepath.isEmpty()) {
+        if (!filepath.isEmpty()) {
             File file = new File(filepath);
             if (!file.getName().isEmpty()) {
                 external.putExtra(API_MX_FILENAME, file.getName());
@@ -403,17 +709,156 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
         //End player API params
 
-        Timber.i("Starting external playback of path: %s and mime: video/%s at position/ms: %s",path,container,mPosition);
+        Timber.i("Starting external playback of path: %s and mime: video/%s at position: %d ms, <%s>",path,container,mPosition,getMillisecondsFormated(mPosition));
 
         try {
             mLastPlayerStart = System.currentTimeMillis();
-            ReportingHelper.reportStart(item, mPosition * RUNTIME_TICKS_TO_MS);
-            startReportLoop();
+            mHandler.postDelayed(this::startReportLoop, 5000); // only start reports after we give the external player enough time to start, otherwise reports are invalid
             startActivityForResult(external, 1);
         } catch (ActivityNotFoundException e) {
             noPlayerError = true;
             Timber.e(e, "Error launching external player");
             handlePlayerError();
         }
+    }
+
+    private void startExternalZidooZDMCActivity(String path, String container) {
+        BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
+        if (item == null) {
+            Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
+            return;
+        }
+
+        Uri path_uri = Uri.parse(path);
+        Intent zidooIntent = new Intent(Intent.ACTION_VIEW);
+        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+        zidooIntent.setPackage(API_ZIDOO_PACKAGE);
+        zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_ZDMC);
+        zidooIntent.setDataAndType(path_uri, "video/"+container);
+
+        zidooIntent.putExtra(API_ZIDOO_PLAY_MODE, API_ZIDOO_PLAY_MODE_ZDMC);
+        zidooIntent.putExtra(API_ZIDOO_PLAY_BROADCAST_STATUS, false);
+
+        String netMode = API_ZIDOO_NET_MODE_LOCAL;
+        if (path.contains("smb:")) {
+            netMode = API_ZIDOO_NET_MODE_SMB;
+        } else if (path.contains("nfs:")) {
+            netMode = API_ZIDOO_NET_MODE_NFS;
+        }
+        zidooIntent.putExtra(API_ZIDOO_NET_MODE, netMode);
+
+        if (netMode.equals(API_ZIDOO_NET_MODE_SMB)) {
+            String smb_username = "";
+            String smb_password = "";
+            String userInfo = path_uri.getUserInfo();
+            if (userInfo != null) {
+                String[] splitArray = userInfo.split(":", 2);
+                if (splitArray.length > 0) {
+                    smb_username = splitArray[0];
+                    if (splitArray.length > 1) {
+                        smb_password = splitArray[1];
+                    }
+                }
+            }
+
+            if (!smb_username.isEmpty()) {
+                zidooIntent.putExtra(API_ZIDOO_NET_SMB_USERNAME, smb_username);
+                if (!smb_password.isEmpty()) {
+                    zidooIntent.putExtra(API_ZIDOO_NET_SMB_PASSWORD, smb_password);
+                }
+                Timber.i("Using SMB username <%s>%s for Zidoo ZDMCActivity!",smb_username,!smb_password.isEmpty() ? " with secret password " : "");
+            }
+        }
+
+        Timber.i("Starting external Zidoo ZDMCActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ",path_uri.getHost(),container,mPosition,getMillisecondsFormated(mPosition),path_uri.getPath());
+
+        try {
+            mLastPlayerStart = System.currentTimeMillis();
+            mZidooStartupOK = false;
+            mZidooReportTaskErrorCount = 0;
+            mZidooTask = new ZidooStartupTask();
+            mHandler.postDelayed(mZidooTask, 2000); // 2s initial delay = quickest time zidoo can start something
+            startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while both don't set any results!
+        } catch (ActivityNotFoundException e) {
+            noPlayerError = true;
+            Timber.e(e, "Error launching external Zidoo player");
+            finish();
+        }
+    }
+
+    // will crash via mountSambaServer() ? URI data is correct?
+    private void startExternalZidooMovieActivity(String path, String container) {
+        BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
+        if (item == null) {
+            Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
+            return;
+        }
+
+        Intent zidooIntent = new Intent(Intent.ACTION_VIEW);
+//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+        zidooIntent.setPackage(API_ZIDOO_PACKAGE);
+        zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_MOVIE);
+        zidooIntent.setDataAndType(Uri.parse(path), "video/"+container);
+
+        zidooIntent.putExtra(API_ZIDOO_PLAY_BROADCAST_STATUS, false);
+        zidooIntent.putExtra(API_ZIDOO_SEEK_POSITION, mPosition);
+        zidooIntent.putExtra(API_ZIDOO_SOURCEFROM, API_ZIDOO_SOURCEFROM_LOCAL);
+        zidooIntent.putExtra(API_ZIDOO_PLAYMODEL, 5); // >= 0 isStream
+        zidooIntent.putExtra(API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER, true);
+
+        Timber.i("Starting external Zidoo MovieActivity playback of path: %s and mime: video/%s at position %d ms",path,container,mPosition);
+
+//        mountSambaServer(zidooIntent.getData());
+//        finish();
+
+        try {
+            mLastPlayerStart = System.currentTimeMillis();
+            ReportingHelper.reportStart(item, 0);
+            startReportLoop();
+            startActivity(zidooIntent);
+        } catch (ActivityNotFoundException e) {
+            noPlayerError = true;
+            Timber.e(e, "Error launching external Zidoo player");
+            finish();
+        }
+    }
+
+    // directly from zidoo SmbUtils
+    private void ParseSambaURI(Uri videoUri) {
+        Timber.i("Samba file uri: %s", videoUri.toString());
+        String server = videoUri.getHost();
+        String share = null;
+        String password = null;
+        String username = null;
+        String domain = null;
+        String fileName = null;
+        String path = videoUri.getPath();
+        if (path != null) {
+            int length = path.length();
+            int index = path.lastIndexOf(47);
+            if (index > 1 && index < length - 1) {
+                fileName = path.substring(index + 1);
+                share = path.substring(1, index);
+            }
+        }
+        String userInfo = videoUri.getUserInfo();
+        if (userInfo != null) {
+            int index2 = userInfo.lastIndexOf(58);
+            if (index2 > -1) {
+                password = userInfo.substring(index2 + 1);
+                userInfo = userInfo.substring(0, index2);
+            }
+            int index3 = userInfo.lastIndexOf(59);
+            if (index3 > -1) {
+                domain = userInfo.substring(0, index3);
+                userInfo = userInfo.substring(index3 + 1);
+            }
+            username = userInfo;
+        }
+        Timber.i("server=" + server + ", domain=" + domain + ", user=" + username + ", password=" + password + ", share=" + share + ", file=" + fileName);
     }
 }

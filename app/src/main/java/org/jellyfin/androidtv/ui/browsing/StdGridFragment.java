@@ -109,8 +109,10 @@ public class StdGridFragment extends GridFragment {
 
         mCardHeight = getCardHeight(mPosterSizeSetting);
         setCardHeight(mCardHeight);
-
         setGridSizes();
+
+        float density = getContext().getResources().getDisplayMetrics().density;
+        Timber.i("XXX: mCardHeight <%s> density <%s>", mCardHeight, density);
 
         mJumplistPopup = new JumplistPopup();
     }
@@ -161,7 +163,7 @@ public class StdGridFragment extends GridFragment {
                     break;
             }
 
-            ((VerticalGridPresenter) gridPresenter).setNumberOfColumns(size);
+            ((VerticalGridPresenter) gridPresenter).setNumberOfColumns(mSize);
         }
     }
 
@@ -186,6 +188,7 @@ public class StdGridFragment extends GridFragment {
     @Override
     public void onResume() {
         super.onResume();
+        Timber.d("XXX: onResume");
 
         PosterSize posterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         ImageType imageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
@@ -212,12 +215,44 @@ public class StdGridFragment extends GridFragment {
             loadGrid(mRowDef);
         }
 
+        mGridDock.post(new Runnable() {
+            @Override
+            public void run() {
+                Timber.i("XXX mGridDock.post: getHeight <%d> getWidth <%d>", mGridDock.getHeight(), mGridDock.getWidth());
+                //((VerticalGridPresenter) mGridPresenter).setNumberOfColumns(13);
+                mSize = 13;
+                setGridSizes();
+                mToolBar.requestFocus();
+
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        Timber.d("XXX: mGridDock.post.run 1");
+                        createGrid();
+                        loadGrid(mRowDef);
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                Timber.d("XXX: mGridDock.post.run 2");
+                                mGridDock.requestFocus();
+                                if (mActivity == null || mActivity.isFinishing()) return;
+                                if (mGridAdapter != null && mGridAdapter.size() > 0) {
+                                    refreshCurrentItem();
+                                }
+                            }
+                        },500);
+                    }
+                },300);
+            }
+        });
+
         if (!justLoaded) {
             //Re-retrieve anything that needs it but delay slightly so we don't take away gui landing
             if (mGridAdapter != null) {
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
+                        Timber.d("XXX: justLoaded.run()");
                         if (mActivity == null || mActivity.isFinishing()) return;
                         if (mGridAdapter != null && mGridAdapter.size() > 0) {
                             if (!mGridAdapter.ReRetrieveIfNeeded()) refreshCurrentItem();
@@ -309,6 +344,7 @@ public class StdGridFragment extends GridFragment {
 
         mGridAdapter.setSortBy(getSortOption(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())));
         mGridAdapter.Retrieve();
+
         determiningPosterSize = false;
     }
 
@@ -568,7 +604,9 @@ public class StdGridFragment extends GridFragment {
 
                         }
                     }, 500);
-                } else focusGrid();
+                } else {
+//                    focusGrid();
+                }
             }
         });
     }

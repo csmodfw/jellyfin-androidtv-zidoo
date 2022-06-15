@@ -1460,6 +1460,9 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                                 mediaManager.getValue().playNow(FullDetailsActivity.this, response, false);
                             } else {
                                 Intent intent = new Intent(FullDetailsActivity.this, ExternalPlayerActivity.class);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
                                 mediaManager.getValue().setCurrentVideoQueue(response);
                                 intent.putExtra("Position", 0);
                                 startActivity(intent);

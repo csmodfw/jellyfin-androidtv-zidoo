@@ -88,13 +88,13 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Enable cinema mode
 		 */
-		var cinemaModeEnabled = booleanPreference("pref_enable_cinema_mode", true)
+		var cinemaModeEnabled = booleanPreference("pref_enable_cinema_mode", false)
 
 		/* Playback - Video */
 		/**
 		 * Preferred video player.
 		 */
-		var videoPlayer = enumPreference("video_player", PreferredVideoPlayer.EXOPLAYER)
+		var videoPlayer = enumPreference("video_player", PreferredVideoPlayer.EXTERNAL)
 
 		/**
 		 * Change refresh rate to match media when device supports it
@@ -104,7 +104,12 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Send a path instead to the external player
 		 */
-		var externalVideoPlayerSendPath = booleanPreference("pref_send_path_external", false)
+		var externalVideoPlayerSendPath = booleanPreference("pref_send_path_external", true)
+
+		/**
+		 * Use Zidoo internal player as external player
+		 */
+		var zidooPlayerEnabled = booleanPreference("pref_enable_zidoo_player", true)
 
 		/* Playback - Audio related */
 		/**
@@ -168,7 +173,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Enable ACRA crash reporting
 		 */
-		var acraEnabled = booleanPreference(ACRA.PREF_ENABLE_ACRA, true)
+		var acraEnabled = booleanPreference(ACRA.PREF_ENABLE_ACRA, false)
 
 		/**
 		 * Never prompt to report crash logs
@@ -178,7 +183,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Include system logs in crash reports
 		 */
-		var acraIncludeSystemLogs = booleanPreference(ACRA.PREF_ENABLE_SYSTEM_LOGS, true)
+		var acraIncludeSystemLogs = booleanPreference(ACRA.PREF_ENABLE_SYSTEM_LOGS, false)
 
 		/**
 		 * When to show the clock.
@@ -203,7 +208,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Enable subtitles background
 		 */
-		var subtitlesBackgroundEnabled = booleanPreference("subtitles_background_enabled", true)
+		var subtitlesBackgroundEnabled = booleanPreference("subtitles_background_enabled", false)
 
 		/**
 		 * Set default subtitles font size
