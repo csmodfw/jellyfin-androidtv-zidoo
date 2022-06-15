@@ -4,14 +4,13 @@ plugins {
 }
 
 android {
-	compileSdk = 31
-
+	compileSdk = 32
 	defaultConfig {
-		minSdk = 21
-		targetSdk = 31
-	}
+        minSdk = 28
+        targetSdk = 28
+    }
 
-	buildFeatures {
+    buildFeatures {
 		viewBinding = true
 	}
 

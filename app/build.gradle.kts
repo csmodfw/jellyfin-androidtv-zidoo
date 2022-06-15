@@ -11,8 +11,9 @@ android {
 	compileSdk = 31
 
 	defaultConfig {
-		minSdk = 21
-		targetSdk = 31
+        minSdk = 28
+		targetSdk = 28
+
 
 		// Release version
 		applicationId = namespace
@@ -33,6 +34,9 @@ android {
 	}
 
 	buildTypes {
+		getByName("release") {
+			matchingFallbacks += listOf()
+		}
 		val release by getting {
 			isMinifyEnabled = false
 
