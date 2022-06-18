@@ -15,6 +15,13 @@ public class BrowseGridFragment extends StdGridFragment {
     private final static int CHUNK_SIZE = 50;
 
     @Override
+    protected float getGridScaling() {
+//        final float xhdpi = 2.0f;
+//        return 1.5f; //xhdpi + (xhdpi - requireContext().getResources().getDisplayMetrics().density); // use a fixed xhdpi scale
+        return 2.0f; // use default scaling -> make setting out of it
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
     }
@@ -52,7 +59,7 @@ public class BrowseGridFragment extends StdGridFragment {
                     break;
                 case "music":
                     //Special queries needed for album artists
-                    String includeType = getActivity().getIntent().getStringExtra(Extras.IncludeType);
+                    String includeType = requireActivity().getIntent().getStringExtra(Extras.IncludeType);
                     if ("AlbumArtist".equals(includeType)) {
                         ArtistsQuery albumArtists = new ArtistsQuery();
                         albumArtists.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
@@ -62,8 +69,7 @@ public class BrowseGridFragment extends StdGridFragment {
                                 ItemFields.ChildCount
                         });
                         albumArtists.setParentId(mParentId.toString());
-                        mRowDef = new BrowseRowDef("", albumArtists, CHUNK_SIZE, new ChangeTriggerType[] {});
-                        loadGrid(mRowDef);
+                        setRowDef(new BrowseRowDef("", albumArtists, CHUNK_SIZE, new ChangeTriggerType[] {}));
                         return;
                     }
                     query.setIncludeItemTypes(new String[]{includeType != null ? includeType : "MusicAlbum"});
@@ -72,8 +78,6 @@ public class BrowseGridFragment extends StdGridFragment {
             }
         }
 
-        mRowDef = new BrowseRowDef("", query, CHUNK_SIZE, false, true);
-
-        loadGrid(mRowDef);
+        setRowDef(new BrowseRowDef("", query, CHUNK_SIZE, false, true));
     }
 }

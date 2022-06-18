@@ -6,8 +6,7 @@ buildscript {
 	dependencies {
 		classpath(libs.android.gradle)
 		classpath(libs.kotlin.gradle)
-        classpath("com.android.tools.build:gradle:7.2.1")
-    }
+	}
 }
 
 subprojects {
