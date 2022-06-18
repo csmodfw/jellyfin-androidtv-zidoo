@@ -11,9 +11,8 @@ android {
 	compileSdk = 31
 
 	defaultConfig {
-        minSdk = 28
-		targetSdk = 28
-
+		minSdk = 28
+		targetSdk = 31
 
 		// Release version
 		applicationId = namespace

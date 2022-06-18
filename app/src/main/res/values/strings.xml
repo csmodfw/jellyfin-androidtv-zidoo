@@ -244,8 +244,8 @@
     <string name="lbl_song_title">Song Title</string>
     <string name="pref_use_direct_path_title">Pass Direct Path for external player</string>
     <string name="pref_use_direct_path_summary">Pass the file system path instead of streaming URL</string>
-    <string name="pref_use_zidoo_player_title">Use Zidoo player with direct path</string>
-    <string name="pref_use_zidoo_player_text">Hint: The Jellyfin username, password is optionally used as smb credentials!</string>
+    <string name="pref_use_zidoo_player_title">Use Zidoo player</string>
+    <string name="pref_use_zidoo_player_text">Use Zidoo internal player via Direct Path.</string>
     <string name="pref_acra_category">Crash reporting</string>
     <string name="pref_enable_acra">Send crash reports to developers</string>
     <string name="pref_acra_enabled">You will be prompted to submit crash reports</string>
@@ -368,7 +368,7 @@
     <string name="lbl_sign_out">Sign out</string>
     <string name="enable_smart_view">Enable smart screen</string>
     <string name="enable_smart_view_description">Smart screen shows relevant items instead of a grid</string>
-    <string name="image_type_default">Default</string>
+    <string name="image_type_poster">Poster</string>
     <string name="image_type_thumbnail">Thumbnail</string>
     <string name="image_type_banner">Banner</string>
     <string name="image_size_auto">Default</string>

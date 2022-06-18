@@ -1,12 +1,11 @@
 package org.jellyfin.androidtv.ui;
 
 import android.os.Bundle;
-import android.os.Handler;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -21,7 +20,6 @@ import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
 import androidx.leanback.widget.RowPresenter;
 import androidx.leanback.widget.VerticalGridPresenter;
-import androidx.leanback.widget.VerticalGridView;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.data.model.FilterOptions;
@@ -34,8 +32,10 @@ import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.apiclient.model.entities.SortOrder;
 import org.jellyfin.apiclient.model.querying.ItemSortBy;
 
+import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import timber.log.Timber;
 
@@ -47,15 +47,13 @@ public class GridFragment extends Fragment {
     protected LinearLayout mInfoRow;
     protected LinearLayout mToolBar;
     private ItemRowAdapter mAdapter;
-    private Presenter mGridPresenter;
+    protected Presenter mGridPresenter;
     private Presenter.ViewHolder mGridViewHolder;
-    private BaseGridView mGridView;
+    protected BaseGridView mGridView;
     private OnItemViewSelectedListener mOnItemViewSelectedListener;
     private OnItemViewClickedListener mOnItemViewClickedListener;
     private int mSelectedPosition = -1;
-    private int mCardHeight;
 
-    protected int mSize = 5;
     protected int SMALL_CARD;
     protected int MED_CARD;
     protected int LARGE_CARD;
@@ -74,6 +72,11 @@ public class GridFragment extends Fragment {
     protected int SMALL_VERTICAL_BANNER;
     protected int MED_VERTICAL_BANNER;
     protected int LARGE_VERTICAL_BANNER;
+
+    // ability to use different scaling for grids, we may prefer fixed cardSize over adapting row/col sizes
+    protected float getGridScaling() {
+        return requireContext().getResources().getDisplayMetrics().density; // HINT: xdpi holds physical dps of screen
+    }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -107,7 +110,7 @@ public class GridFragment extends Fragment {
             sortOptions.put(4, new SortOption(getString(R.string.lbl_community_rating), ItemSortBy.CommunityRating + "," + ItemSortBy.SortName, SortOrder.Descending));
             sortOptions.put(5,new SortOption(getString(R.string.lbl_critic_rating), ItemSortBy.CriticRating + "," + ItemSortBy.SortName, SortOrder.Descending));
             sortOptions.put(6, new SortOption(getString(R.string.lbl_last_played), ItemSortBy.DatePlayed + "," + ItemSortBy.SortName, SortOrder.Descending));
-        };
+        }
     }
 
     /**
@@ -161,10 +164,12 @@ public class GridFragment extends Fragment {
     }
 
     public int getGridHeight() {
-        if (mGridDock != null) {
-            return mGridDock.getHeight();
-        }
-        return Utils.convertDpToPixel(requireContext(), 580); //400
+        final DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
+        return display.heightPixels - Math.round(display.density * 129.5f); // top + bottom elements
+    }
+
+    public int getGridWidth() {
+        return requireContext().getResources().getDisplayMetrics().widthPixels;
     }
 
     public void setItem(BaseRowItem item) {
@@ -198,7 +203,7 @@ public class GridFragment extends Fragment {
     protected SortOption getSortOption(String value) {
         for (Integer key : sortOptions.keySet()) {
             SortOption option = sortOptions.get(key);
-            if (option.value.equals(value)) return option;
+            if (Objects.requireNonNull(option).value.equals(value)) return option;
         }
 
         return new SortOption("Unknown","",SortOrder.Ascending);
@@ -241,31 +246,6 @@ public class GridFragment extends Fragment {
                         mOnItemViewSelectedListener.onItemSelected(itemViewHolder, item,
                                 rowViewHolder, row);
                     }
-                    if (mGridPresenter instanceof VerticalGridPresenter) {
-                        if (mCardHeight == SMALL_VERTICAL_BANNER && position < ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns()) {
-                            mGridView.setWindowAlignmentOffsetPercent((float) 11.4);
-                        } else if (mCardHeight == SMALL_VERTICAL_BANNER && position < ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns() * 2) {
-                            mGridView.setWindowAlignmentOffsetPercent((float) 25.95);
-                        } else if (mCardHeight == SMALL_VERTICAL_BANNER && position < ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns() * 3) {
-                            mGridView.setWindowAlignmentOffsetPercent((float) 40.5);
-                        } else if (mCardHeight == MED_VERTICAL_BANNER && position < ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns()) {
-                            mGridView.setWindowAlignmentOffsetPercent(15);
-                        } else if (mCardHeight == MED_VERTICAL_BANNER && position < ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns() * 2) {
-                            mGridView.setWindowAlignmentOffsetPercent(36);
-                        } else if (mCardHeight == SMALL_VERTICAL_SQUARE && position >= ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns() && position < ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns() * 2) {
-                            mGridView.setWindowAlignmentOffsetPercent((float) 49.3);
-                            mGridView.setWindowAlignmentOffset(0);
-                        } else if (position < ((VerticalGridPresenter)mGridPresenter).getNumberOfColumns()) {
-//                            mGridView.setWindowAlignmentOffsetPercent(0);
-//                            mGridView.setWindowAlignmentOffset(0);
-
-//                            mGridView.setWindowAlignmentOffsetPercent((float) 5.1); // 5.1
-//                            mGridView.setWindowAlignmentOffset((int) Math.round(mCardHeight * 0.5)); // 0.5
-                        } else {
-                            mGridView.setWindowAlignmentOffsetPercent(50);
-                            mGridView.setWindowAlignmentOffset(0);
-                        }
-                    }
                 }
             };
 
@@ -286,7 +266,7 @@ public class GridFragment extends Fragment {
 
     public void updateCounter(int position) {
         if (mAdapter != null) {
-            mCounter.setText((position)+" | "+ mAdapter.getTotalItems());
+            mCounter.setText(MessageFormat.format("{0} | {1}", position, mAdapter.getTotalItems()));
         }
 
     }
@@ -336,83 +316,16 @@ public class GridFragment extends Fragment {
         createGrid();
     }
 
-    protected void createGrid(int size) {
-        if (mCardHeight == SMALL_VERTICAL_POSTER || mCardHeight == MED_VERTICAL_POSTER || mCardHeight == LARGE_VERTICAL_POSTER) { // only works with square posters for now
-            if (mGridView != null && mGridDock != null && mGridDock.getHeight() > 0 && mGridDock.getWidth() > 0) {
-                Timber.i("XXX focusGrid: getHeight <%d> getWidth <%d>", mGridDock.getHeight(), mGridDock.getWidth());
-
-                if (mGridPresenter instanceof HorizontalGridPresenter) {
-                    HorizontalGridPresenter hPresenter = ((HorizontalGridPresenter) mGridPresenter);
-                    int optimalNumRows = mGridDock.getHeight() / mCardHeight;
-                    if (hPresenter.getNumberOfRows() != optimalNumRows) {
-                        createGrid(optimalNumRows);
-                    }
-                } else if (mGridPresenter instanceof VerticalGridPresenter) {
-                    VerticalGridPresenter vPresenter = ((VerticalGridPresenter) mGridPresenter);
-                    int optimalNumColumns = (int) (mGridDock.getWidth() / ((mCardHeight / 1.5f) + mGridView.getHorizontalSpacing()) ); // convert to width assume 9:6 ratio
-                    if (vPresenter.getNumberOfColumns() != optimalNumColumns) {
-                        Timber.i("XXX focusGrid: NumColumns <%d> mCardHeight <%d> HorizontalSpacing <%d>", optimalNumColumns, mCardHeight, mGridView.getHorizontalSpacing());
-                        createGrid(optimalNumColumns);
-                    }
-                }
-            }
-        }
-
-        if (mGridPresenter instanceof HorizontalGridPresenter) {
-            ((HorizontalGridPresenter) mGridPresenter).setNumberOfRows(size);
-        } else if (mGridPresenter instanceof VerticalGridPresenter) {
-            ((VerticalGridPresenter) mGridPresenter).setNumberOfColumns(size);
-        }
-        mGridViewHolder = mGridPresenter.onCreateViewHolder(mGridDock);
-        if (mGridViewHolder instanceof HorizontalGridPresenter.ViewHolder) {
-            mGridView = ((HorizontalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
-//            mGridView.setGravity(Gravity.CENTER_VERTICAL);
-        } else if (mGridViewHolder instanceof VerticalGridPresenter.ViewHolder) {
-            mGridView = ((VerticalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
-//            mGridView.setGravity(Gravity.CENTER_HORIZONTAL);
-            mGridView.setPadding(0, 0, 0, 0);
-            mGridView.setItemSpacing(0);
-        }
-
-        mGridView.setFocusable(true);
-        mGridDock.removeAllViews();
-        mGridView.setGravity(Gravity.CENTER_VERTICAL);
-        mGridDock.addView(mGridViewHolder.view);
-
-        updateAdapter();
-
-        mGridView.requestLayout();
-
-        int left = mGridView.getPaddingLeft();
-        int right = mGridView.getPaddingRight();
-        int top = mGridView.getPaddingTop();
-        int bottom = mGridView.getPaddingBottom();
-        Timber.d("XXX 2: Padding: L<%d> R<%d> T<%d> B<%d>", left, right, top, bottom);
-//            ((VerticalGridView)mGridView).setPadding(0, 0, 0, 0);
-    }
-
-    private void debugTest()
+    public void printGridStats()
     {
         if (mGridDock != null) {
-            Timber.i("XXX debugTest: getHeight <%d> getWidth <%d>", mGridDock.getHeight(), mGridDock.getWidth());
+            Timber.d("XXX createGrid: mGridDock.getWidth: <%s> mGridDock.getHeight: <%s>", mGridDock.getWidth(), mGridDock.getHeight());
         }
-    }
-
-    protected void createGridEx() {
-        Timber.d("XXX createGrid");
-        mGridViewHolder = mGridPresenter.onCreateViewHolder(mGridDock);
-        if (mGridViewHolder instanceof HorizontalGridPresenter.ViewHolder) {
-            mGridView = ((HorizontalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
-        } else if (mGridViewHolder instanceof VerticalGridPresenter.ViewHolder) {
-            mGridView = ((VerticalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
-            mGridView.setPadding(0, 0, 0, 0);
-            mGridView.setItemSpacing(0);
+        if (mGridView != null) {
+            Timber.d("XXX createGrid: mGridView.getPadding: L<%s> R<%s> T<%s> B<%s>", mGridView.getPaddingLeft(), mGridView.getPaddingRight(), mGridView.getPaddingTop(), mGridView.getPaddingBottom());
+            Timber.d("XXX createGrid: mGridView.getHorizontalSpacing <%s> mGridView.getVerticalSpacing <%s>", mGridView.getHorizontalSpacing(), mGridView.getVerticalSpacing());
+            Timber.d("XXX createGrid: mGridView.WindowAlignment Offset <%s> OffsetPercent <%s> Alignment <%s>", mGridView.getWindowAlignmentOffset(), mGridView.getWindowAlignmentOffsetPercent(), mGridView.getWindowAlignment());
         }
-        mGridView.setFocusable(true);
-        mGridView.setGravity(Gravity.CENTER_VERTICAL);
-        mGridDock.removeAllViews();
-        mGridDock.addView(mGridViewHolder.view);
-        updateAdapter();
     }
 
     protected void createGrid() {
@@ -420,18 +333,15 @@ public class GridFragment extends Fragment {
         mGridViewHolder = mGridPresenter.onCreateViewHolder(mGridDock);
         if (mGridViewHolder instanceof HorizontalGridPresenter.ViewHolder) {
             mGridView = ((HorizontalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
+            mGridView.setGravity(Gravity.CENTER_VERTICAL);
         } else if (mGridViewHolder instanceof VerticalGridPresenter.ViewHolder) {
             mGridView = ((VerticalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
-            mGridView.setPadding(0, 0, 0, 0);
-            mGridView.setItemSpacing(0);
+            mGridView.setGravity(Gravity.CENTER_HORIZONTAL);
         }
 
         mGridView.setFocusable(true);
-        mGridView.setGravity(Gravity.CENTER_VERTICAL);
         mGridDock.removeAllViews();
         mGridDock.addView(mGridViewHolder.view);
-
-//        new Handler().postDelayed(this::debugTest, 500);
 
         updateAdapter();
     }
@@ -442,10 +352,7 @@ public class GridFragment extends Fragment {
         Timber.d("XXX: onStart");
     }
 
-
-
     public void focusGrid() {
-
         if (mGridView != null) mGridView.requestFocus();
     }
 
@@ -462,9 +369,5 @@ public class GridFragment extends Fragment {
                 mGridView.setSelectedPosition(mSelectedPosition);
             }
         }
-    }
-
-    protected void setCardHeight(int height) {
-        mCardHeight = height;
     }
 }

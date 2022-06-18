@@ -73,7 +73,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     Runnable mZidooTask;
     private static HttpURLConnection connZidooApi;
-    boolean useZidoo;
+    boolean useZidoo = false;
     boolean mZidooStartupOK;
     int mZidooReportTaskErrorCount = 0;
 
@@ -139,9 +139,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
     static final int API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE = 0;
     static final int API_ZIDOO_HTTP_API_SUCCESS = 200;
     static final int API_ZIDOO_HTTP_API_NORESOURCE = 806;
-    static final int API_ZIDOO_STARTUP_TIMEOUT = 16000; // allow Zidoo player to trigger wake + hdd spinup + smb mount and start playback
+    static final int API_ZIDOO_STARTUP_TIMEOUT = 16000; // allow Zidoo player to trigger wake + hdd spinnup + smb mount and start playback
     static final int API_ZIDOO_STARTUP_RETRY_INTERVAL = 500; // interval between startup detection try's
-    static final int API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL = 30000; // interval between playback report ticks
+    static final int API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL = 15000; // interval between playback report ticks
     static final int API_ZIDOO_HTTP_API_MAX_ERROR_COUNT = 4; // maximum http errors, before we fail
 
     @Override
@@ -161,15 +161,12 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         mPosition = getIntent().getIntExtra("Position", 0);
         mInitialSeekPosition = mPosition;
-        mLastPlayerStart = 0;
 
-        useZidoo = false;
         if (userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
             if (userPreferences.getValue().get(UserPreferences.Companion.getZidooPlayerEnabled())) {
                 useZidoo = true;
             }
         }
-        mZidooStartupOK = false;
 
         launchExternalPlayer(0);
     }
@@ -178,6 +175,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         Timber.d("onNewIntent");
+        resetPlayStatus();
     }
 
     @Override
@@ -190,8 +188,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     protected void onDestroy() {
         super.onDestroy();
         Timber.d("onDestroy");
-        stopReportLoop();
-        stopZidooTask();
+        resetPlayStatus();
     }
 
     @Override
@@ -210,10 +207,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     protected void onRestart() {
         super.onRestart();
         Timber.d("onRestart");
-        stopReportLoop();
-        stopZidooTask();
-        mLastPlayerStart = 0;
-        mZidooStartupOK = false;
+        resetPlayStatus();
     }
 
     @Override
@@ -227,7 +221,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         Timber.i("Returned from player request <%d>, result <%d>, extra data <%s>", requestCode, resultCode, data);
-        long activityPlayTime = System.currentTimeMillis() - mLastPlayerStart;
+        final long activityPlayTime = System.currentTimeMillis() - mLastPlayerStart;
         mLastPlayerStart = 0;
         stopReportLoop();
         stopZidooTask();
@@ -256,8 +250,8 @@ public class ExternalPlayerActivity extends FragmentActivity {
             finish();
             return;
         }
-        BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
-        long runtime = item.getRunTimeTicks() != null ? item.getRunTimeTicks() / RUNTIME_TICKS_TO_MS : 0;
+        final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
+        final long runtime = item.getRunTimeTicks() != null ? item.getRunTimeTicks() / RUNTIME_TICKS_TO_MS : 0;
         int pos = 0;
         // look for result position in API's
          if (data != null) {
@@ -288,17 +282,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 Timber.i("Detected playback completion for Vimu player.");
             }
         }
-
+        // Zidoo Activity does not have results, use the last ZidooReportTask pos
         if (requestCode == API_ZIDOO_REQUEST_CODE && mZidooStartupOK) {
-            pos = mPosition; // Zidoo Activity does not have results, use the last ZidooReportTask pos
+            pos = mPosition;
         }
 
-        // only report on pos > 0, prevent reset old valid/seek position
         if (pos > 0) {
+            // only report on pos > 0, prevent reset old valid/seek position
             Timber.i("Player returned position: %d ms, <%s>",pos,getMillisecondsFormated(pos));
             ReportingHelper.reportStopped(item, mCurrentStreamInfo, (long) pos * RUNTIME_TICKS_TO_MS);
         } else {
-            ReportingHelper.reportStopped(item, mCurrentStreamInfo, (long) activityPlayTime * RUNTIME_TICKS_TO_MS); // use playtime as fallback
+            ReportingHelper.reportStopped(item, mCurrentStreamInfo, activityPlayTime * RUNTIME_TICKS_TO_MS); // use playtime as fallback
         }
 
         if (pos == 0) {
@@ -344,6 +338,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 finish();
             }
         }
+    }
+
+    private void resetPlayStatus()
+    {
+        stopReportLoop();
+        stopZidooTask();
+        mPosition = 0;
+        mInitialSeekPosition = 0;
+        mLastPlayerStart = 0;
+        mZidooStartupOK = false;
+        mZidooReportTaskErrorCount = 0;
     }
 
     private void handleZidooPlayerError() {
@@ -511,10 +516,14 @@ public class ExternalPlayerActivity extends FragmentActivity {
                         mZidooReportTaskErrorCount++;
                         if (mZidooReportTaskErrorCount > API_ZIDOO_HTTP_API_MAX_ERROR_COUNT) { // ended/error, allow for some hiccups since its a http api
                             Timber.e("ZidooReportTask detected invalid Zidoo player status, ending Activity!");
+                            final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
+                            if (item != null) {
+                                ReportingHelper.reportStopped(mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS);
+                            }
                             finish();
                         } else {
                             mHandler.postDelayed(this, 1000); // try again in a second
-                            Timber.d("ZidooReportTask detected Zidoo player http status error, trying again in 1000 ms.");
+                            Timber.d("ZidooReportTask detected Zidoo player http-api status error, trying again in 1000 ms.");
                         }
                     } else {
                         mHandler.postDelayed(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
@@ -534,16 +543,20 @@ public class ExternalPlayerActivity extends FragmentActivity {
     private void startReportLoop() {
         PlaybackController playbackController = playbackControllerContainer.getValue().getPlaybackController();
         ReportingHelper.reportStart(mItemsToPlay.get(mCurrentNdx), (long) mPosition * RUNTIME_TICKS_TO_MS);
-        mReportLoop = new Runnable() {
-            @Override
-            public void run() {
-                // TODO: is mPosition always 0 for external players? Use activityPlayTime instead?
-                ReportingHelper.reportProgress(playbackController, mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS, false);
-                Timber.d("startReportLoop Position: %d ms, <%s>",mPosition,getMillisecondsFormated(mPosition));
-                mHandler.postDelayed(this, REPORT_LOOP_INTERVAL);
-            }
-        };
-        mHandler.postDelayed(mReportLoop, REPORT_LOOP_INTERVAL);
+
+        if (mCurrentStreamInfo.getPlayMethod() == PlayMethod.DirectStream || mCurrentStreamInfo.getPlayMethod() == PlayMethod.Transcode) { // there is nothing to report for external direct plays
+            // TODO This runneable will run until next jellyfin app start, if the user hits "home" during external playback!
+            mReportLoop = new Runnable() {
+                @Override
+                public void run() {
+                    // TODO: is mPosition always 0 for external directpath players? Use activityPlayTime instead?
+                    ReportingHelper.reportProgress(playbackController, mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS, false);
+                    Timber.d("startReportLoop Position: %d ms, <%s>", mPosition, getMillisecondsFormated(mPosition));
+                    mHandler.postDelayed(this, REPORT_LOOP_INTERVAL);
+                }
+            };
+            mHandler.postDelayed(mReportLoop, REPORT_LOOP_INTERVAL);
+        }
     }
 
     private void stopReportLoop() {
@@ -577,6 +590,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 startActivity(intent);
                 finishAfterTransition();
             } else {
+                resetPlayStatus();
                 launchExternalPlayer(0);
             }
         } else {
@@ -664,7 +678,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     protected void startExternalActivity(String path, String container) {
-        BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
+        final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         if (item == null) {
             Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
             return;
@@ -723,7 +737,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     private void startExternalZidooZDMCActivity(String path, String container) {
-        BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
+        final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         if (item == null) {
             Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
             return;
@@ -787,7 +801,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
     }
 
-    // will crash via mountSambaServer() ? URI data is correct?
+    // will crash via mountSambaServer() in internal player? URI data is correct?
     private void startExternalZidooMovieActivity(String path, String container) {
         BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         if (item == null) {
@@ -825,40 +839,5 @@ public class ExternalPlayerActivity extends FragmentActivity {
             Timber.e(e, "Error launching external Zidoo player");
             finish();
         }
-    }
-
-    // directly from zidoo SmbUtils
-    private void ParseSambaURI(Uri videoUri) {
-        Timber.i("Samba file uri: %s", videoUri.toString());
-        String server = videoUri.getHost();
-        String share = null;
-        String password = null;
-        String username = null;
-        String domain = null;
-        String fileName = null;
-        String path = videoUri.getPath();
-        if (path != null) {
-            int length = path.length();
-            int index = path.lastIndexOf(47);
-            if (index > 1 && index < length - 1) {
-                fileName = path.substring(index + 1);
-                share = path.substring(1, index);
-            }
-        }
-        String userInfo = videoUri.getUserInfo();
-        if (userInfo != null) {
-            int index2 = userInfo.lastIndexOf(58);
-            if (index2 > -1) {
-                password = userInfo.substring(index2 + 1);
-                userInfo = userInfo.substring(0, index2);
-            }
-            int index3 = userInfo.lastIndexOf(59);
-            if (index3 > -1) {
-                domain = userInfo.substring(0, index3);
-                userInfo = userInfo.substring(index3 + 1);
-            }
-            username = userInfo;
-        }
-        Timber.i("server=" + server + ", domain=" + domain + ", user=" + username + ", password=" + password + ", share=" + share + ", file=" + fileName);
     }
 }
