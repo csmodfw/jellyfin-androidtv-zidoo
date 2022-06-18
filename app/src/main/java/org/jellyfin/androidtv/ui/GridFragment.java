@@ -75,31 +75,33 @@ public class GridFragment extends Fragment {
 
     // ability to use different scaling for grids, we may prefer fixed cardSize over adapting row/col sizes
     protected float getGridScaling() {
-        return requireContext().getResources().getDisplayMetrics().density; // HINT: xdpi holds physical dps of screen
+        return requireContext().getResources().getDisplayMetrics().density; // HINT: xdpi holds physical dpi of screen
     }
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        SMALL_CARD = Utils.convertDpToPixel(getContext(), 116);
-        MED_CARD = Utils.convertDpToPixel(getContext(), 175);
-        LARGE_CARD = Utils.convertDpToPixel(getContext(), 210);
-        SMALL_BANNER = Utils.convertDpToPixel(getContext(), 58);
-        MED_BANNER = Utils.convertDpToPixel(getContext(), 88);
-        LARGE_BANNER = Utils.convertDpToPixel(getContext(), 105);
-        SMALL_VERTICAL_POSTER = Utils.convertDpToPixel(getContext(), 116);
-        MED_VERTICAL_POSTER = Utils.convertDpToPixel(getContext(), 171);
-        LARGE_VERTICAL_POSTER = Utils.convertDpToPixel(getContext(), 202);
-        SMALL_VERTICAL_SQUARE = Utils.convertDpToPixel(getContext(), 114);
-        MED_VERTICAL_SQUARE = Utils.convertDpToPixel(getContext(), 163);
-        LARGE_VERTICAL_SQUARE = Utils.convertDpToPixel(getContext(), 206);
-        SMALL_VERTICAL_THUMB = Utils.convertDpToPixel(getContext(), 116);
-        MED_VERTICAL_THUMB = Utils.convertDpToPixel(getContext(), 155);
-        LARGE_VERTICAL_THUMB = Utils.convertDpToPixel(getContext(), 210);
-        SMALL_VERTICAL_BANNER = Utils.convertDpToPixel(getContext(), 51);
-        MED_VERTICAL_BANNER = Utils.convertDpToPixel(getContext(), 77);
-        LARGE_VERTICAL_BANNER = Utils.convertDpToPixel(getContext(), 118);
+        final float gridscale = getGridScaling();
+
+        SMALL_CARD = Math.round(gridscale * 116);
+        MED_CARD = Math.round(gridscale * 175);
+        LARGE_CARD = Math.round(gridscale * 210);
+        SMALL_BANNER = Math.round(gridscale * 58);
+        MED_BANNER = Math.round(gridscale * 88);
+        LARGE_BANNER = Math.round(gridscale * 105);
+        SMALL_VERTICAL_POSTER = Math.round(gridscale * 116);
+        MED_VERTICAL_POSTER = Math.round(gridscale * 171);
+        LARGE_VERTICAL_POSTER = Math.round(gridscale * 202);
+        SMALL_VERTICAL_SQUARE = Math.round(gridscale * 114);
+        MED_VERTICAL_SQUARE = Math.round(gridscale * 163);
+        LARGE_VERTICAL_SQUARE = Math.round(gridscale * 206);
+        SMALL_VERTICAL_THUMB = Math.round(gridscale * 116);
+        MED_VERTICAL_THUMB = Math.round(gridscale * 155);
+        LARGE_VERTICAL_THUMB = Math.round(gridscale * 210);
+        SMALL_VERTICAL_BANNER = Math.round(gridscale * 51);
+        MED_VERTICAL_BANNER = Math.round(gridscale * 77);
+        LARGE_VERTICAL_BANNER = Math.round(gridscale * 118);
 
         sortOptions = new HashMap<>();
         {
