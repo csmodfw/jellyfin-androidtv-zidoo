@@ -47,7 +47,7 @@ Jellyfin Android TV Zidoo-Edition is a Jellyfin client adapted to better run on 
  - UI layout fixes
 	 - cutoff grids, ui scaling fixed
 ### How to use:
-- setup your Jellyfin server [library's](https://jellyfin.org/docs/general/server/libraries.html) with network paths or path substitution via `Network Path:` option
+- setup your Jellyfin server [library's](https://jellyfin.org/docs/general/server/libraries.html) with network paths or path substitution via `Shared network folder:` option
 	- Formats
 		- smb://smb_user:smb_password@server_ip/share/folder
 		-  nfs://server_ip/folder
