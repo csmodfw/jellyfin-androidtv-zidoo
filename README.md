@@ -53,6 +53,7 @@ Jellyfin Android TV Zidoo-Edition is a Jellyfin client adapted to better run on 
 		-  nfs://server_ip/folder
 	- Examples: 
 		- smb://andy:1234@192.168.1.101/htpc-share/series
+![setting](https://user-images.githubusercontent.com/5340247/174437861-c1db621a-d4b2-4696-b33c-5152c0c67fb6.png)
 - enable the `Direct Path` and `Use Zidoo player` option in the JellyfinTv client
 ### Community
 - **for major bugs/issues regarding the Zidoo-Edition, please open a github issue**
