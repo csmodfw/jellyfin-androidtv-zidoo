@@ -37,6 +37,7 @@ Jellyfin Android TV Zidoo-Edition is a Jellyfin client adapted to better run on 
 - future plans
 	- add/improve default player audio/subtitle handling
 	- add support for vlclib software decode fallback on Hi10 *(H264/10 bit)* files
+	- library Ui option to allow adjusting the poster view scale
 	- if the upcoming Plex client is released, maybe we get better working http stream support
 		- atm playback via http stream is buggy/glitchy so its disabled via Zidoo player
   
