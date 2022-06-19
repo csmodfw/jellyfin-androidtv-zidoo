@@ -37,31 +37,31 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
 - beta1:
   - initial release to get all basic functionality working
 - beta2
-  - fixed http streaming case (nfs still broken)
+  - fixed http streaming case *(nfs still broken sorry)*
   - disabled confusing player options not related to Zidoo player
   - force use of Zidoo player always
 - future plans
     - add/improve default player audio/subtitle handling
     - add support for vlclib software decode fallback on Hi10 *(H264/10 bit)* files
-    - library Ui option to allow adjusting the poster view scale
-    - if the upcoming Plex client is released, maybe we get better working http stream support
-        - atm playback via http stream is buggy/glitchy so its disabled via Zidoo player
-  
+    - library Ui option to allow adjusting the poster view scale 
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
-   - working resume, seek and watched handling
+   - working resume, seek and playback position reporting
+   - working watched state reporting
+   - http streaming support
    - smb, nfs support via `Direct Path` option
  - UI layout fixes
 	 - cutoff grids, ui scaling fixed
-### How to use:
+### How to use with "Direct Path" option (smb/~~nfs~~):
 - setup your Jellyfin server [library's](https://jellyfin.org/docs/general/server/libraries.html) with network paths or path substitution via `Shared network folder:` option
 	- Formats
 		- smb://smb_user:smb_password@server_ip/share/folder
-		-  nfs://server_ip/folder
+		- smb://smb_user@server_ip/share/folder
+		-  ~~nfs://server_ip/folder~~
 	- Examples: 
-		- smb://andy:1234@192.168.1.101/htpc-share/series
+		- smb://andy:123456@192.168.1.101/htpc-share/series
 ![setting](https://user-images.githubusercontent.com/5340247/174437861-c1db621a-d4b2-4696-b33c-5152c0c67fb6.png)
-- enable the `Direct Path` and `Use Zidoo player` option in the JellyfinTv client
+- enable the `Direct Path` option in the JellyfinTv client
 ### Community
 - **for major bugs/issues regarding the Zidoo-Edition, please open a github issue**
 - for questions, suggestions or help use the [Zidoo forum](http://forum.zidoo.tv/index.php)
