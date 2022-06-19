@@ -1,6 +1,7 @@
 package org.jellyfin.androidtv.ui.preference.screen
 
 import android.app.AlertDialog
+import android.os.Build
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.AudioBehavior
@@ -12,11 +13,13 @@ import org.jellyfin.androidtv.ui.preference.custom.DurationSeekBarPreference
 import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
 import org.jellyfin.androidtv.ui.preference.dsl.checkbox
 import org.jellyfin.androidtv.ui.preference.dsl.enum
+import org.jellyfin.androidtv.ui.preference.dsl.link
 import org.jellyfin.androidtv.ui.preference.dsl.list
 import org.jellyfin.androidtv.ui.preference.dsl.optionsScreen
 import org.jellyfin.androidtv.ui.preference.dsl.seekbar
 import org.jellyfin.androidtv.util.DeviceUtils
 import org.jellyfin.androidtv.util.TimeUtils
+import org.jellyfin.preference.booleanPreference
 import org.koin.android.ext.android.inject
 
 class PlaybackPreferencesScreen : OptionsFragment() {
@@ -77,21 +80,21 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 				bind(userPreferences, UserPreferences.mediaQueuingEnabled)
 			}
 
-			checkbox {
-				setTitle(R.string.lbl_enable_cinema_mode)
-				setContent(R.string.sum_enable_cinema_mode)
-				bind(userPreferences, UserPreferences.cinemaModeEnabled)
-				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
-			}
+//			checkbox {
+//				setTitle(R.string.lbl_enable_cinema_mode)
+//				setContent(R.string.sum_enable_cinema_mode)
+//				bind(userPreferences, UserPreferences.cinemaModeEnabled)
+//				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
+//			}
 		}
 
 		category {
 			setTitle(R.string.pref_video)
 
-			enum<PreferredVideoPlayer> {
-				setTitle(R.string.pref_media_player)
-				bind(userPreferences, UserPreferences.videoPlayer)
-			}
+//			enum<PreferredVideoPlayer> {
+//				setTitle(R.string.pref_media_player)
+//				bind(userPreferences, UserPreferences.videoPlayer)
+//			}
 
 			@Suppress("MagicNumber")
 			list {
@@ -138,94 +141,101 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 			checkbox {
 				setTitle(R.string.pref_use_zidoo_player_title)
 				setContent(R.string.pref_use_zidoo_player_text)
-				bind(userPreferences, UserPreferences.zidooPlayerEnabled)
-				depends { userPreferences[UserPreferences.videoPlayer] == PreferredVideoPlayer.EXTERNAL && userPreferences[UserPreferences.externalVideoPlayerSendPath] }
-			}
-
-			enum<RefreshRateSwitchingBehavior> {
-				setTitle(R.string.lbl_refresh_switching)
-				bind(userPreferences, UserPreferences.refreshRateSwitchingBehavior)
-				depends { DeviceUtils.is60() && userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
-			}
-		}
-
-		category {
-			setTitle(R.string.pref_subtitles)
-
-			checkbox {
-				setTitle(R.string.pref_subtitles_background_title)
-				setContent(R.string.pref_subtitles_background_summary)
-				bind(userPreferences, UserPreferences.subtitlesBackgroundEnabled)
-			}
-
-			@Suppress("MagicNumber")
-			seekbar {
-				setTitle(R.string.pref_libvlc_subtitle_delay_title)
-				min = -50_000
-				max = 50_000
-				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
-					override fun display(value: Int) = "${value}ms"
+				bind {
+					get { true }
+					set {
+						userPreferences[UserPreferences.zidooPlayerEnabled] = it
+					}
+					default { userPreferences.getDefaultValue(UserPreferences.zidooPlayerEnabled) }
 				}
-				bind(userPreferences, UserPreferences.libVLCSubtitleDelay)
+//				bind(userPreferences, UserPreferences.zidooPlayerEnabled)
+//				depends { userPreferences[UserPreferences.externalVideoPlayerSendPath] }
 			}
 
-			@Suppress("MagicNumber")
-			seekbar {
-				setTitle(R.string.pref_subtitles_size)
-				min = 10
-				max = 38
-				bind(userPreferences, UserPreferences.defaultSubtitlesSize)
-			}
+//			enum<RefreshRateSwitchingBehavior> {
+//				setTitle(R.string.lbl_refresh_switching)
+//				bind(userPreferences, UserPreferences.refreshRateSwitchingBehavior)
+//				depends { DeviceUtils.is60() && userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
+//			}
 		}
 
-		category {
-			setTitle(R.string.pref_audio)
+//		category {
+//			setTitle(R.string.pref_subtitles)
+//
+//			checkbox {
+//				setTitle(R.string.pref_subtitles_background_title)
+//				setContent(R.string.pref_subtitles_background_summary)
+//				bind(userPreferences, UserPreferences.subtitlesBackgroundEnabled)
+//			}
+//
+//			@Suppress("MagicNumber")
+//			seekbar {
+//				setTitle(R.string.pref_libvlc_subtitle_delay_title)
+//				min = -50_000
+//				max = 50_000
+//				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
+//					override fun display(value: Int) = "${value}ms"
+//				}
+//				bind(userPreferences, UserPreferences.libVLCSubtitleDelay)
+//			}
+//
+//			@Suppress("MagicNumber")
+//			seekbar {
+//				setTitle(R.string.pref_subtitles_size)
+//				min = 10
+//				max = 38
+//				bind(userPreferences, UserPreferences.defaultSubtitlesSize)
+//			}
+//		}
 
-			enum<AudioBehavior> {
-				setTitle(R.string.lbl_audio_output)
-				bind(userPreferences, UserPreferences.audioBehaviour)
-				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
-			}
+//		category {
+//			setTitle(R.string.pref_audio)
+//
+//			enum<AudioBehavior> {
+//				setTitle(R.string.lbl_audio_output)
+//				bind(userPreferences, UserPreferences.audioBehaviour)
+//				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
+//			}
+//
+//			checkbox {
+//				setTitle(R.string.lbl_bitstream_ac3)
+//				setContent(R.string.desc_bitstream_ac3)
+//				bind(userPreferences, UserPreferences.ac3Enabled)
+//				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL && !DeviceUtils.is60() }
+//			}
+//
+//			checkbox {
+//				setTitle(R.string.lbl_bitstream_dts)
+//				setContent(R.string.desc_bitstream_ac3)
+//				bind(userPreferences, UserPreferences.dtsEnabled)
+//				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
+//			}
+//
+//			@Suppress("MagicNumber")
+//			seekbar {
+//				setTitle(R.string.pref_libvlc_audio_delay_title)
+//				min = -5_000
+//				max = 5_000
+//				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
+//					override fun display(value: Int) = "${value}ms"
+//				}
+//				bind(userPreferences, UserPreferences.libVLCAudioDelay)
+//			}
+//		}
 
-			checkbox {
-				setTitle(R.string.lbl_bitstream_ac3)
-				setContent(R.string.desc_bitstream_ac3)
-				bind(userPreferences, UserPreferences.ac3Enabled)
-				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL && !DeviceUtils.is60() }
-			}
-
-			checkbox {
-				setTitle(R.string.lbl_bitstream_dts)
-				setContent(R.string.desc_bitstream_ac3)
-				bind(userPreferences, UserPreferences.dtsEnabled)
-				depends { userPreferences[UserPreferences.videoPlayer] != PreferredVideoPlayer.EXTERNAL }
-			}
-
-			@Suppress("MagicNumber")
-			seekbar {
-				setTitle(R.string.pref_libvlc_audio_delay_title)
-				min = -5_000
-				max = 5_000
-				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
-					override fun display(value: Int) = "${value}ms"
-				}
-				bind(userPreferences, UserPreferences.libVLCAudioDelay)
-			}
-		}
-
-		category {
-			setTitle(R.string.pref_live_tv_cat)
-
-			enum<PreferredVideoPlayer> {
-				setTitle(R.string.pref_media_player)
-				bind(userPreferences, UserPreferences.liveTvVideoPlayer)
-			}
-
-			checkbox {
-				setTitle(R.string.lbl_direct_stream_live)
-				bind(userPreferences, UserPreferences.liveTvDirectPlayEnabled)
-				setContent(R.string.pref_direct_stream_live_on, R.string.pref_direct_stream_live_off)
-			}
-		}
+//		category {
+//			setTitle(R.string.pref_live_tv_cat)
+//
+//			enum<PreferredVideoPlayer> {
+//				setTitle(R.string.pref_media_player)
+//				bind(userPreferences, UserPreferences.liveTvVideoPlayer)
+//			}
+//
+//			checkbox {
+//				setTitle(R.string.lbl_direct_stream_live)
+//				bind(userPreferences, UserPreferences.liveTvDirectPlayEnabled)
+//				setContent(R.string.pref_direct_stream_live_on, R.string.pref_direct_stream_live_off)
+//			}
+//		}
 	}
 }

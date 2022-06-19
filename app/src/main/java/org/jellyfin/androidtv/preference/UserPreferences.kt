@@ -104,7 +104,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Send a path instead to the external player
 		 */
-		var externalVideoPlayerSendPath = booleanPreference("pref_send_path_external", true)
+		var externalVideoPlayerSendPath = booleanPreference("pref_send_path_external", false)
 
 		/**
 		 * Use Zidoo internal player as external player
