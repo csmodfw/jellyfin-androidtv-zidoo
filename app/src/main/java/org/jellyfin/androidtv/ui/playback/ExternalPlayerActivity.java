@@ -116,6 +116,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     static final int API_ZIDOO_REQUEST_CODE = 99;
     static final String API_ZIDOO_PACKAGE = "com.android.gallery3d";
     static final String API_ZIDOO_ACTIVITY_NAME_ZDMC = "com.android.gallery3d.app.ZDMCActivity";
+    static final String API_ZIDOO_ACTIVITY_NAME_GALLERY = "com.android.gallery3d.app.GalleryActivity";
     static final String API_ZIDOO_ACTIVITY_NAME_MOVIE = "com.android.gallery3d.app.MovieActivity";
     static final String API_ZIDOO_SOURCEFROM = "SourceFrom";
     static final String API_ZIDOO_SOURCEFROM_LOCAL = "Local";
@@ -836,7 +837,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         zidooIntent.putExtra(API_ZIDOO_PLAY_BROADCAST_STATUS, false);
         zidooIntent.putExtra(API_ZIDOO_SEEK_POSITION, mInitialSeekPosition);
         zidooIntent.putExtra(API_ZIDOO_SOURCEFROM, API_ZIDOO_SOURCEFROM_LOCAL);
-        zidooIntent.putExtra(API_ZIDOO_PLAYMODEL, 5); // >= 0 isStream
+//        zidooIntent.putExtra(API_ZIDOO_PLAYMODEL, 5); // >= 0 isStream only = no overlay/menus!
         zidooIntent.putExtra(API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER, true);
 
         Timber.i("Starting external Zidoo MovieActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ",path_uri.getHost(),container,mInitialSeekPosition,getMillisecondsFormated(mInitialSeekPosition),path_uri.getPath());
