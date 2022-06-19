@@ -245,7 +245,7 @@
     <string name="pref_use_direct_path_title">Pass Direct Path for external player</string>
     <string name="pref_use_direct_path_summary">Pass the file system path instead of streaming URL</string>
     <string name="pref_use_zidoo_player_title">Use Zidoo player</string>
-    <string name="pref_use_zidoo_player_text">Use Zidoo internal player via Direct Path.</string>
+    <string name="pref_use_zidoo_player_text">Use Zidoo internal player for http streams and via smb/nfs Direct Path.</string>
     <string name="pref_acra_category">Crash reporting</string>
     <string name="pref_enable_acra">Send crash reports to developers</string>
     <string name="pref_acra_enabled">You will be prompted to submit crash reports</string>
