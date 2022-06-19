@@ -140,9 +140,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
     static final int API_ZIDOO_HTTP_API_SUCCESS = 200;
     static final int API_ZIDOO_HTTP_API_NORESOURCE = 806;
     static final int API_ZIDOO_STARTUP_TIMEOUT = 20000; // allow Zidoo player to trigger wake + hdd spinnup + smb mount and start playback
-    static final int API_ZIDOO_STARTUP_RETRY_INTERVAL = 500; // interval between startup detection try's
+    static final int API_ZIDOO_STARTUP_RETRY_INTERVAL = 400; // interval between startup detection try's
     static final int API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL = 15000; // interval between playback report ticks
-    static final int API_ZIDOO_HTTP_API_MAX_ERROR_COUNT = 5; // maximum http errors, before we fail
+    static final int API_ZIDOO_HTTP_API_MAX_ERROR_COUNT = 8; // maximum http errors, before we fail
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -232,7 +232,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
         // handle Zidoo player failures
         if (requestCode == API_ZIDOO_REQUEST_CODE) {
             if (!mZidooStartupOK) {
-                handleZidooPlayerError();
+                if (userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
+                    handleZidooPlayerError();
+                }
                 return;
             }
         } else if (activityPlayTime < 2000) { // Check against a total failure (no apps installed)
