@@ -32,19 +32,19 @@ class UserPreferencesScreen : OptionsFragment() {
 				withFragment<PlaybackPreferencesScreen>()
 			}
 
-			link {
-				setTitle(R.string.pref_acra_category)
-				setContent(R.string.pref_acra_description)
-				icon = R.drawable.ic_error
-				withFragment<CrashReportingPreferencesScreen>()
-			}
+//			link {
+//				setTitle(R.string.pref_acra_category)
+//				setContent(R.string.pref_acra_description)
+//				icon = R.drawable.ic_error
+//				withFragment<CrashReportingPreferencesScreen>()
+//			}
 
-			link {
-				setTitle(R.string.pref_developer_link)
-				setContent(R.string.pref_developer_link_description)
-				icon = R.drawable.ic_flask
-				withFragment<DeveloperPreferencesScreen>()
-			}
+//			link {
+//				setTitle(R.string.pref_developer_link)
+//				setContent(R.string.pref_developer_link_description)
+//				icon = R.drawable.ic_flask
+//				withFragment<DeveloperPreferencesScreen>()
+//			}
 		}
 
 		aboutCategory()
