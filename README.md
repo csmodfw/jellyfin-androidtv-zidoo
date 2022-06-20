@@ -33,13 +33,15 @@
 Jellyfin Android TV Zidoo-Edition is a Jellyfin client adapted to better run on [Zidoo media players](https://www.zidoo.tv) running Android 9+.  
 ### Release [downloads here](https://github.com/Andy2244/jellyfin-androidtv-zidoo/releases)
 TIP: you can directly install from your browser via `http://zidoo_ip:18888` web interface
-### App ONLY works with latest 10.8 server, nfs may be broken atm! Fixes for this will be coming in beta3.
+### App ONLY works with latest 10.8 server!
 - beta1:
   - initial release to get all basic functionality working
 - beta2
-  - fixed http streaming case *(nfs still broken sorry)*
+  - fixed http streaming case
   - disabled confusing player options not related to Zidoo player
   - force use of Zidoo player always
+- beta3
+	- working nfs playback mode
 - future plans
     - add/improve default player audio/subtitle handling
     - add support for vlclib software decode fallback on Hi10 *(H264/10 bit)* files
@@ -52,14 +54,17 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
    - smb, nfs support via `Direct Path` option
  - UI layout fixes
 	 - cutoff grids, ui scaling fixed
-### How to use with "Direct Path" option (smb/~~nfs~~):
+### How to use with "Direct Path" option (smb/nfs):
 - setup your Jellyfin server [library's](https://jellyfin.org/docs/general/server/libraries.html) with network paths or path substitution via `Shared network folder:` option
 	- Formats
-		- smb://smb_user:smb_password@server_ip/share/folder
-		- smb://smb_user@server_ip/share/folder
-		-  ~~nfs://server_ip/folder~~
+		- `smb://smb_user:smb_password@server_ip/share/folder`
+		- `smb://smb_user@server_ip/share/folder`
+		- `nfs://server_ip/nfs_export/:`
+			- nfs needs the `/:` at the end of the nfs export name/path!
 	- Examples: 
-		- smb://andy:123456@192.168.1.101/htpc-share/series
+		- `smb://andy:123456@192.168.1.101/htpc-share/series`
+		- `smb://andy@192.168.1.101/htpc-share/series`
+ 		- `nfs://192.168.1.101/media/movies/:`
 ![setting](https://user-images.githubusercontent.com/5340247/174437861-c1db621a-d4b2-4696-b33c-5152c0c67fb6.png)
 - enable the `Direct Path` option in the JellyfinTv client
 ### Community
