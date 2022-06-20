@@ -309,7 +309,7 @@
     <string name="no_player">No Player</string>
     <string name="no_player_message">It doesn\'t appear you have a video capable app installed.  This option requires you install a 3rd party application for playing video content.</string>
     <string name="zidoo_player_error">Zidoo Player Failed</string>
-    <string name="zidoo_player_error_message">Detected Zidoo playback error, check if your server libraries have correctly setup network paths or use path substitution via the \'Shared network folder:\' option on the server.\n\nFormats:\n smb://smb_user:smb_password@server_ip/share/folder\n nfs://server_ip/folder\n\nExamples:\n smb://andy:1234@192.168.1.101/htpc-share/series</string>
+    <string name="zidoo_player_error_message">Detected Zidoo playback error, check if your server libraries have correctly setup network paths or use path substitution via the \'Shared network folder:\' option on the server.\n\nFormats:\n smb://smb_user:smb_password@server_ip/share/folder\n nfs://server_ip/nfs_export/:\n\nExamples:\n smb://andy:1234@192.168.1.101/htpc-share/series\n nfs://192.168.1.101/home/andy/movies/:</string>
     <string name="lbl_clear">Clear</string>
     <string name="clear_expanded">Clear current video queue?</string>
     <string name="delete_warning">This will PERMANENTLY DELETE %1$s from your library. Are you VERY sure?</string>

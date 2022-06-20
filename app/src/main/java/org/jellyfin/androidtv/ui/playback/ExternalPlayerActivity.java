@@ -234,11 +234,12 @@ public class ExternalPlayerActivity extends FragmentActivity {
         // handle Zidoo player failures
         if (requestCode == API_ZIDOO_REQUEST_CODE) {
             if (!mZidooStartupOK) {
+                Timber.e("Zidoo startup failed, ignoring result!");
                 if (userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
                     handleZidooPlayerError();
+                } else {
+                    finish();
                 }
-                Timber.e("Zidoo startup failed, ignoring result!");
-                finish();
                 return;
             }
         } else if (activityPlayTime < 2000) { // Check against a total failure (no apps installed)
@@ -661,7 +662,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
                         String url = response.getMediaUrl();
                         //And request an activity to play it
-                        startExternalZidooZDMCActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
+                        startExternalZidooMovieActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
 //                        if (useZidoo) {
 //                            startExternalZidooZDMCActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
 //                        } else {
@@ -778,7 +779,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             return;
         }
 
-        final Uri path_uri = Uri.parse(path);
+        Uri path_uri = Uri.parse(path);
         Intent zidooIntent = new Intent(Intent.ACTION_VIEW);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
@@ -788,7 +789,6 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         zidooIntent.setPackage(API_ZIDOO_PACKAGE);
         zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_ZDMC);
-        zidooIntent.setDataAndType(path_uri, "video/"+container);
 
         zidooIntent.putExtra(API_ZIDOO_PLAY_MODE, API_ZIDOO_PLAY_MODE_ZDMC);
 //        String netMode = API_ZIDOO_NET_MODE_LOCAL;
@@ -816,12 +816,20 @@ public class ExternalPlayerActivity extends FragmentActivity {
         } else if (path.contains("nfs:")) {
             zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_NFS);
 
-            final String nfs_root = path_uri.getHost() + "/" + path_uri.getPathSegments().get(0); // actual export might be more /path1/path2, but ZDMCActivity merges them anyway
+            String nfs_root = path_uri.getHost() + "/" + path_uri.getPathSegments().get(0); // init with simple case first
+            String[] splitArray = path_uri.getPath().split("/:", 2); // we use "/:" as marker for the export path
+            if (splitArray.length > 0) {
+                nfs_root = path_uri.getHost() + splitArray[0];
+                path_uri = Uri.parse(path.replace("/:","")); // fix Uri
+            }
+
             zidooIntent.putExtra(API_ZIDOO_NET_NFS_ROOT, nfs_root);
             Timber.i("Using NFS root_path <%s> for Zidoo ZDMCActivity!",nfs_root);
         }
 
         Timber.i("Starting external Zidoo ZDMCActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ",path_uri.getHost(),container,mInitialSeekPosition,getMillisecondsFormated(mInitialSeekPosition),path_uri.getPath());
+
+        zidooIntent.setDataAndType(path_uri, "video/"+container);
 
         try {
             mZidooTask = new ZidooStartupTask();
@@ -852,9 +860,15 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     // will crash via mountSambaServer() in internal player? URI data is correct?
     private void startExternalZidooMovieActivity(String path, String container) {
+        if (path == null || path.isEmpty() || path.trim().isEmpty()) {
+            Timber.e("Error null/empty input path given!");
+            finish();
+            return;
+        }
         final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         if (item == null) {
             Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
+            finish();
             return;
         }
 
@@ -863,6 +877,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
 //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
 //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         zidooIntent.setPackage(API_ZIDOO_PACKAGE);
         zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_MOVIE);
@@ -872,14 +887,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
         zidooIntent.putExtra(API_ZIDOO_SEEK_POSITION, mInitialSeekPosition);
         zidooIntent.putExtra(API_ZIDOO_SOURCEFROM, API_ZIDOO_SOURCEFROM_LOCAL);
 //        zidooIntent.putExtra(API_ZIDOO_PLAYMODEL, 5); // >= 0 isStream only = no overlay/menus!
-        zidooIntent.putExtra(API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER, true);
+//        zidooIntent.putExtra(API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER, true);
 
         Timber.i("Starting external Zidoo MovieActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ",path_uri.getHost(),container,mInitialSeekPosition,getMillisecondsFormated(mInitialSeekPosition),path_uri.getPath());
 
         try {
-            mLastPlayerStart = System.currentTimeMillis();
-            mZidooStartupOK = false;
-            mZidooReportTaskErrorCount = 0;
             mZidooTask = new ZidooStartupTask();
             mHandler.postDelayed(mZidooTask, 2000); // 2s initial delay = quickest time zidoo can start something
             startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while both don't set any results!
