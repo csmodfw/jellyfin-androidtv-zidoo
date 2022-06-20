@@ -136,6 +136,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     static final String API_ZIDOO_HTTP_API_IP = "127.0.0.1:9529";
     static final String API_ZIDOO_HTTP_API_TARGET_VIDEOPLAY = "ZidooVideoPlay";
     static final String API_ZIDOO_HTTP_API_JSON_STATUS = "status";
+    static final int API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR = -1;
     static final int API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING = 1;
     static final int API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE = 0;
     static final int API_ZIDOO_HTTP_API_SUCCESS = 200;
@@ -236,6 +237,8 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 if (userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
                     handleZidooPlayerError();
                 }
+                Timber.e("Zidoo startup failed, ignoring result!");
+                finish();
                 return;
             }
         } else if (activityPlayTime < 2000) { // Check against a total failure (no apps installed)
@@ -249,6 +252,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             return;
         } else if (activityPlayTime < REPORT_LOOP_INTERVAL) { // ignore "quick" play starts < than looptime
             Timber.i("Playback took less than 10 seconds - ignoring.");
+            finish();
             return;
         }
 
@@ -464,13 +468,22 @@ public class ExternalPlayerActivity extends FragmentActivity {
         if (video_obj != null) {
             int duration = video_obj.optInt("duration");
             if (duration > 0) { // sanity check if we have valid data
-                return new Pair<Integer, Integer>(video_obj.optInt("status", -1), video_obj.optInt("currentPosition", -1));
+                return new Pair<Integer, Integer>(video_obj.optInt("status", API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR), video_obj.optInt("currentPosition", -1));
             }
         }
-        return new Pair<Integer, Integer>(-1,-1);
+        return new Pair<Integer, Integer>(API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR,-1);
     }
 
     private class ZidooStartupTask implements Runnable {
+        final public BaseItemDto mItem;
+
+        public ZidooStartupTask()  {
+            mLastPlayerStart = System.currentTimeMillis();
+            mZidooStartupOK = false;
+            mZidooReportTaskErrorCount = 0;
+            this.mItem = mItemsToPlay.get(mCurrentNdx);
+        }
+
         @Override
         public void run() {
             // Network task need run in background see: strictMode
@@ -479,10 +492,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 if (!mZidooStartupOK) {
                     if (getZidooPlayStatus().first >= API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE) {
                         mZidooStartupOK = true;
-                        if (mInitialSeekPosition > 0) {
-                            if (!setZidooSeekPosition()) {
-                                Timber.e("zidooStartupTask setZidooSeekPosition failed!");
-                            }
+                        if (mInitialSeekPosition > 0 && setZidooSeekPosition()) {
+                            Timber.d("zidooStartupTask setZidooSeekPosition success <%s>", mInitialSeekPosition);
+                        } else {
+                            Timber.e("zidooStartupTask setZidooSeekPosition failed!");
+                            mInitialSeekPosition = 0;
                         }
                     }
                 }
@@ -491,12 +505,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 if (mZidooStartupOK) {
                     Timber.d("zidooStartupTask detected ZidooPlayer running!");
                     stopZidooTask();
-                    ReportingHelper.reportStart(mItemsToPlay.get(mCurrentNdx), (long) mInitialSeekPosition * RUNTIME_TICKS_TO_MS);
-                    startReportLoop();
-                    mZidooTask = new ZidooReportTask();
+                    ReportingHelper.reportStart(this.mItem, (long) mInitialSeekPosition * RUNTIME_TICKS_TO_MS);
+                    mZidooTask = new ZidooReportTask(this.mItem);
                     mHandler.postDelayed(mZidooTask, REPORT_LOOP_INTERVAL);
                 } else if (activityPlayTime < API_ZIDOO_STARTUP_TIMEOUT) {
-                    Timber.d("zidooStartupTask testing failed, try again in %d ms", API_ZIDOO_STARTUP_RETRY_INTERVAL);
+                    Timber.d("zidooStartupTask testing failed, try again in %s ms", API_ZIDOO_STARTUP_RETRY_INTERVAL);
                     mHandler.postDelayed(this, API_ZIDOO_STARTUP_RETRY_INTERVAL); // try again
                 } else {
                     Timber.e("zidooStartupTask timeout reached, giving-up!");
@@ -507,30 +520,30 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     private class ZidooReportTask implements Runnable {
+        final public PlaybackController mPlaybackController = playbackControllerContainer.getValue().getPlaybackController();
+        final public BaseItemDto mItem;
+
+        public ZidooReportTask(BaseItemDto item) {
+            this.mItem = item;
+        }
+
         @Override
         public void run() {
             // Network task need run in background see: strictMode
             AsyncTask.execute(() -> {
-                if (mZidooStartupOK) {
+                if (mZidooStartupOK && this.mItem != null && this.mPlaybackController != null) {
                     Pair<Integer, Integer> status = getZidooPlayStatus();
                     if (status.first == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING && status.second > 0) { // only update
                         mPosition = status.second;
-                        final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
-                        if (item != null) {
-                            PlaybackController playbackController = playbackControllerContainer.getValue().getPlaybackController();
-                            ReportingHelper.reportProgress(playbackController, mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS, false);
-                        }
+                        ReportingHelper.reportProgress(this.mPlaybackController, this.mItem, mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS, false);
                     }
                     Timber.d("ZidooReportTask status: <%s> Position: %d ms, <%s>",status.first,mPosition,getMillisecondsFormated(mPosition));
 
-                    if (status.first == -1) {
+                    if (status.first == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR) {
                         mZidooReportTaskErrorCount++;
                         if (mZidooReportTaskErrorCount > API_ZIDOO_HTTP_API_MAX_ERROR_COUNT) { // ended/error, allow for some hiccups since its a http api
                             Timber.e("ZidooReportTask detected invalid Zidoo player status, ending Activity!");
-                            final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
-                            if (item != null) {
-                                ReportingHelper.reportStopped(mItemsToPlay.get(mCurrentNdx), mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS);
-                            }
+                            ReportingHelper.reportStopped(this.mItem, mCurrentStreamInfo, (long) mPosition * RUNTIME_TICKS_TO_MS);
                             finish();
                         } else {
                             mHandler.postDelayed(this, 1000); // try again in a second
@@ -555,7 +568,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         PlaybackController playbackController = playbackControllerContainer.getValue().getPlaybackController();
         ReportingHelper.reportStart(mItemsToPlay.get(mCurrentNdx), (long) mPosition * RUNTIME_TICKS_TO_MS);
 
-        if (mCurrentStreamInfo.getPlayMethod() == PlayMethod.DirectStream || mCurrentStreamInfo.getPlayMethod() == PlayMethod.Transcode) { // there is nothing to report for external direct plays
+        if (mCurrentStreamInfo.getPlayMethod() == PlayMethod.DirectStream || mCurrentStreamInfo.getPlayMethod() == PlayMethod.Transcode) {
             // TODO This runneable will run until next jellyfin app start, if the user hits "home" during external playback!
             mReportLoop = new Runnable() {
                 @Override
@@ -648,7 +661,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
                         String url = response.getMediaUrl();
                         //And request an activity to play it
-                        startExternalZidooMovieActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
+                        startExternalZidooZDMCActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
 //                        if (useZidoo) {
 //                            startExternalZidooZDMCActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
 //                        } else {
@@ -681,7 +694,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     protected String preparePath(String rawPath) {
-        if (rawPath == null) return "";
+        if (rawPath == null || rawPath.isEmpty() || rawPath.trim().isEmpty()) {
+            return "";
+        }
         if (!rawPath.contains("://")) {
             rawPath = rawPath.replace("\\\\",""); // remove UNC prefix if there
             //prefix with smb
@@ -729,7 +744,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             external.putExtra(API_VIMU_TITLE, full_title);
         }
         String filepath = item.getPath();
-        if (!filepath.isEmpty()) {
+        if (filepath != null && !filepath.isEmpty()) {
             File file = new File(filepath);
             if (!file.getName().isEmpty()) {
                 external.putExtra(API_MX_FILENAME, file.getName());
@@ -751,33 +766,34 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     private void startExternalZidooZDMCActivity(String path, String container) {
+        if (path == null || path.isEmpty() || path.trim().isEmpty()) {
+            Timber.e("Error null/empty input path given!");
+            finish();
+            return;
+        }
         final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         if (item == null) {
             Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
+            finish();
             return;
         }
 
-        Uri path_uri = Uri.parse(path);
+        final Uri path_uri = Uri.parse(path);
         Intent zidooIntent = new Intent(Intent.ACTION_VIEW);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
         zidooIntent.setPackage(API_ZIDOO_PACKAGE);
         zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_ZDMC);
         zidooIntent.setDataAndType(path_uri, "video/"+container);
 
         zidooIntent.putExtra(API_ZIDOO_PLAY_MODE, API_ZIDOO_PLAY_MODE_ZDMC);
-        zidooIntent.putExtra(API_ZIDOO_PLAY_BROADCAST_STATUS, false);
-        zidooIntent.putExtra(API_ZIDOO_SEEK_POSITION, mInitialSeekPosition);
-
-        String netMode = API_ZIDOO_NET_MODE_LOCAL;
+//        String netMode = API_ZIDOO_NET_MODE_LOCAL;
         if (path.contains("smb:")) {
-            netMode = API_ZIDOO_NET_MODE_SMB;
-        } else if (path.contains("nfs:")) {
-            netMode = API_ZIDOO_NET_MODE_NFS;
-        }
-        zidooIntent.putExtra(API_ZIDOO_NET_MODE, netMode);
-
-        if (netMode.equals(API_ZIDOO_NET_MODE_SMB)) {
+            zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_SMB);
             String smb_username = "";
             String smb_password = "";
             String userInfo = path_uri.getUserInfo();
@@ -790,7 +806,6 @@ public class ExternalPlayerActivity extends FragmentActivity {
                     }
                 }
             }
-
             if (!smb_username.isEmpty()) {
                 zidooIntent.putExtra(API_ZIDOO_NET_SMB_USERNAME, smb_username);
                 if (!smb_password.isEmpty()) {
@@ -798,14 +813,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 }
                 Timber.i("Using SMB username <%s>%s for Zidoo ZDMCActivity!",smb_username,!smb_password.isEmpty() ? " with secret password " : "");
             }
+        } else if (path.contains("nfs:")) {
+            zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_NFS);
+
+            final String nfs_root = path_uri.getHost() + "/" + path_uri.getPathSegments().get(0); // actual export might be more /path1/path2, but ZDMCActivity merges them anyway
+            zidooIntent.putExtra(API_ZIDOO_NET_NFS_ROOT, nfs_root);
+            Timber.i("Using NFS root_path <%s> for Zidoo ZDMCActivity!",nfs_root);
         }
 
         Timber.i("Starting external Zidoo ZDMCActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ",path_uri.getHost(),container,mInitialSeekPosition,getMillisecondsFormated(mInitialSeekPosition),path_uri.getPath());
 
         try {
-            mLastPlayerStart = System.currentTimeMillis();
-            mZidooStartupOK = false;
-            mZidooReportTaskErrorCount = 0;
             mZidooTask = new ZidooStartupTask();
             mHandler.postDelayed(mZidooTask, 2000); // 2s initial delay = quickest time zidoo can start something
             startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while both don't set any results!
@@ -814,6 +832,22 @@ public class ExternalPlayerActivity extends FragmentActivity {
             Timber.e(e, "Error launching external Zidoo player");
             finish();
         }
+    }
+
+    private void testNFS(Intent initIntent)
+    {
+        Uri uri = initIntent.getData();
+        String mPath = uri.toString();
+        mPath = mPath.replace("nfs://", "");
+
+        final String ip = uri.getHost();
+        String nfs_root = initIntent.getStringExtra("nfs_root");
+        mPath = mPath.replace(nfs_root, "");
+        String ip2 = nfs_root.substring(0, nfs_root.indexOf("/"));
+        String id = nfs_root.substring(nfs_root.lastIndexOf("/"), nfs_root.length());
+
+        String outPath = ip2 + id + mPath;
+        Timber.i("ZDMCActivity = out mPath = %s",outPath);
     }
 
     // will crash via mountSambaServer() in internal player? URI data is correct?
