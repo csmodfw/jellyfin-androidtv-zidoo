@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.auth.repository
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -7,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.auth.model.AuthenticationStoreServer
 import org.jellyfin.androidtv.auth.model.ConnectedState
 import org.jellyfin.androidtv.auth.model.ConnectingState
@@ -66,15 +68,17 @@ class ServerRepositoryImpl(
 	}
 
 	override suspend fun loadDiscoveryServers() {
-		val servers = mutableListOf<Server>()
+		withContext(Dispatchers.IO) {
+			val servers = mutableListOf<Server>()
 
-		jellyfin.discovery
-			.discoverLocalServers()
-			.map(ServerDiscoveryInfo::toServer)
-			.collect { server ->
-				servers += server
-				_discoveredServers.emit(servers.toList())
-			}
+			jellyfin.discovery
+				.discoverLocalServers()
+				.map(ServerDiscoveryInfo::toServer)
+				.collect { server ->
+					servers += server
+					_discoveredServers.emit(servers.toList())
+				}
+		}
 	}
 
 	// Mutating data
