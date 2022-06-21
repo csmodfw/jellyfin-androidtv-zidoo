@@ -794,43 +794,43 @@ public class ExternalPlayerActivity extends FragmentActivity {
 //        String netMode = API_ZIDOO_NET_MODE_LOCAL;
         if (path.contains("smb:")) {
             zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_SMB);
-            String smb_username = "";
-            String smb_password = "";
+            Timber.d("Using SMB NET_MODE for ZDMCActivity!");
             String userInfo = path_uri.getUserInfo();
-            if (userInfo != null) {
+            if (userInfo != null && !userInfo.trim().isEmpty()) {
                 String[] splitArray = userInfo.split(":", 2);
-                if (splitArray.length > 0) {
-                    smb_username = splitArray[0];
-                    if (splitArray.length > 1) {
-                        smb_password = splitArray[1];
+                if (splitArray.length >= 1) {
+                    final String smb_username = splitArray[0].trim();
+                    if (!smb_username.isEmpty()) {
+                        zidooIntent.putExtra(API_ZIDOO_NET_SMB_USERNAME, smb_username);
+                        Timber.d("Using SMB username <%s> for ZDMCActivity!",smb_username);
+                    }
+                    if (splitArray.length >= 2) {
+                        final String smb_password = splitArray[1].trim();
+                        if (!smb_password.isEmpty()) {
+                            zidooIntent.putExtra(API_ZIDOO_NET_SMB_PASSWORD, smb_password);
+                            Timber.d("Using SMB password ******* for ZDMCActivity!");
+                        }
                     }
                 }
-            }
-            if (!smb_username.isEmpty()) {
-                zidooIntent.putExtra(API_ZIDOO_NET_SMB_USERNAME, smb_username);
-                if (!smb_password.isEmpty()) {
-                    zidooIntent.putExtra(API_ZIDOO_NET_SMB_PASSWORD, smb_password);
-                }
-                Timber.i("Using SMB username <%s>%s for Zidoo ZDMCActivity!",smb_username,!smb_password.isEmpty() ? " with secret password " : "");
+            } else {
+                Timber.d("Using SMB username <Guest> for ZDMCActivity!");
             }
         } else if (path.contains("nfs:")) {
             zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_NFS);
-
+            Timber.d("Using NFS NET_MODE for ZDMCActivity!");
             String nfs_root = path_uri.getHost() + "/" + path_uri.getPathSegments().get(0); // init with simple case first
             String[] splitArray = path_uri.getPath().split("/:", 2); // we use "/:" as marker for the export path
-            if (splitArray.length > 0) {
+            if (splitArray.length > 1) {
                 nfs_root = path_uri.getHost() + splitArray[0];
                 path_uri = Uri.parse(path.replace("/:","")); // fix Uri
             }
-
             zidooIntent.putExtra(API_ZIDOO_NET_NFS_ROOT, nfs_root);
-            Timber.i("Using NFS root_path <%s> for Zidoo ZDMCActivity!",nfs_root);
+            Timber.d("Using NFS root_path <%s> for ZDMCActivity!",nfs_root);
         }
 
         Timber.i("Starting external Zidoo ZDMCActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ",path_uri.getHost(),container,mInitialSeekPosition,getMillisecondsFormated(mInitialSeekPosition),path_uri.getPath());
 
         zidooIntent.setDataAndType(path_uri, "video/"+container);
-
         try {
             mZidooTask = new ZidooStartupTask();
             mHandler.postDelayed(mZidooTask, 2000); // 2s initial delay = quickest time zidoo can start something
