@@ -60,11 +60,13 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
 		- `smb://smb_user:smb_password@server_ip/share/folder`
 		- `smb://smb_user@server_ip/share/folder`
 		- `nfs://server_ip/nfs_export/:`
-			- nfs needs the `/:` at the end of the nfs export name/path!
+		- `nfs://server_ip/nfs_export/:/tv`
+			- nfs needs the `/:` special marker right after the actual nfs export name/path portion!
 	- Examples: 
 		- `smb://andy:123456@192.168.1.101/htpc-share/series`
 		- `smb://andy@192.168.1.101/htpc-share/series`
- 		- `nfs://192.168.1.101/media/movies/:`
+		- `nfs://192.168.1.101/media/movies/:` -> with nfs export `/media/movies`
+ 		- `nfs://192.168.1.101/mnt/media/:/movies` -> with nfs export `/mnt/media`
 ![setting](https://user-images.githubusercontent.com/5340247/174437861-c1db621a-d4b2-4696-b33c-5152c0c67fb6.png)
 - enable the `Direct Path` option in the JellyfinTv client
 ### Community
