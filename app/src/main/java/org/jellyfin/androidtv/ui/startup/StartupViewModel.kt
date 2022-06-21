@@ -2,10 +2,13 @@ package org.jellyfin.androidtv.ui.startup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.auth.model.AuthenticationSortBy
 import org.jellyfin.androidtv.auth.model.AutomaticAuthenticateMethod
 import org.jellyfin.androidtv.auth.model.LoginState
@@ -67,6 +70,7 @@ class StartupViewModel(
 
 	fun reloadServers() {
 		viewModelScope.launch { serverRepository.loadStoredServers() }
+		viewModelScope.launch { serverRepository.loadDiscoveryServers() }
 	}
 
 	suspend fun getLastServer(): Server? {
