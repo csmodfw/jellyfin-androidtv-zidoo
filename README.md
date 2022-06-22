@@ -10,13 +10,6 @@
 <a href="https://github.com/jellyfin/jellyfin-androidtv">  
 <img alt="GPL 2.0 License" src="https://img.shields.io/github/license/jellyfin/jellyfin-androidtv.svg"/>  
 </a>  
-<a href="https://github.com/Andy2244/jellyfin-androidtv-zidoo/releases">  
-<img alt="Current Zidoo Edition Release" src="https://img.shields.io/github/release/jellyfin/jellyfin-androidtv.svg"/>  
-</a>  
-<a href="https://translate.jellyfin.org/projects/jellyfin-android/jellyfin-androidtv/">  
-<img alt="Translation Status" src="https://translate.jellyfin.org/widgets/jellyfin-android/-/jellyfin-androidtv/svg-badge.svg"/>  
-</a>  
-<br/>  
 <a href="https://opencollective.com/jellyfin">  
 <img alt="Donate" src="https://img.shields.io/opencollective/all/jellyfin.svg?label=backers"/>  
 </a>  
