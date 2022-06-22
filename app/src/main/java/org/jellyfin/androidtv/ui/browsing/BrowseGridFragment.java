@@ -18,17 +18,7 @@ public class BrowseGridFragment extends StdGridFragment {
     protected float getGridScaling() {
 //        final float xhdpi = 2.0f;
 //        return 1.5f; //xhdpi + (xhdpi - requireContext().getResources().getDisplayMetrics().density); // use a fixed xhdpi scale
-        return 2.0f; // use default scaling -> make setting out of it
-    }
-
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
+        return 2.0f; // use default scaling
     }
 
     @Override

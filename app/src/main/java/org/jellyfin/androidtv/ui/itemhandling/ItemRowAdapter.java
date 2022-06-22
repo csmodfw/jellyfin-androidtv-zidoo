@@ -832,7 +832,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
             public void onResponse(ItemsResult response) {
                 if (response.getItems() != null && response.getItems().length > 0) {
                     setTotalItems(query.getEnableTotalRecordCount() ? response.getTotalRecordCount() : response.getItems().length);
-                    final int olditemsloaded = getItemsLoaded();
                     int i = getItemsLoaded();
                     int prevItems = i == 0 && size() > 0 ? size() : 0;
                     for (BaseItemDto item : response.getItems()) {
