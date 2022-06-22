@@ -40,7 +40,6 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
 - future plans
     - add/improve default player audio/subtitle handling
     - add support for vlclib software decode fallback on Hi10 *(H264/10 bit)* files
-    - library Ui option to allow adjusting the poster view scale 
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
    - working resume, seek and playback position reporting
