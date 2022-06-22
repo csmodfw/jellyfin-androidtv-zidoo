@@ -41,7 +41,9 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
   - disabled confusing player options not related to Zidoo player
   - force use of Zidoo player always
 - beta3
-	- working nfs playback mode
+  - working nfs playback mode
+- beta4
+  - grid layout improvements and fixes
 - future plans
     - add/improve default player audio/subtitle handling
     - add support for vlclib software decode fallback on Hi10 *(H264/10 bit)* files
