@@ -10,13 +10,6 @@
 <a href="https://github.com/jellyfin/jellyfin-androidtv">  
 <img alt="GPL 2.0 License" src="https://img.shields.io/github/license/jellyfin/jellyfin-androidtv.svg"/>  
 </a>  
-<a href="https://github.com/Andy2244/jellyfin-androidtv-zidoo/releases">  
-<img alt="Current Zidoo Edition Release" src="https://img.shields.io/github/release/jellyfin/jellyfin-androidtv.svg"/>  
-</a>  
-<a href="https://translate.jellyfin.org/projects/jellyfin-android/jellyfin-androidtv/">  
-<img alt="Translation Status" src="https://translate.jellyfin.org/widgets/jellyfin-android/-/jellyfin-androidtv/svg-badge.svg"/>  
-</a>  
-<br/>  
 <a href="https://opencollective.com/jellyfin">  
 <img alt="Donate" src="https://img.shields.io/opencollective/all/jellyfin.svg?label=backers"/>  
 </a>  
@@ -41,11 +34,12 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
   - disabled confusing player options not related to Zidoo player
   - force use of Zidoo player always
 - beta3
-	- working nfs playback mode
+  - working nfs playback mode
+- beta4
+  - grid layout improvements and fixes
 - future plans
     - add/improve default player audio/subtitle handling
     - add support for vlclib software decode fallback on Hi10 *(H264/10 bit)* files
-    - library Ui option to allow adjusting the poster view scale 
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
    - working resume, seek and playback position reporting
