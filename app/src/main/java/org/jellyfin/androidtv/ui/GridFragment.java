@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -20,6 +21,7 @@ import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
 import androidx.leanback.widget.RowPresenter;
 import androidx.leanback.widget.VerticalGridPresenter;
+import androidx.recyclerview.widget.RecyclerView;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.data.model.FilterOptions;
@@ -47,31 +49,14 @@ public class GridFragment extends Fragment {
     protected LinearLayout mInfoRow;
     protected LinearLayout mToolBar;
     private ItemRowAdapter mAdapter;
-    protected Presenter mGridPresenter;
+    private Presenter mGridPresenter;
     private Presenter.ViewHolder mGridViewHolder;
     protected BaseGridView mGridView;
     private OnItemViewSelectedListener mOnItemViewSelectedListener;
     private OnItemViewClickedListener mOnItemViewClickedListener;
     private int mSelectedPosition = -1;
-
-    protected int SMALL_CARD;
-    protected int MED_CARD;
-    protected int LARGE_CARD;
-    protected int SMALL_BANNER;
-    protected int MED_BANNER;
-    protected int LARGE_BANNER;
-    protected int SMALL_VERTICAL_POSTER;
-    protected int MED_VERTICAL_POSTER;
-    protected int LARGE_VERTICAL_POSTER;
-    protected int SMALL_VERTICAL_SQUARE;
-    protected int MED_VERTICAL_SQUARE;
-    protected int LARGE_VERTICAL_SQUARE;
-    protected int SMALL_VERTICAL_THUMB;
-    protected int MED_VERTICAL_THUMB;
-    protected int LARGE_VERTICAL_THUMB;
-    protected int SMALL_VERTICAL_BANNER;
-    protected int MED_VERTICAL_BANNER;
-    protected int LARGE_VERTICAL_BANNER;
+    private int mGridHeight = -1;
+    private int mGridWidth = -1;
 
     // ability to use different scaling for grids, we may prefer fixed cardSize over adapting row/col sizes
     protected float getGridScaling() {
@@ -82,26 +67,10 @@ public class GridFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        final float gridscale = getGridScaling();
-
-        SMALL_CARD = Math.round(gridscale * 116);
-        MED_CARD = Math.round(gridscale * 175);
-        LARGE_CARD = Math.round(gridscale * 210);
-        SMALL_BANNER = Math.round(gridscale * 58);
-        MED_BANNER = Math.round(gridscale * 88);
-        LARGE_BANNER = Math.round(gridscale * 105);
-        SMALL_VERTICAL_POSTER = Math.round(gridscale * 116);
-        MED_VERTICAL_POSTER = Math.round(gridscale * 171);
-        LARGE_VERTICAL_POSTER = Math.round(gridscale * 202);
-        SMALL_VERTICAL_SQUARE = Math.round(gridscale * 114);
-        MED_VERTICAL_SQUARE = Math.round(gridscale * 163);
-        LARGE_VERTICAL_SQUARE = Math.round(gridscale * 206);
-        SMALL_VERTICAL_THUMB = Math.round(gridscale * 116);
-        MED_VERTICAL_THUMB = Math.round(gridscale * 155);
-        LARGE_VERTICAL_THUMB = Math.round(gridscale * 210);
-        SMALL_VERTICAL_BANNER = Math.round(gridscale * 51);
-        MED_VERTICAL_BANNER = Math.round(gridscale * 77);
-        LARGE_VERTICAL_BANNER = Math.round(gridscale * 118);
+        // init with some working defaults
+        final DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
+        mGridHeight = display.heightPixels - Math.round(display.density * 130.6f); // top + bottom elements
+        mGridWidth = display.widthPixels;
 
         sortOptions = new HashMap<>();
         {
@@ -165,13 +134,23 @@ public class GridFragment extends Fragment {
         return mAdapter;
     }
 
+    private boolean updateGridMeasurements() {
+        if (mGridDock != null && mGridDock.getWidth() > 0 && mGridDock.getHeight() > 0) {
+            if (mGridWidth != mGridDock.getWidth() || mGridHeight != mGridDock.getHeight()) {
+                mGridWidth = mGridDock.getWidth();
+                mGridHeight = mGridDock.getHeight();
+                return true;
+            }
+        }
+        return false;
+    }
+
     public int getGridHeight() {
-        final DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
-        return display.heightPixels - Math.round(display.density * 129.5f); // top + bottom elements
+        return mGridHeight;
     }
 
     public int getGridWidth() {
-        return requireContext().getResources().getDisplayMetrics().widthPixels;
+        return mGridWidth;
     }
 
     public void setItem(BaseRowItem item) {
@@ -245,8 +224,24 @@ public class GridFragment extends Fragment {
                     Timber.d("row selected position %s", position);
                     onRowSelected(position);
                     if (mOnItemViewSelectedListener != null && position >= 0) {
-                        mOnItemViewSelectedListener.onItemSelected(itemViewHolder, item,
-                                rowViewHolder, row);
+                        mOnItemViewSelectedListener.onItemSelected(itemViewHolder, item, rowViewHolder, row);
+                    }
+
+                    // onGridCreate = 0 padding to prevent card cutoff, after select set padding
+                    if (position > 0) {
+                        if (mGridPresenter instanceof HorizontalGridPresenter && mGridView.getPaddingRight() != mGridView.getPaddingLeft()) {
+                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingLeft(), mGridView.getPaddingBottom()); // match left/right
+                        }
+                        else if (mGridPresenter instanceof VerticalGridPresenter && mGridView.getPaddingTop() != mGridView.getPaddingBottom()) {
+                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingRight(), mGridView.getPaddingTop()); // match top/bottom
+                        }
+                    } if (position == 0) {
+                        if (mGridPresenter instanceof HorizontalGridPresenter && mGridView.getPaddingRight() != 0) {
+                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), 0, mGridView.getPaddingBottom()); // match left/right
+                        }
+                        else if (mGridPresenter instanceof VerticalGridPresenter && mGridView.getPaddingBottom() != 0) {
+                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingRight(), 0); // match top/bottom
+                        }
                     }
                 }
             };
@@ -309,25 +304,22 @@ public class GridFragment extends Fragment {
         // Hide the description because we don't have room for it
         binding.npBug.showDescription(false);
 
+        // NOTE: we only get the 100% correct grid size if we render it once, so hook into it here
+        mGridDock.post(() -> {
+            if (updateGridMeasurements()) {
+                onGridSizeMeasurementsChanged();
+            }
+        });
+
         return binding.getRoot();
     }
+
+    protected void onGridSizeMeasurementsChanged() {    }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         Timber.d("XXX: onViewCreated");
         createGrid();
-    }
-
-    public void printGridStats()
-    {
-        if (mGridDock != null) {
-            Timber.d("XXX createGrid: mGridDock.getWidth: <%s> mGridDock.getHeight: <%s>", mGridDock.getWidth(), mGridDock.getHeight());
-        }
-        if (mGridView != null) {
-            Timber.d("XXX createGrid: mGridView.getPadding: L<%s> R<%s> T<%s> B<%s>", mGridView.getPaddingLeft(), mGridView.getPaddingRight(), mGridView.getPaddingTop(), mGridView.getPaddingBottom());
-            Timber.d("XXX createGrid: mGridView.getHorizontalSpacing <%s> mGridView.getVerticalSpacing <%s>", mGridView.getHorizontalSpacing(), mGridView.getVerticalSpacing());
-            Timber.d("XXX createGrid: mGridView.WindowAlignment Offset <%s> OffsetPercent <%s> Alignment <%s>", mGridView.getWindowAlignmentOffset(), mGridView.getWindowAlignmentOffsetPercent(), mGridView.getWindowAlignment());
-        }
     }
 
     protected void createGrid() {
