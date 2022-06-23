@@ -19,7 +19,7 @@ class LibraryPreferences(
 	api = api,
 ) {
 	companion object {
-		val posterSize = enumPreference("PosterSize", PosterSize.MED)
+		val posterSize = enumPreference("PosterSize", PosterSize.SMALL)
 		val imageType = enumPreference("ImageType", ImageType.POSTER)
 		val gridDirection = enumPreference("GridDirection", GridDirection.VERTICAL)
 		val enableSmartScreen = booleanPreference("SmartScreen", false)
