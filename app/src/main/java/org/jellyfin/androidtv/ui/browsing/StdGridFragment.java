@@ -55,7 +55,6 @@ import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.apiclient.interaction.EmptyResponse;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
-import org.jellyfin.apiclient.model.entities.CollectionType;
 import org.jellyfin.apiclient.model.querying.ItemSortBy;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 
@@ -93,12 +92,15 @@ public class StdGridFragment extends GridFragment {
     private final Lazy<PreferencesRepository> preferencesRepository = inject(PreferencesRepository.class);
     private final Lazy<UserViewsRepository> userViewsRepository = inject(UserViewsRepository.class);
 
-    private boolean mDirty = true; // CardHeight or RowDef changed
+    private final int MIN_NUM_CARDS = 5;
+    private double mCardFocusScale = 1.15;
+    private final int MIN_GRIDSIZE_CHANGE_DELTA = 4; // minimum pixel size changes, to trigger a recreate of the grid via onGridSizeMeasurements
+
+    private boolean mDirty = true; // CardHeight, RowDef or GridSize changed
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         Timber.i("XXX onCreate");
 
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), requireActivity().getIntent().getStringExtra(Extras.Folder));
@@ -108,12 +110,15 @@ public class StdGridFragment extends GridFragment {
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
         mGridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
+        mCardFocusScale = getResources().getFraction(R.fraction.card_scale_focus, 1, 1);
 
         if (mGridDirection.equals(GridDirection.VERTICAL))
             setGridPresenter(new VerticalGridPresenter());
         else
             setGridPresenter(new HorizontalGridPresenter());
 
+        setDefaultGridRowCols(mPosterSizeSetting, mImageType);
+        setGridItemSpacing(getDefaultGridItemSpacing());
         mJumplistPopup = new JumplistPopup();
     }
 
@@ -157,7 +162,7 @@ public class StdGridFragment extends GridFragment {
         } catch (Exception ignored) {        }
     }
 
-    protected int getCardWidthBy(float cardHeight, ImageType imageType) {
+    protected int getCardWidthBy(double cardHeight, ImageType imageType) {
         switch (imageType) {
             case POSTER:
                 return (int) Math.round(cardHeight * ImageUtils.ASPECT_RATIO_2_3);
@@ -170,7 +175,7 @@ public class StdGridFragment extends GridFragment {
         }
     }
 
-    protected int getCardHeightBy(float cardWidth, ImageType imageType) {
+    protected int getCardHeightBy(double cardWidth, ImageType imageType) {
         switch (imageType) {
             case POSTER:
                 return (int) Math.round(cardWidth / ImageUtils.ASPECT_RATIO_2_3);
@@ -221,18 +226,48 @@ public class StdGridFragment extends GridFragment {
         }
     }
 
-    protected int calcCardHeightBy(Presenter presenter, BaseGridView gridView) {
+    private void setGridPaddingBy(int cardHeight, double cardFocusScaling) {
+        if (cardHeight <= 0 || cardFocusScaling < 1.0) {
+            Timber.e("Invalid cardHeight/cardFocusScaling, cant calculate padding!");
+            return;
+        }
+        BaseGridView gridView = getGridView();
+        Presenter presenter = getGridPresenter();
+        if (presenter == null || gridView == null) {
+            Timber.e("Invalid presenter/gridView, cant calculate padding!");
+            return;
+        }
+        final double cardScaling = Math.max(cardFocusScaling - 1.0, 0.0);
+        int card_padding_top = (int) Math.round(((cardHeight * cardScaling) / 2.0) + 0.5);
+        int card_width = getCardWidthBy(cardHeight, mImageType);
+        int card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
+
+        if (presenter instanceof HorizontalGridPresenter) {
+            gridView.setPadding(card_padding_left,card_padding_top,0,card_padding_top); // prevent initial card cutoffs
+        } else if (presenter instanceof VerticalGridPresenter) {
+            gridView.setPadding(card_padding_left,card_padding_top,card_padding_left,0); // prevent initial card cutoffs
+        }
+    }
+
+    private int calcCardHeightBy(int minNumCards, double cardFocusScaling) {
+        if (minNumCards < 1 || cardFocusScaling < 1.0) {
+            Timber.e("Invalid minNumCards/cardFocusScaling, cant calculate CardHeight!");
+            return 0;
+        }
+        BaseGridView gridView = getGridView();
+        Presenter presenter = getGridPresenter();
+        if (presenter == null || gridView == null) {
+            Timber.e("Invalid presenter/gridView, cant calculate CardHeight!");
+            return 0;
+        }
+        final double cardScaling = Math.max(cardFocusScaling - 1.0, 0.0);
         int spacing_h = gridView.getHorizontalSpacing();
         int spacing_v = gridView.getVerticalSpacing();
         int grid_height = getGridHeight();
         int grid_width = getGridWidth();
-        final float cardScaling = 0.15f;
         int maxCardHeight;
-        int maxCard_padding_top;
-        int maxCard_padding_left;
 
         {
-            final int minNumCards = 5; // at least try to display 5 cards on screen
             int space_h = (minNumCards - 1) * spacing_h;
             int grid_width_adj = grid_width - space_h;
             int card_width = grid_width_adj / minNumCards;
@@ -241,10 +276,8 @@ public class StdGridFragment extends GridFragment {
             grid_width_adj = grid_width - (card_padding_left + space_h);
             card_width = grid_width_adj / minNumCards;
             maxCardHeight = getCardHeightBy(card_width, mImageType);
-            maxCard_padding_top = (int) Math.round(((maxCardHeight * cardScaling) / 2.0) + 0.5);
-            maxCard_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
         }
-
+        // NOTE: There should be a full solution to this math problem, without the second iteration.
         if (presenter instanceof HorizontalGridPresenter) {
             int numRows = ((HorizontalGridPresenter) presenter).getNumberOfRows();
             if (numRows > 1) {
@@ -255,14 +288,8 @@ public class StdGridFragment extends GridFragment {
                 // second iteration with padding
                 grid_height_adj = grid_height - ((card_padding_top * 2) + space_v);
                 card_height = grid_height_adj / numRows;
-                card_padding_top = (int) Math.round(((card_height * cardScaling) / 2.0) + 0.5);
-
-                int card_width = getCardWidthBy(card_height, mImageType);
-                int card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
-                gridView.setPadding(card_padding_left,card_padding_top,0,card_padding_top); // prevent initial card cutoffs
                 return card_height;
             } else {
-                gridView.setPadding(maxCard_padding_left,maxCard_padding_top,0,maxCard_padding_top);
                 return maxCardHeight;
             }
         } else if (presenter instanceof VerticalGridPresenter) {
@@ -275,13 +302,9 @@ public class StdGridFragment extends GridFragment {
                 // second iteration with padding
                 grid_width_adj = grid_width - ((card_padding_left * 2) + space_h);
                 card_width = grid_width_adj / numCols;
-                card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
                 int card_height = getCardHeightBy(card_width, mImageType);
-                int card_padding_top = (int) Math.round(((card_height * cardScaling) / 2.0) + 0.5);
-                gridView.setPadding(card_padding_left,card_padding_top,card_padding_left,0); // prevent initial card cutoffs
                 return card_height;
             } else {
-                gridView.setPadding(maxCard_padding_left,maxCard_padding_top,maxCard_padding_left,0);
                 return maxCardHeight;
             }
         } else {
@@ -289,28 +312,19 @@ public class StdGridFragment extends GridFragment {
         }
     }
 
-    protected int getGridItemSpacing() {
+    // fixed pixel values, since the grid is also density independent
+    // values based on 1080p with a 2.0 display density
+    private int getDefaultGridItemSpacing() {
         switch (mPosterSizeSetting) {
             case SMALL:
-                return Math.round(getGridScaling() * 6); //dp, keep spacing density independent
+                return 12;
             case MED:
-                return Math.round(getGridScaling() * 10);
+                return 20;
             case LARGE:
-                return Math.round(getGridScaling() * 14);
+                return 28;
             default:
                 throw new IllegalStateException("Unexpected value: " + mPosterSizeSetting);
         }
-    }
-
-    @Override
-    protected void createGrid() {
-        setDefaultGridRowCols(mPosterSizeSetting, mImageType);
-        super.createGrid();
-
-        // adjust padding/spacing
-        mGridView.setItemSpacing(getGridItemSpacing());
-//        final int padding = 0;
-//        mGridView.setPadding(padding, padding, padding, padding);
     }
 
     @Override
@@ -338,12 +352,22 @@ public class StdGridFragment extends GridFragment {
     }
 
     @Override
-    protected void onGridSizeMeasurementsChanged() {
-        Timber.d("XXX: onGridSizeMeasurementsChanged");
-        determiningPosterSize = true;
-        createGrid();
-        loadGrid();
-        determiningPosterSize = false;
+    protected void onGridSizeMeasurements(int gridHeight, int gridWidth) {
+        Timber.d("XXX: onGridSizeMeasurements");
+        BaseGridView gridView = getGridView();
+        if (gridView == null) {
+            return;
+        }
+        // prevent adaption on minor size delta's
+        if (Math.abs(getGridHeight() - gridHeight) > MIN_GRIDSIZE_CHANGE_DELTA || Math.abs(getGridWidth() - gridWidth) > MIN_GRIDSIZE_CHANGE_DELTA) {
+            setGridSize(gridHeight, gridWidth); // set to new "real" measured size
+            Timber.d("XXX: Auto-Adapting grid size to height <%s> width <%s>", gridHeight, gridWidth);
+            mDirty = true;
+            determiningPosterSize = true;
+            createGrid();
+            loadGrid();
+            determiningPosterSize = false;
+        }
     }
 
     @Override
@@ -356,7 +380,7 @@ public class StdGridFragment extends GridFragment {
         GridDirection gridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
 
 
-        if (mImageType != imageType || mPosterSizeSetting != posterSizeSetting || mGridDirection != gridDirection) {
+        if (mImageType != imageType || mPosterSizeSetting != posterSizeSetting || mGridDirection != gridDirection || isDirty()) {
             determiningPosterSize = true;
 
             mImageType = imageType;
@@ -368,7 +392,8 @@ public class StdGridFragment extends GridFragment {
             } else if (mGridDirection.equals(GridDirection.HORIZONTAL) && (getGridPresenter() == null || !(getGridPresenter() instanceof HorizontalGridPresenter))) {
                 setGridPresenter(new HorizontalGridPresenter());
             }
-
+            setDefaultGridRowCols(mPosterSizeSetting, mImageType);
+            setGridItemSpacing(getDefaultGridItemSpacing());
             createGrid();
             loadGrid();
             determiningPosterSize = false;
@@ -436,6 +461,9 @@ public class StdGridFragment extends GridFragment {
                 mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getQuery(), mRowDef.getChunkSize(), mRowDef.getPreferParentThumb(), mRowDef.isStaticHeight(), mCardPresenter, null);
                 break;
         }
+        if (isDirty()) {
+            Timber.d("XXX buildAdapter was Dirty!");
+        }
         mDirty = false;
 
         FilterOptions filters = new FilterOptions();
@@ -449,15 +477,16 @@ public class StdGridFragment extends GridFragment {
 
     public void loadGrid() {
         Timber.d("XXX loadGrid");
-        setCardHeight(calcCardHeightBy(getGridPresenter(),mGridView));
+        setCardHeight(calcCardHeightBy(MIN_NUM_CARDS, mCardFocusScale));
         if (mCardPresenter == null || mGridAdapter == null || isDirty())  {
+            setGridPaddingBy(getCardHeight(), mCardFocusScale);
             buildAdapter();
         }
 
         mGridAdapter.setSortBy(getSortOption(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())));
         mGridAdapter.Retrieve();
 
-//        printViewStats(mGridView);
+//        printViewStats(getGridView());
 //        printViewStats(mGridDock);
     }
 
