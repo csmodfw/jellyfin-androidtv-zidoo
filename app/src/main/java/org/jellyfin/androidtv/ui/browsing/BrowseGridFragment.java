@@ -15,13 +15,6 @@ public class BrowseGridFragment extends StdGridFragment {
     private final static int CHUNK_SIZE = 50;
 
     @Override
-    protected float getGridScaling() {
-//        final float xhdpi = 2.0f;
-//        return 1.5f; //xhdpi + (xhdpi - requireContext().getResources().getDisplayMetrics().density); // use a fixed xhdpi scale
-        return 2.0f; // use default scaling
-    }
-
-    @Override
     protected void setupQueries() {
         StdItemQuery query = new StdItemQuery(new ItemFields[] {
                 ItemFields.PrimaryImageAspectRatio,

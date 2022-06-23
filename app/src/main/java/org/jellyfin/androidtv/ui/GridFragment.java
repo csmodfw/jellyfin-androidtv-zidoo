@@ -51,17 +51,13 @@ public class GridFragment extends Fragment {
     private ItemRowAdapter mAdapter;
     private Presenter mGridPresenter;
     private Presenter.ViewHolder mGridViewHolder;
-    protected BaseGridView mGridView;
+    private BaseGridView mGridView;
     private OnItemViewSelectedListener mOnItemViewSelectedListener;
     private OnItemViewClickedListener mOnItemViewClickedListener;
     private int mSelectedPosition = -1;
     private int mGridHeight = -1;
     private int mGridWidth = -1;
-
-    // ability to use different scaling for grids, we may prefer fixed cardSize over adapting row/col sizes
-    protected float getGridScaling() {
-        return requireContext().getResources().getDisplayMetrics().density; // HINT: xdpi holds physical dpi of screen
-    }
+    private int mGridItemSpacing = 0;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -69,7 +65,7 @@ public class GridFragment extends Fragment {
 
         // init with some working defaults
         final DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
-        mGridHeight = display.heightPixels - Math.round(display.density * 130.6f); // top + bottom elements
+        mGridHeight = display.heightPixels - Math.round(display.density * 130.6f); // top + bottom in dp, elements scale with density so adjust accordingly
         mGridWidth = display.widthPixels;
 
         sortOptions = new HashMap<>();
@@ -79,7 +75,7 @@ public class GridFragment extends Fragment {
             sortOptions.put(2, new SortOption(getString(R.string.lbl_premier_date), ItemSortBy.PremiereDate + "," + ItemSortBy.SortName, SortOrder.Descending));
             sortOptions.put(3, new SortOption(getString(R.string.lbl_rating), ItemSortBy.OfficialRating + "," + ItemSortBy.SortName, SortOrder.Ascending));
             sortOptions.put(4, new SortOption(getString(R.string.lbl_community_rating), ItemSortBy.CommunityRating + "," + ItemSortBy.SortName, SortOrder.Descending));
-            sortOptions.put(5,new SortOption(getString(R.string.lbl_critic_rating), ItemSortBy.CriticRating + "," + ItemSortBy.SortName, SortOrder.Descending));
+            sortOptions.put(5, new SortOption(getString(R.string.lbl_critic_rating), ItemSortBy.CriticRating + "," + ItemSortBy.SortName, SortOrder.Descending));
             sortOptions.put(6, new SortOption(getString(R.string.lbl_last_played), ItemSortBy.DatePlayed + "," + ItemSortBy.SortName, SortOrder.Descending));
         }
     }
@@ -134,15 +130,11 @@ public class GridFragment extends Fragment {
         return mAdapter;
     }
 
-    private boolean updateGridMeasurements() {
-        if (mGridDock != null && mGridDock.getWidth() > 0 && mGridDock.getHeight() > 0) {
-            if (mGridWidth != mGridDock.getWidth() || mGridHeight != mGridDock.getHeight()) {
-                mGridWidth = mGridDock.getWidth();
-                mGridHeight = mGridDock.getHeight();
-                return true;
-            }
-        }
-        return false;
+    /**
+     * @return the GridView for the fragment.
+     */
+    public BaseGridView getGridView() {
+        return mGridView;
     }
 
     public int getGridHeight() {
@@ -153,6 +145,11 @@ public class GridFragment extends Fragment {
         return mGridWidth;
     }
 
+    protected void setGridSize(int height, int width) {
+        mGridHeight = height;
+        mGridWidth = width;
+    }
+
     public void setItem(BaseRowItem item) {
         if (item != null) {
             mTitleView.setText(item.getFullName(requireContext()));
@@ -161,6 +158,14 @@ public class GridFragment extends Fragment {
             mTitleView.setText("");
             mInfoRow.removeAllViews();
         }
+    }
+
+    public int getGridItemSpacing() {
+        return mGridItemSpacing;
+    }
+
+    protected void setGridItemSpacing(int gridItemSpacing) {
+        mGridItemSpacing = gridItemSpacing;
     }
 
     public class SortOption {
@@ -306,15 +311,18 @@ public class GridFragment extends Fragment {
 
         // NOTE: we only get the 100% correct grid size if we render it once, so hook into it here
         mGridDock.post(() -> {
-            if (updateGridMeasurements()) {
-                onGridSizeMeasurementsChanged();
-            }
+                if (mGridDock.getHeight() > 0 && mGridDock.getWidth() > 0) {
+                    onGridSizeMeasurements(mGridDock.getHeight(), mGridDock.getWidth());
+                }
         });
 
         return binding.getRoot();
     }
 
-    protected void onGridSizeMeasurementsChanged() {    }
+    /**
+     * Callback for measured GridSize.
+     */
+    protected void onGridSizeMeasurements(int gridHeight, int gridWidth) {    }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -334,6 +342,8 @@ public class GridFragment extends Fragment {
         }
 
         mGridView.setFocusable(true);
+        mGridView.setItemSpacing(mGridItemSpacing);
+
         mGridDock.removeAllViews();
         mGridDock.addView(mGridViewHolder.view);
 
