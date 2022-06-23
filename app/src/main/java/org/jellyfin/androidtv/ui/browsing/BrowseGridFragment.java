@@ -1,7 +1,5 @@
 package org.jellyfin.androidtv.ui.browsing;
 
-import android.os.Bundle;
-
 import org.jellyfin.androidtv.auth.repository.UserRepository;
 import org.jellyfin.androidtv.constant.ChangeTriggerType;
 import org.jellyfin.androidtv.constant.Extras;
@@ -12,7 +10,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.koin.java.KoinJavaComponent;
 
 public class BrowseGridFragment extends StdGridFragment {
-    private final static int CHUNK_SIZE = 50;
+    private final static int CHUNK_SIZE_DEFAULT = 50;
 
     @Override
     protected void setupQueries() {
@@ -52,7 +50,7 @@ public class BrowseGridFragment extends StdGridFragment {
                                 ItemFields.ChildCount
                         });
                         albumArtists.setParentId(mParentId.toString());
-                        setRowDef(new BrowseRowDef("", albumArtists, CHUNK_SIZE, new ChangeTriggerType[] {}));
+                        setRowDef(new BrowseRowDef("", albumArtists, CHUNK_SIZE_DEFAULT, new ChangeTriggerType[] {}));
                         return;
                     }
                     query.setIncludeItemTypes(new String[]{includeType != null ? includeType : "MusicAlbum"});
@@ -61,6 +59,6 @@ public class BrowseGridFragment extends StdGridFragment {
             }
         }
 
-        setRowDef(new BrowseRowDef("", query, CHUNK_SIZE, false, true));
+        setRowDef(new BrowseRowDef("", query, CHUNK_SIZE_DEFAULT, false, true));
     }
 }

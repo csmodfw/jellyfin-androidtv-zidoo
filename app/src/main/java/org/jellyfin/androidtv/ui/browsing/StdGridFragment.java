@@ -190,12 +190,18 @@ public class StdGridFragment extends GridFragment {
 
     protected void setDefaultGridRowCols(PosterSize posterSize, ImageType imageType) {
         Presenter presenter = getGridPresenter();
+        // HINT: use uneven numCols if possible, so selected middle lines up with TV middle!
         if (presenter instanceof VerticalGridPresenter) {
             int numCols = 2;
-
             switch (posterSize) {
+                case TINY:
+                    numCols = imageType.equals(ImageType.BANNER) ? 6 : imageType.equals(ImageType.THUMB) ? 11 : 15;
+                    break;
+                case SMALLER:
+                    numCols = imageType.equals(ImageType.BANNER) ? 5 : imageType.equals(ImageType.THUMB) ? 9 : 13;
+                    break;
                 case SMALL:
-                    numCols = imageType.equals(ImageType.BANNER) ? 4 : imageType.equals(ImageType.THUMB) ? 7 : 10;
+                    numCols = imageType.equals(ImageType.BANNER) ? 4 : imageType.equals(ImageType.THUMB) ? 7 : 11;
                     break;
                 case MED:
                     numCols = imageType.equals(ImageType.BANNER) ? 3 : imageType.equals(ImageType.THUMB) ? 5 : 7;
@@ -210,6 +216,12 @@ public class StdGridFragment extends GridFragment {
         } else if (presenter instanceof HorizontalGridPresenter) {
             int numRows = 2;
             switch (posterSize) {
+                case TINY:
+                    numRows = imageType.equals(ImageType.BANNER) ? 13 : imageType.equals(ImageType.THUMB) ? 7 : 5;
+                    break;
+                case SMALLER:
+                    numRows = imageType.equals(ImageType.BANNER) ? 11 : imageType.equals(ImageType.THUMB) ? 6 : 4;
+                    break;
                 case SMALL:
                     numRows = imageType.equals(ImageType.BANNER) ? 9 : imageType.equals(ImageType.THUMB) ? 5 : 3;
                     break;
@@ -223,6 +235,25 @@ public class StdGridFragment extends GridFragment {
                     throw new IllegalStateException("Unexpected value: " + mPosterSizeSetting);
             }
             ((HorizontalGridPresenter) presenter).setNumberOfRows(numRows);
+        }
+    }
+
+    // fixed pixel values, since the grid is also density independent
+    // values based on 1080p with a 2.0 display density
+    private int getDefaultGridItemSpacing() {
+        switch (mPosterSizeSetting) {
+            case TINY:
+                return 6;
+            case SMALLER:
+                return 8;
+            case SMALL:
+                return 12;
+            case MED:
+                return 20;
+            case LARGE:
+                return 28;
+            default:
+                throw new IllegalStateException("Unexpected value: " + mPosterSizeSetting);
         }
     }
 
@@ -241,6 +272,13 @@ public class StdGridFragment extends GridFragment {
         int card_padding_top = (int) Math.round(((cardHeight * cardScaling) / 2.0) + 0.5);
         int card_width = getCardWidthBy(cardHeight, mImageType);
         int card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
+        if (mImageType == ImageType.BANNER) {
+            // FIX: we run into some math rounding errors, so the grid moves a tiny bit in vertical mode
+            card_padding_left = (int) Math.min(card_padding_left * 0.99, card_padding_left - 4);
+        }
+        // no negative padding
+        card_padding_top = Math.max(card_padding_top, 0);
+        card_padding_left = Math.max(card_padding_left, 0);
 
         if (presenter instanceof HorizontalGridPresenter) {
             gridView.setPadding(card_padding_left,card_padding_top,0,card_padding_top); // prevent initial card cutoffs
@@ -312,19 +350,11 @@ public class StdGridFragment extends GridFragment {
         }
     }
 
-    // fixed pixel values, since the grid is also density independent
-    // values based on 1080p with a 2.0 display density
-    private int getDefaultGridItemSpacing() {
-        switch (mPosterSizeSetting) {
-            case SMALL:
-                return 12;
-            case MED:
-                return 20;
-            case LARGE:
-                return 28;
-            default:
-                throw new IllegalStateException("Unexpected value: " + mPosterSizeSetting);
-        }
+    private int estimateNumCardsScreen()
+    {
+        int gridArea = getGridHeight() * getGridWidth();
+        int cardArea = mCardHeight * getCardWidthBy(mCardHeight, mImageType);
+        return (gridArea / cardArea);
     }
 
     @Override
@@ -420,6 +450,14 @@ public class StdGridFragment extends GridFragment {
         mCardPresenter = new CardPresenter(false, mImageType, getCardHeight());
         Timber.d("XXX buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, getCardWidthBy(mCardHeight, mImageType), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
 
+        // adapt chunk size if needed
+        int chunkSize = mRowDef.getChunkSize();
+        int estCardsScreen = estimateNumCardsScreen();
+        if (estCardsScreen > chunkSize) {
+            chunkSize = Math.min((int) (estCardsScreen * 1.15), 100); // sanity limit
+            Timber.d("XXX buildAdapter adjusting chunkSize to <%s> screenEst <%s>",chunkSize,estCardsScreen);
+        }
+
         switch (mRowDef.getQueryType()) {
             case NextUp:
                 mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getNextUpQuery(), true, mCardPresenter, null);
@@ -440,7 +478,7 @@ public class StdGridFragment extends GridFragment {
                 mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getSimilarQuery(), QueryType.SimilarMovies, mCardPresenter, null);
                 break;
             case Persons:
-                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getPersonsQuery(), mRowDef.getChunkSize(), mCardPresenter, null);
+                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getPersonsQuery(), chunkSize, mCardPresenter, null);
                 break;
             case LiveTvChannel:
                 mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getTvChannelQuery(), 40, mCardPresenter, null);
@@ -449,16 +487,16 @@ public class StdGridFragment extends GridFragment {
                 mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getProgramQuery(), mCardPresenter, null);
                 break;
             case LiveTvRecording:
-                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getRecordingQuery(), mRowDef.getChunkSize(), mCardPresenter, null);
+                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getRecordingQuery(), chunkSize, mCardPresenter, null);
                 break;
             case LiveTvRecordingGroup:
                 mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getRecordingGroupQuery(), mCardPresenter, null);
                 break;
             case AlbumArtists:
-                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getArtistsQuery(), mRowDef.getChunkSize(), mCardPresenter, null);
+                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getArtistsQuery(), chunkSize, mCardPresenter, null);
                 break;
             default:
-                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getQuery(), mRowDef.getChunkSize(), mRowDef.getPreferParentThumb(), mRowDef.isStaticHeight(), mCardPresenter, null);
+                mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getQuery(), chunkSize, mRowDef.getPreferParentThumb(), mRowDef.isStaticHeight(), mCardPresenter, null);
                 break;
         }
         if (isDirty()) {

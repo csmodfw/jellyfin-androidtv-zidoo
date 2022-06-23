@@ -372,6 +372,8 @@
     <string name="image_type_thumbnail">Thumbnail</string>
     <string name="image_type_banner">Banner</string>
     <string name="image_size_auto">Default</string>
+    <string name="image_size_tiny">Tiny</string>
+    <string name="image_size_smaller">Smaller</string>
     <string name="image_size_small">Small</string>
     <string name="image_size_medium">Medium</string>
     <string name="image_size_large">Large</string>
