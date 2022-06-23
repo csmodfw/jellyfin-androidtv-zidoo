@@ -162,27 +162,27 @@ public class StdGridFragment extends GridFragment {
         } catch (Exception ignored) {        }
     }
 
-    protected int getCardWidthBy(double cardHeight, ImageType imageType) {
+    protected double getCardWidthBy(double cardHeight, ImageType imageType) {
         switch (imageType) {
             case POSTER:
-                return (int) Math.round(cardHeight * ImageUtils.ASPECT_RATIO_2_3);
+                return cardHeight * ImageUtils.ASPECT_RATIO_2_3;
             case THUMB:
-                return (int) Math.round(cardHeight * ImageUtils.ASPECT_RATIO_16_9);
+                return cardHeight * ImageUtils.ASPECT_RATIO_16_9;
             case BANNER:
-                return (int) Math.round(cardHeight * CardPresenter.ASPECT_RATIO_BANNER);
+                return cardHeight * CardPresenter.ASPECT_RATIO_BANNER;
             default:
                 throw new IllegalStateException("Unexpected value: " + imageType);
         }
     }
 
-    protected int getCardHeightBy(double cardWidth, ImageType imageType) {
+    protected double getCardHeightBy(double cardWidth, ImageType imageType) {
         switch (imageType) {
             case POSTER:
-                return (int) Math.round(cardWidth / ImageUtils.ASPECT_RATIO_2_3);
+                return cardWidth / ImageUtils.ASPECT_RATIO_2_3;
             case THUMB:
-                return (int) Math.round(cardWidth / ImageUtils.ASPECT_RATIO_16_9);
+                return cardWidth / ImageUtils.ASPECT_RATIO_16_9;
             case BANNER:
-                return (int) Math.round(cardWidth / CardPresenter.ASPECT_RATIO_BANNER);
+                return cardWidth / CardPresenter.ASPECT_RATIO_BANNER;
             default:
                 throw new IllegalArgumentException("Unexpected value: " + imageType);
         }
@@ -270,12 +270,9 @@ public class StdGridFragment extends GridFragment {
         }
         final double cardScaling = Math.max(cardFocusScaling - 1.0, 0.0);
         int card_padding_top = (int) Math.round(((cardHeight * cardScaling) / 2.0) + 0.5);
-        int card_width = getCardWidthBy(cardHeight, mImageType);
+        double card_width = getCardWidthBy(cardHeight, mImageType);
         int card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
-        if (mImageType == ImageType.BANNER) {
-            // FIX: we run into some math rounding errors, so the grid moves a tiny bit in vertical mode
-            card_padding_left = (int) Math.min(card_padding_left * 0.99, card_padding_left - 4);
-        }
+
         // no negative padding
         card_padding_top = Math.max(card_padding_top, 0);
         card_padding_left = Math.max(card_padding_left, 0);
@@ -307,26 +304,26 @@ public class StdGridFragment extends GridFragment {
 
         {
             int space_h = (minNumCards - 1) * spacing_h;
-            int grid_width_adj = grid_width - space_h;
-            int card_width = grid_width_adj / minNumCards;
-            int card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
+            double grid_width_adj = grid_width - space_h;
+            double card_width = grid_width_adj / minNumCards;
+            double card_padding_left = (card_width * cardScaling) / 2.0;
             // second iteration with padding
             grid_width_adj = grid_width - (card_padding_left + space_h);
             card_width = grid_width_adj / minNumCards;
-            maxCardHeight = getCardHeightBy(card_width, mImageType);
+            maxCardHeight = (int) getCardHeightBy(card_width, mImageType);
         }
         // NOTE: There should be a full solution to this math problem, without the second iteration.
         if (presenter instanceof HorizontalGridPresenter) {
             int numRows = ((HorizontalGridPresenter) presenter).getNumberOfRows();
             if (numRows > 1) {
                 int space_v = Math.max(numRows - 1, 0) * spacing_v;
-                int grid_height_adj = grid_height - space_v;
-                int card_height = grid_height_adj / numRows;
-                int card_padding_top = (int) Math.round(((card_height * cardScaling) / 2.0) + 0.5);
+                double grid_height_adj = grid_height - space_v;
+                double card_height = grid_height_adj / numRows;
+                double card_padding_top = (card_height * cardScaling) / 2.0;
                 // second iteration with padding
                 grid_height_adj = grid_height - ((card_padding_top * 2) + space_v);
                 card_height = grid_height_adj / numRows;
-                return card_height;
+                return (int) card_height;
             } else {
                 return maxCardHeight;
             }
@@ -334,13 +331,13 @@ public class StdGridFragment extends GridFragment {
             int numCols = ((VerticalGridPresenter) presenter).getNumberOfColumns();
             if (numCols > 1) {
                 int space_h = Math.max(numCols - 1, 0) * spacing_h;
-                int grid_width_adj = grid_width - space_h;
-                int card_width = grid_width_adj / numCols;
-                int card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
+                double grid_width_adj = grid_width - space_h;
+                double card_width = grid_width_adj / numCols;
+                double card_padding_left = (card_width * cardScaling) / 2.0;
                 // second iteration with padding
                 grid_width_adj = grid_width - ((card_padding_left * 2) + space_h);
                 card_width = grid_width_adj / numCols;
-                int card_height = getCardHeightBy(card_width, mImageType);
+                int card_height = (int) getCardHeightBy(card_width, mImageType);
                 return card_height;
             } else {
                 return maxCardHeight;
@@ -352,9 +349,9 @@ public class StdGridFragment extends GridFragment {
 
     private int estimateNumCardsScreen()
     {
-        int gridArea = getGridHeight() * getGridWidth();
-        int cardArea = mCardHeight * getCardWidthBy(mCardHeight, mImageType);
-        return (gridArea / cardArea);
+        double gridArea = getGridHeight() * getGridWidth();
+        double cardArea = mCardHeight * getCardWidthBy(mCardHeight, mImageType);
+        return (int) (gridArea / cardArea);
     }
 
     @Override
