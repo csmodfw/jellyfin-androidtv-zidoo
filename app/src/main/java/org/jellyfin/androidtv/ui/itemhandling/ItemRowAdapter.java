@@ -498,7 +498,13 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
             Timber.d("XXX Not loading more because currently retrieving");
             return;
         }
-        if (pos >= itemsLoaded - 20) {
+        // This needs tobe based on the actual estimated cards on screen and type of presenter used
+        if (chunkSize > 0) {
+            if (pos >= (itemsLoaded - (chunkSize / 1.7))) {
+                Timber.d("XXX Loading more items trigger pos <%s> itemsLoaded <%s> from total <%s> with chunkSize <%s>", pos, itemsLoaded, totalItems, chunkSize);
+                retrieveNext();
+            }
+        } else if (pos >= itemsLoaded - 20) {
             Timber.d("XXX Loading more items trigger pos <%s> itemsLoaded <%s> from total <%s>", pos, itemsLoaded, totalItems);
             retrieveNext();
         }
