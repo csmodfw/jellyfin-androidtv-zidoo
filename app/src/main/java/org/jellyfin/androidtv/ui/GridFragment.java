@@ -57,7 +57,10 @@ public class GridFragment extends Fragment {
     private int mSelectedPosition = -1;
     private int mGridHeight = -1;
     private int mGridWidth = -1;
-    private int mGridItemSpacing = 0;
+    private int mGridItemSpacingHorizontal = 0;
+    private int mGridItemSpacingVertical = 0;
+    private int mGridPaddingLeft = 0;
+    private int mGridPaddingTop = 0;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -160,12 +163,14 @@ public class GridFragment extends Fragment {
         }
     }
 
-    public int getGridItemSpacing() {
-        return mGridItemSpacing;
+    protected void setGridItemSpacing(int spacingHorizontal, int spacingVertical) {
+        mGridItemSpacingHorizontal = spacingHorizontal;
+        mGridItemSpacingVertical = spacingVertical;
     }
 
-    protected void setGridItemSpacing(int gridItemSpacing) {
-        mGridItemSpacing = gridItemSpacing;
+    protected void setGridPadding(int gridPaddingLeft, int gridPaddingTop) {
+        mGridPaddingLeft = gridPaddingLeft;
+        mGridPaddingTop = gridPaddingTop;
     }
 
     public class SortOption {
@@ -336,13 +341,15 @@ public class GridFragment extends Fragment {
         if (mGridViewHolder instanceof HorizontalGridPresenter.ViewHolder) {
             mGridView = ((HorizontalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
             mGridView.setGravity(Gravity.CENTER_VERTICAL);
+            mGridView.setPadding(mGridPaddingLeft,mGridPaddingTop,0,mGridPaddingTop); // prevent initial card cutoffs
         } else if (mGridViewHolder instanceof VerticalGridPresenter.ViewHolder) {
             mGridView = ((VerticalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
             mGridView.setGravity(Gravity.CENTER_HORIZONTAL);
+            mGridView.setPadding(mGridPaddingLeft,mGridPaddingTop,mGridPaddingLeft,0); // prevent initial card cutoffs
         }
-
+        mGridView.setHorizontalSpacing(mGridItemSpacingHorizontal);
+        mGridView.setVerticalSpacing(mGridItemSpacingVertical);
         mGridView.setFocusable(true);
-        mGridView.setItemSpacing(mGridItemSpacing);
 
         mGridDock.removeAllViews();
         mGridDock.addView(mGridViewHolder.view);
