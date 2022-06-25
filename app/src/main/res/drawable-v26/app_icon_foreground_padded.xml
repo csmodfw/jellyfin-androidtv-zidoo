@@ -4,5 +4,12 @@
         android:drawable="@drawable/app_icon_foreground"
         android:end="18dp"
         android:start="18dp"
-        android:top="18dp"></item>
+        android:top="18dp"/>
+    <item android:drawable="@drawable/zidoologo"
+        android:height="19dp"
+        android:width="91dp"
+        android:gravity="bottom"
+        android:left="95dp"
+        android:bottom="90dp"
+    />
 </layer-list>

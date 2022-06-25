@@ -86,18 +86,18 @@ class CustomizationPreferencesScreen : OptionsFragment() {
 			}
 		}
 
-		category {
-			setTitle(R.string.pref_behavior)
-
-			shortcut {
-				setTitle(R.string.pref_audio_track_button)
-				bind(userPreferences, UserPreferences.shortcutAudioTrack)
-			}
-
-			shortcut {
-				setTitle(R.string.pref_subtitle_track_button)
-				bind(userPreferences, UserPreferences.shortcutSubtitleTrack)
-			}
-		}
+//		category {
+//			setTitle(R.string.pref_behavior)
+//
+//			shortcut {
+//				setTitle(R.string.pref_audio_track_button)
+//				bind(userPreferences, UserPreferences.shortcutAudioTrack)
+//			}
+//
+//			shortcut {
+//				setTitle(R.string.pref_subtitle_track_button)
+//				bind(userPreferences, UserPreferences.shortcutSubtitleTrack)
+//			}
+//		}
 	}
 }

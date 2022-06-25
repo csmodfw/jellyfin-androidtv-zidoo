@@ -295,7 +295,7 @@
     <string name="pref_device_model">Device model</string>
     <string name="grid_direction">Grid Direction</string>
     <string name="grid_direction_horizontal">Horizontal</string>
-    <string name="grid_direction_vertical">Vertical (experimental)</string>
+    <string name="grid_direction_vertical">Vertical</string>
     <string name="lbl_unknown_key">Unknown (%1s)</string>
     <string name="pref_audio_track_button">Audio track button</string>
     <string name="pref_subtitle_track_button">Subtitle track button</string>
@@ -310,6 +310,8 @@
     <string name="no_player_message">It doesn\'t appear you have a video capable app installed.  This option requires you install a 3rd party application for playing video content.</string>
     <string name="zidoo_player_error">Zidoo Player Failed</string>
     <string name="zidoo_player_error_message">Detected Zidoo playback error, check if your server libraries have correctly setup network paths or use path substitution via the \'Shared network folder:\' option on the server.\n\nFormats:\n smb://smb_user:smb_password@server_ip/share/folder\n nfs://server_ip/nfs_export/:\n\nExamples:\n smb://andy:1234@192.168.1.101/htpc-share/series\n nfs://192.168.1.101/home/andy/movies/:</string>
+    <string name="zidoo_player_notfound">Zidoo Player not found!</string>
+    <string name="zidoo_player_notfound_message">Can\'t find compatible Zidoo player on device!</string>
     <string name="lbl_clear">Clear</string>
     <string name="clear_expanded">Clear current video queue?</string>
     <string name="delete_warning">This will PERMANENTLY DELETE %1$s from your library. Are you VERY sure?</string>
@@ -372,11 +374,11 @@
     <string name="image_type_thumbnail">Thumbnail</string>
     <string name="image_type_banner">Banner</string>
     <string name="image_size_auto">Default</string>
-    <string name="image_size_tiny">Tiny</string>
-    <string name="image_size_smaller">Smaller</string>
+    <string name="image_size_smallest">Smallest</string>
     <string name="image_size_small">Small</string>
     <string name="image_size_medium">Medium</string>
     <string name="image_size_large">Large</string>
+    <string name="image_size_xlarge">Extra-Large</string>
     <string name="pref_developer_link">Developer options</string>
     <string name="pref_developer_link_description">Advanced and experimental features</string>
     <string name="lbl_hidden">Hidden</string>
