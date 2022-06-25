@@ -866,7 +866,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         String id = nfs_root.substring(nfs_root.lastIndexOf("/"), nfs_root.length());
 
         String outPath = ip2 + id + mPath;
-        Timber.i("ZDMCActivity = out mPath = %s",outPath);
+        Timber.d("ZDMCActivity = out mPath = %s",outPath);
     }
 
     // will crash via mountSambaServer() in internal player? URI data is correct?

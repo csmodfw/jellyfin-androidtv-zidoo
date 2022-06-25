@@ -92,6 +92,8 @@ public class StdGridFragment extends GridFragment {
     private final Lazy<PreferencesRepository> preferencesRepository = inject(PreferencesRepository.class);
     private final Lazy<UserViewsRepository> userViewsRepository = inject(UserViewsRepository.class);
 
+    private int mCardsScreenEst = 0;
+    private int mCardsScreenStride = 0;
     private double mCardFocusScale = 1.15; // 115%
     private final int MIN_NUM_CARDS = 5;
     private final double CARD_SPACING_PCT = 1.0; // 100% expressed as relative to the padding_left/top, which depends on the mCardFocusScale and AspectRatio
@@ -274,6 +276,7 @@ public class StdGridFragment extends GridFragment {
         int paddingTopInt = 0;
         int numRows = 0;
         int numCols = 0;
+        int numCardsScreen = 0; // number of cards visible, including cutoff's
 
         if (presenter instanceof HorizontalGridPresenter) {
             numRows = ((HorizontalGridPresenter) presenter).getNumberOfRows();
@@ -302,7 +305,7 @@ public class StdGridFragment extends GridFragment {
 
             int sumSize = (cardHeightInt * numRows) + (spacingVerticalInt * (numRows - 1)) + (paddingTopInt * 2);
             if (Math.abs(sumSize - grid_height) > 2) {
-                Timber.w("XXX: calcCardHeight calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", grid_height, sumSize);
+                Timber.w("XXX calcCardHeight calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", grid_height, sumSize);
             }
             int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType);
             paddingLeftInt = (int) Math.round((cardWidthInt * cardScaling) / 2.0);
@@ -310,6 +313,9 @@ public class StdGridFragment extends GridFragment {
             if (mImageType == ImageType.BANNER) {
                 spacingHorizontalInt = Math.max((int) (Math.round(paddingLeftInt * CARD_SPACING_HORIZONTAL_BANNER_PCT)), 0); // round spacing
             }
+            int cardsCol = (int) Math.round(((double)grid_width / (cardWidthInt + spacingHorizontalInt)) + 0.5);
+            mCardsScreenEst = numRows * cardsCol;
+            mCardsScreenStride = numRows;
         } else if (numCols > 0) {
             double paddingPct = cardScaling / numCols;
             double spaceingPct = ((paddingPct / 2.0) * CARD_SPACING_PCT) * (numCols - 1);
@@ -334,22 +340,20 @@ public class StdGridFragment extends GridFragment {
 
             int sumSize = (cardWidthInt * numCols) + (spacingHorizontalInt * (numCols - 1)) + (paddingLeftInt * 2);
             if (Math.abs(sumSize - grid_width) > 2) {
-                Timber.w("XXX: calcCardHeight calculation delta > 2, something is off GridWidth <%s> sumSize <%s>!", grid_width, sumSize);
+                Timber.w("XXX calcCardHeight calculation delta > 2, something is off GridWidth <%s> sumSize <%s>!", grid_width, sumSize);
             }
             paddingTopInt = (int) Math.round((cardHeightInt * cardScaling) / 2.0);
             spacingVerticalInt = Math.max((int) (Math.round(paddingTopInt * CARD_SPACING_PCT)), 0); // round spacing
+            int cardsRow = (int) Math.round(((double)grid_height / (cardHeightInt + spacingVerticalInt)) + 0.5);
+            mCardsScreenEst = numCols * cardsRow;
+            mCardsScreenStride = numCols;
         }
+
+        Timber.d("XXX numCardsScreen <%s>", numCardsScreen);
 
         setCardHeight(cardHeightInt);
         setGridItemSpacing(spacingHorizontalInt,spacingVerticalInt);
         setGridPadding(paddingLeftInt,paddingTopInt);
-    }
-
-    private int estimateNumCardsScreen()
-    {
-        double gridArea = getGridHeight() * getGridWidth();
-        double cardArea = mCardHeight * getCardWidthBy(mCardHeight, mImageType);
-        return (int) (gridArea / cardArea);
     }
 
     @Override
@@ -448,10 +452,9 @@ public class StdGridFragment extends GridFragment {
 
         // adapt chunk size if needed
         int chunkSize = mRowDef.getChunkSize();
-        int estCardsScreen = estimateNumCardsScreen();
-        if (estCardsScreen > chunkSize) {
-            chunkSize = Math.min((int) (estCardsScreen * 1.15), 120); // safer limit
-            Timber.d("XXX buildAdapter adjusting chunkSize to <%s> screenEst <%s>",chunkSize,estCardsScreen);
+        if (mCardsScreenEst > 0 && mCardsScreenEst >= chunkSize) {
+            chunkSize = Math.min(mCardsScreenEst + mCardsScreenStride, 150); // cap at 150
+            Timber.d("XXX buildAdapter adjusting chunkSize to <%s> screenEst <%s>",chunkSize,mCardsScreenEst);
         }
 
         switch (mRowDef.getQueryType()) {
