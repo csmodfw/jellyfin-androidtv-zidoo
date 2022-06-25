@@ -97,6 +97,7 @@ public class StdGridFragment extends GridFragment {
     private final double CARD_SPACING_PCT = 1.0; // 100% expressed as relative to the padding_left/top, which depends on the mCardFocusScale and AspectRatio
     private final double CARD_SPACING_HORIZONTAL_BANNER_PCT = 0.5; // 50% allow horizontal card overlapping for banners, otherwise spacing is too large
     private final int MIN_GRIDSIZE_CHANGE_DELTA = 4; // minimum pixel size changes, to trigger a recreate of the grid via onGridSizeMeasurements
+    private final int VIEW_SELECT_UPDATE_DELAY = 250; // delay in ms until we update the top-row info for a selected item
 
     private boolean mDirty = true; // CardHeight, RowDef or GridSize changed
 
@@ -813,7 +814,7 @@ public class StdGridFragment extends GridFragment {
                 mCurrentItem = (BaseRowItem)item;
                 mTitleView.setText(mCurrentItem.getName(requireContext()));
                 mInfoRow.removeAllViews();
-                mHandler.postDelayed(mDelayedSetItem, 400);
+                mHandler.postDelayed(mDelayedSetItem, VIEW_SELECT_UPDATE_DELAY);
 
                 if (!determiningPosterSize) mGridAdapter.loadMoreItemsIfNeeded(mCurrentItem.getIndex());
 
