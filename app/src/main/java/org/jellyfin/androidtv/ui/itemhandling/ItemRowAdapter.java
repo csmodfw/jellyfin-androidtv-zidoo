@@ -27,6 +27,7 @@ import org.jellyfin.androidtv.data.repository.UserViewsRepository;
 import org.jellyfin.androidtv.ui.GridButton;
 import org.jellyfin.androidtv.ui.GridFragment;
 import org.jellyfin.androidtv.ui.browsing.EnhancedBrowseFragment;
+import org.jellyfin.androidtv.ui.browsing.GenericGridActivity;
 import org.jellyfin.androidtv.ui.livetv.TvManager;
 import org.jellyfin.androidtv.ui.presentation.PositionableListRowPresenter;
 import org.jellyfin.androidtv.ui.presentation.TextItemPresenter;
@@ -498,8 +499,9 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
             Timber.d("XXX Not loading more because currently retrieving");
             return;
         }
-        // This needs tobe based on the actual estimated cards on screen and type of presenter used
-        if (chunkSize > 0) {
+        // This needs tobe based on the actual estimated cards on screen via type of presenter and WindowAlignmentOffsetPercent
+        if (chunkSize > 0 && context instanceof GenericGridActivity) {
+            // we can use chunkSize as indicator on when to load
             if (pos >= (itemsLoaded - (chunkSize / 1.7))) {
                 Timber.d("XXX Loading more items trigger pos <%s> itemsLoaded <%s> from total <%s> with chunkSize <%s>", pos, itemsLoaded, totalItems, chunkSize);
                 retrieveNext();

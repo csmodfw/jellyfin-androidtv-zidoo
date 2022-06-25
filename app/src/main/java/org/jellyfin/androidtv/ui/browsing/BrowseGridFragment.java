@@ -10,7 +10,7 @@ import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.koin.java.KoinJavaComponent;
 
 public class BrowseGridFragment extends StdGridFragment {
-    private final static int CHUNK_SIZE_MINIMUM = 30;
+    private final static int CHUNK_SIZE_MINIMUM = 25;
 
     @Override
     protected void setupQueries() {

@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
 	id("com.android.application")
 	kotlin("android")
@@ -41,9 +43,19 @@ android {
 		}
 	}
 
+	signingConfigs {
+		create("release") {
+			storeFile = file(gradleLocalProperties(rootDir).getProperty("STOREFILE"))
+			keyAlias = gradleLocalProperties(rootDir).getProperty("KEYALIAS")
+			keyPassword = gradleLocalProperties(rootDir).getProperty("KEYPASSWORD")
+			storePassword = gradleLocalProperties(rootDir).getProperty("STOREPASSWORD")
+		}
+	}
+
 	buildTypes {
 		getByName("release") {
 			matchingFallbacks += listOf()
+			signingConfig = signingConfigs.getByName("release")
 		}
 
 		val release by getting {
