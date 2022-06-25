@@ -106,11 +106,6 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var externalVideoPlayerSendPath = booleanPreference("pref_send_path_external", false)
 
-		/**
-		 * Use Zidoo internal player as external player
-		 */
-		var zidooPlayerEnabled = booleanPreference("pref_enable_zidoo_player", true)
-
 		/* Playback - Audio related */
 		/**
 		 * Preferred behavior for audio streaming.
@@ -178,7 +173,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Never prompt to report crash logs
 		 */
-		var acraNoPrompt = booleanPreference(ACRA.PREF_ALWAYS_ACCEPT, false)
+		var acraNoPrompt = booleanPreference(ACRA.PREF_ALWAYS_ACCEPT, true)
 
 		/**
 		 * Include system logs in crash reports

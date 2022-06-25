@@ -8,17 +8,20 @@ plugins {
 
 android {
 	namespace = "org.jellyfin.androidtv"
-	compileSdk = 31
+	compileSdk = 33
+	ndkVersion = "24.0.8215888"
 
 	defaultConfig {
 		minSdk = 28
-		targetSdk = 31
+		targetSdk = 33
 
 		// Release version
 		applicationId = namespace
 		versionName = project.getVersionName()
 		versionCode = getVersionCode(versionName!!)
 		setProperty("archivesBaseName", "jellyfin-androidtv-v$versionName")
+
+		ndk.abiFilters.addAll(setOf("armeabi-v7a"))
 	}
 
 	sourceSets["main"].java.srcDirs("src/main/kotlin")
@@ -32,13 +35,18 @@ android {
 		isCoreLibraryDesugaringEnabled = true
 	}
 
+	bundle {
+		abi {
+			enableSplit = true
+		}
+	}
+
 	buildTypes {
 		getByName("release") {
 			matchingFallbacks += listOf()
 		}
-		val release by getting {
-			isMinifyEnabled = false
 
+		val release by getting {
 			// Set package names used in various XML files
 			resValue("string", "app_id", namespace!!)
 			resValue("string", "app_search_suggest_authority", "${namespace}.content")

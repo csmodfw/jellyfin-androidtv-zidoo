@@ -72,8 +72,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     boolean noPlayerError;
 
     Runnable mZidooTask;
-    private static HttpURLConnection connZidooApi;
-    boolean useZidoo = false;
+    private static HttpURLConnection mHttpConnZidooApi;
     boolean mZidooStartupOK;
     int mZidooReportTaskErrorCount = 0;
 
@@ -164,11 +163,6 @@ public class ExternalPlayerActivity extends FragmentActivity {
         mPosition = getIntent().getIntExtra("Position", 0);
         mInitialSeekPosition = mPosition;
 
-        if (userPreferences.getValue().get(UserPreferences.Companion.getZidooPlayerEnabled())) {
-            useZidoo = true;
-            Timber.d("XXX onCreate Zidoo player enabled!");
-        }
-
         if (userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
             Timber.d("XXX onCreate SendPath enabled!");
         }
@@ -242,17 +236,8 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 }
                 return;
             }
-        } else if (activityPlayTime < 2000) { // Check against a total failure (no apps installed)
-            // probably no player explain the option
-            Timber.e("Playback took less than two seconds - assuming it failed");
-            if (!noPlayerError) {
-                handlePlayerError();
-            } else {
-                finish();
-            }
-            return;
         } else if (activityPlayTime < REPORT_LOOP_INTERVAL) { // ignore "quick" play starts < than looptime
-            Timber.i("Playback took less than 10 seconds - ignoring.");
+            Timber.i("Playback took less than <%s> seconds - ignoring.", REPORT_LOOP_INTERVAL / 1000);
             finish();
             return;
         }
@@ -368,6 +353,31 @@ public class ExternalPlayerActivity extends FragmentActivity {
         new AlertDialog.Builder(this)
                 .setTitle(R.string.zidoo_player_error)
                 .setMessage(R.string.zidoo_player_error_message)
+                .setPositiveButton(R.string.btn_got_it, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                })
+                .setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    @Override
+                    public void onDismiss(DialogInterface dialog) {
+                        finish();
+                    }
+                })
+                .show();
+    }
+
+    private void handleZidooPlayerNotFoundError() {
+        if (!mediaManager.getValue().isVideoQueueModified()) mediaManager.getValue().clearVideoQueue();
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.zidoo_player_notfound)
+                .setMessage(R.string.zidoo_player_notfound_message)
+                .setPositiveButton(R.string.btn_got_it, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                    }
+                })
                 .setOnDismissListener(new DialogInterface.OnDismissListener() {
                     @Override
                     public void onDismiss(DialogInterface dialog) {
@@ -422,16 +432,16 @@ public class ExternalPlayerActivity extends FragmentActivity {
             }
             URL url = new URL(url_string);
 
-            connZidooApi = (HttpURLConnection) url.openConnection();
+            mHttpConnZidooApi = (HttpURLConnection) url.openConnection();
             // Request setup
-            connZidooApi.setRequestMethod("GET");
-            connZidooApi.setConnectTimeout(2000);
-            connZidooApi.setReadTimeout(2000);
+            mHttpConnZidooApi.setRequestMethod("GET");
+            mHttpConnZidooApi.setConnectTimeout(2000);
+            mHttpConnZidooApi.setReadTimeout(2000);
 
             // Test if the response from the server is successful
-            int http_status = connZidooApi.getResponseCode();
+            int http_status = mHttpConnZidooApi.getResponseCode();
             if (http_status == 200) {
-                reader = new BufferedReader(new InputStreamReader(connZidooApi.getInputStream()));
+                reader = new BufferedReader(new InputStreamReader(mHttpConnZidooApi.getInputStream()));
                 while ((line = reader.readLine()) != null) {
                     responseContent.append(line);
                 }
@@ -448,8 +458,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
         } catch (JSONException | IOException e) {
             Timber.d("getFromZidooHTTP_API failed, could not reach target or status error.");
         } finally {
-            if (connZidooApi != null) {
-                connZidooApi.disconnect();
+            if (mHttpConnZidooApi != null) {
+                mHttpConnZidooApi.disconnect();
+                mHttpConnZidooApi = null;
             }
         }
 
@@ -838,7 +849,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         } catch (ActivityNotFoundException e) {
             noPlayerError = true;
             Timber.e(e, "Error launching external Zidoo player");
-            finish();
+            handleZidooPlayerNotFoundError();
         }
     }
 
@@ -898,7 +909,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         } catch (ActivityNotFoundException e) {
             noPlayerError = true;
             Timber.e(e, "Error launching external Zidoo player");
-            finish();
+            handleZidooPlayerNotFoundError();
         }
     }
 }

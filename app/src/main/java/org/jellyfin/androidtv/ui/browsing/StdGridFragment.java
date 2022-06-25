@@ -103,7 +103,7 @@ public class StdGridFragment extends GridFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Timber.i("XXX onCreate");
+        Timber.d("XXX onCreate");
 
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), requireActivity().getIntent().getStringExtra(Extras.Folder));
         mParentId = mFolder.getId();
@@ -120,7 +120,7 @@ public class StdGridFragment extends GridFragment {
             setGridPresenter(new HorizontalGridPresenter());
 
         setDefaultGridRowCols(mPosterSizeSetting, mImageType);
-        setAutoCardGridValues(true, true, true);
+        setAutoCardGridValues();
         mJumplistPopup = new JumplistPopup();
     }
 
@@ -196,19 +196,19 @@ public class StdGridFragment extends GridFragment {
         if (presenter instanceof VerticalGridPresenter) {
             int numCols = 2;
             switch (posterSize) {
-                case TINY:
+                case SMALLEST:
                     numCols = imageType.equals(ImageType.BANNER) ? 6 : imageType.equals(ImageType.THUMB) ? 11 : 15;
                     break;
-                case SMALLER:
+                case SMALL:
                     numCols = imageType.equals(ImageType.BANNER) ? 5 : imageType.equals(ImageType.THUMB) ? 9 : 13;
                     break;
-                case SMALL:
+                case MED:
                     numCols = imageType.equals(ImageType.BANNER) ? 4 : imageType.equals(ImageType.THUMB) ? 7 : 11;
                     break;
-                case MED:
+                case LARGE:
                     numCols = imageType.equals(ImageType.BANNER) ? 3 : imageType.equals(ImageType.THUMB) ? 5 : 7;
                     break;
-                case LARGE:
+                case X_LARGE:
                     numCols = imageType.equals(ImageType.BANNER) ? 2 : imageType.equals(ImageType.THUMB) ? 3 : 5;
                     break;
                 default:
@@ -218,19 +218,19 @@ public class StdGridFragment extends GridFragment {
         } else if (presenter instanceof HorizontalGridPresenter) {
             int numRows = 2;
             switch (posterSize) {
-                case TINY:
+                case SMALLEST:
                     numRows = imageType.equals(ImageType.BANNER) ? 13 : imageType.equals(ImageType.THUMB) ? 7 : 5;
                     break;
-                case SMALLER:
+                case SMALL:
                     numRows = imageType.equals(ImageType.BANNER) ? 11 : imageType.equals(ImageType.THUMB) ? 6 : 4;
                     break;
-                case SMALL:
+                case MED:
                     numRows = imageType.equals(ImageType.BANNER) ? 9 : imageType.equals(ImageType.THUMB) ? 5 : 3;
                     break;
-                case MED:
+                case LARGE:
                     numRows = imageType.equals(ImageType.BANNER) ? 7 : imageType.equals(ImageType.THUMB) ? 4 : 2;
                     break;
-                case LARGE:
+                case X_LARGE:
                     numRows = imageType.equals(ImageType.BANNER) ? 5 : imageType.equals(ImageType.THUMB) ? 2 : 1;
                     break;
                 default:
@@ -257,7 +257,7 @@ public class StdGridFragment extends GridFragment {
         setGridPadding(card_padding_left, card_padding_top);
     }
 
-    private void setAutoCardGridValues(boolean setCardHeight, boolean setCardSpacing, boolean setCardPadding) {
+    private void setAutoCardGridValues() {
         Presenter presenter = getGridPresenter();
         if (presenter == null) {
             Timber.e("Invalid presenter, cant calculate CardGridValues!");
@@ -339,15 +339,9 @@ public class StdGridFragment extends GridFragment {
             spacingVerticalInt = Math.max((int) (Math.round(paddingTopInt * CARD_SPACING_PCT)), 0); // round spacing
         }
 
-        if (setCardHeight) {
-            setCardHeight(cardHeightInt);
-        }
-        if (setCardSpacing) {
-            setGridItemSpacing(spacingHorizontalInt,spacingVerticalInt);
-        }
-        if (setCardPadding) {
-            setGridPadding(paddingLeftInt,paddingTopInt);
-        }
+        setCardHeight(cardHeightInt);
+        setGridItemSpacing(spacingHorizontalInt,spacingVerticalInt);
+        setGridPadding(paddingLeftInt,paddingTopInt);
     }
 
     private int estimateNumCardsScreen()
@@ -394,7 +388,7 @@ public class StdGridFragment extends GridFragment {
             Timber.d("XXX: Auto-Adapting grid size to height <%s> width <%s>", gridHeight, gridWidth);
             mDirty = true;
             determiningPosterSize = true;
-            setAutoCardGridValues(true, true, true);
+            setAutoCardGridValues();
             createGrid();
             loadGrid();
             determiningPosterSize = false;
@@ -424,7 +418,7 @@ public class StdGridFragment extends GridFragment {
                 setGridPresenter(new HorizontalGridPresenter());
             }
             setDefaultGridRowCols(mPosterSizeSetting, mImageType);
-            setAutoCardGridValues(true, true, true);
+            setAutoCardGridValues();
             createGrid();
             loadGrid();
             determiningPosterSize = false;

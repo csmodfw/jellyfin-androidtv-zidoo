@@ -7,7 +7,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -21,7 +20,6 @@ import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.Row;
 import androidx.leanback.widget.RowPresenter;
 import androidx.leanback.widget.VerticalGridPresenter;
-import androidx.recyclerview.widget.RecyclerView;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.data.model.FilterOptions;
@@ -30,7 +28,6 @@ import org.jellyfin.androidtv.ui.itemhandling.BaseRowItem;
 import org.jellyfin.androidtv.ui.itemhandling.ItemRowAdapter;
 import org.jellyfin.androidtv.ui.presentation.HorizontalGridPresenter;
 import org.jellyfin.androidtv.util.InfoLayoutHelper;
-import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.apiclient.model.entities.SortOrder;
 import org.jellyfin.apiclient.model.querying.ItemSortBy;
 
@@ -61,6 +58,7 @@ public class GridFragment extends Fragment {
     private int mGridItemSpacingVertical = 0;
     private int mGridPaddingLeft = 0;
     private int mGridPaddingTop = 0;
+    private boolean mFixPadding = false;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -237,21 +235,15 @@ public class GridFragment extends Fragment {
                         mOnItemViewSelectedListener.onItemSelected(itemViewHolder, item, rowViewHolder, row);
                     }
 
-                    // onGridCreate = 0 padding to prevent card cutoff, after select set padding
-                    if (position > 0) {
+                    // keep 0 padding for initial view
+                    if (mFixPadding && position > 3) {
                         if (mGridPresenter instanceof HorizontalGridPresenter && mGridView.getPaddingRight() != mGridView.getPaddingLeft()) {
                             mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingLeft(), mGridView.getPaddingBottom()); // match left/right
                         }
                         else if (mGridPresenter instanceof VerticalGridPresenter && mGridView.getPaddingTop() != mGridView.getPaddingBottom()) {
                             mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingRight(), mGridView.getPaddingTop()); // match top/bottom
                         }
-                    } if (position == 0) {
-                        if (mGridPresenter instanceof HorizontalGridPresenter && mGridView.getPaddingRight() != 0) {
-                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), 0, mGridView.getPaddingBottom()); // match left/right
-                        }
-                        else if (mGridPresenter instanceof VerticalGridPresenter && mGridView.getPaddingBottom() != 0) {
-                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingRight(), 0); // match top/bottom
-                        }
+                        mFixPadding = false;
                     }
                 }
             };
@@ -354,6 +346,7 @@ public class GridFragment extends Fragment {
         mGridDock.removeAllViews();
         mGridDock.addView(mGridViewHolder.view);
 
+        mFixPadding = true;
         updateAdapter();
     }
 

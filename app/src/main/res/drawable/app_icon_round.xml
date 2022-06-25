@@ -2,4 +2,11 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@drawable/app_icon_background_round" />
     <item android:drawable="@drawable/app_icon_foreground" />
+    <item android:drawable="@drawable/zidoologo"
+        android:height="19dp"
+        android:width="91dp"
+        android:gravity="bottom"
+        android:left="80dp"
+        android:bottom="70dp"
+        />
 </layer-list>
