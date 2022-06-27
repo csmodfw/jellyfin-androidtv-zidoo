@@ -66,7 +66,7 @@ public class GridFragment extends Fragment {
 
         // init with some working defaults
         final DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
-        mGridHeight = display.heightPixels - Math.round(display.density * 130.6f); // top + bottom in dp, elements scale with density so adjust accordingly
+        mGridHeight = display.heightPixels - (int) Math.round(display.density * 130.6); // top + bottom in dp, elements scale with density so adjust accordingly
         mGridWidth = display.widthPixels;
 
         sortOptions = new HashMap<>();

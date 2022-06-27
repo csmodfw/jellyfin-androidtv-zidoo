@@ -195,7 +195,7 @@ public class StdGridFragment extends GridFragment {
 
     protected void setDefaultGridRowCols(PosterSize posterSize, ImageType imageType) {
         Presenter presenter = getGridPresenter();
-        // HINT: use uneven numCols if possible, so selected middle lines up with TV middle!
+        // HINT: use uneven Rows/Cols if possible, so selected middle lines up with TV middle!
         if (presenter instanceof VerticalGridPresenter) {
             int numCols = 2;
             switch (posterSize) {
@@ -243,23 +243,6 @@ public class StdGridFragment extends GridFragment {
         }
     }
 
-    private void setGridPaddingBy(int cardHeight, double cardFocusScaling) {
-        if (cardHeight <= 0 || cardFocusScaling < 1.0) {
-            Timber.e("Invalid cardHeight/cardFocusScaling, cant calculate padding!");
-            return;
-        }
-        final double cardScaling = Math.max(cardFocusScaling - 1.0, 0.0);
-        int card_padding_top = (int) Math.round(((cardHeight * cardScaling) / 2.0) + 0.5);
-        double card_width = getCardWidthBy(cardHeight, mImageType);
-        int card_padding_left = (int) Math.round(((card_width * cardScaling) / 2.0) + 0.5);
-
-        // no negative padding
-        card_padding_top = Math.max(card_padding_top, 0);
-        card_padding_left = Math.max(card_padding_left, 0);
-
-        setGridPadding(card_padding_left, card_padding_top);
-    }
-
     private void setAutoCardGridValues() {
         Presenter presenter = getGridPresenter();
         if (presenter == null) {
@@ -305,7 +288,7 @@ public class StdGridFragment extends GridFragment {
 
             int sumSize = (cardHeightInt * numRows) + (spacingVerticalInt * (numRows - 1)) + (paddingTopInt * 2);
             if (Math.abs(sumSize - grid_height) > 2) {
-                Timber.w("XXX calcCardHeight calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", grid_height, sumSize);
+                Timber.w("XXX setAutoCardGridValues calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", grid_height, sumSize);
             }
             int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType);
             paddingLeftInt = (int) Math.round((cardWidthInt * cardScaling) / 2.0);
@@ -340,7 +323,7 @@ public class StdGridFragment extends GridFragment {
 
             int sumSize = (cardWidthInt * numCols) + (spacingHorizontalInt * (numCols - 1)) + (paddingLeftInt * 2);
             if (Math.abs(sumSize - grid_width) > 2) {
-                Timber.w("XXX calcCardHeight calculation delta > 2, something is off GridWidth <%s> sumSize <%s>!", grid_width, sumSize);
+                Timber.w("XXX setAutoCardGridValues calculation delta > 2, something is off GridWidth <%s> sumSize <%s>!", grid_width, sumSize);
             }
             paddingTopInt = (int) Math.round((cardHeightInt * cardScaling) / 2.0);
             spacingVerticalInt = Math.max((int) (Math.round(paddingTopInt * CARD_SPACING_PCT)), 0); // round spacing
@@ -352,8 +335,8 @@ public class StdGridFragment extends GridFragment {
         Timber.d("XXX numCardsScreen <%s>", numCardsScreen);
 
         setCardHeight(cardHeightInt);
-        setGridItemSpacing(spacingHorizontalInt,spacingVerticalInt);
-        setGridPadding(paddingLeftInt,paddingTopInt);
+        setGridItemSpacing(spacingHorizontalInt, spacingVerticalInt);
+        setGridPadding(paddingLeftInt, paddingTopInt);
     }
 
     @Override
