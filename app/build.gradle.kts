@@ -10,12 +10,12 @@ plugins {
 
 android {
 	namespace = "org.jellyfin.androidtv"
-	compileSdk = 33
+	compileSdk = 32
 	ndkVersion = "24.0.8215888"
 
 	defaultConfig {
 		minSdk = 28
-		targetSdk = 33
+		targetSdk = 32
 
 		// Release version
 		applicationId = namespace
@@ -35,6 +35,12 @@ android {
 
 	compileOptions {
 		isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_16
+        targetCompatibility = JavaVersion.VERSION_16
+    }
+
+	kotlinOptions {
+		jvmTarget = "16"
 	}
 
 	bundle {

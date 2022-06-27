@@ -4,13 +4,7 @@ plugins {
 }
 
 java {
-	toolchain.languageVersion.set(JavaLanguageVersion.of(18))
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-	kotlinOptions {
-		jvmTarget = "18"
-	}
+	toolchain.languageVersion.set(JavaLanguageVersion.of(16))
 }
 
 buildscript {
