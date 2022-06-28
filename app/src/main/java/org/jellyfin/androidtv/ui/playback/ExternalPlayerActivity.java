@@ -1,7 +1,12 @@
 package org.jellyfin.androidtv.ui.playback;
 
+import static org.jellyfin.androidtv.util.Utils.equalsIgnoreCaseTrim;
+import static org.jellyfin.androidtv.util.Utils.getSafeValue;
+import static org.jellyfin.androidtv.util.Utils.isEmpty;
+import static org.jellyfin.androidtv.util.Utils.isEmptyTrim;
+import static org.jellyfin.androidtv.util.Utils.isNonEmpty;
+import static org.jellyfin.androidtv.util.Utils.isNonEmptyTrim;
 import static org.koin.java.KoinJavaComponent.inject;
-
 import static java.util.Locale.US;
 
 import android.app.Activity;
@@ -27,6 +32,7 @@ import org.jellyfin.androidtv.data.compat.PlaybackException;
 import org.jellyfin.androidtv.data.compat.StreamInfo;
 import org.jellyfin.androidtv.data.compat.VideoOptions;
 import org.jellyfin.androidtv.data.service.BackgroundService;
+import org.jellyfin.androidtv.preference.PreferencesRepository;
 import org.jellyfin.androidtv.preference.UserPreferences;
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior;
 import org.jellyfin.androidtv.preference.constant.PreferredVideoPlayer;
@@ -39,6 +45,7 @@ import org.jellyfin.apiclient.interaction.ApiClient;
 import org.jellyfin.apiclient.interaction.Response;
 import org.jellyfin.apiclient.model.dto.BaseItemDto;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
+import org.jellyfin.apiclient.model.dto.MediaSourceInfo;
 import org.jellyfin.apiclient.model.dto.UserItemDataDto;
 import org.jellyfin.apiclient.model.entities.MediaStream;
 import org.jellyfin.apiclient.model.entities.MediaStreamType;
@@ -57,6 +64,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -79,9 +87,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
     int mPosition = 0;
     boolean isLiveTv;
     boolean noPlayerError;
-    ArrayList<String> mAudioLangCodes = new ArrayList<>();
-    ArrayList<String> mSubLangCodes = new ArrayList<>();
-    boolean mUseForced = false;
+    String mAudioLangCode;
+    String mSubLangCode;
+    boolean mIgnoreForced = false;
     boolean mPreferDefault = false;
     boolean mPreferSdhSubs = false;
     boolean mPrefer6ChAudio = false;
@@ -97,6 +105,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     private Lazy<MediaManager> mediaManager = inject(MediaManager.class);
     private Lazy<org.jellyfin.sdk.api.client.ApiClient> api = inject(org.jellyfin.sdk.api.client.ApiClient.class);
     private Lazy<PlaybackControllerContainer> playbackControllerContainer = inject(PlaybackControllerContainer.class);
+    private final Lazy<PreferencesRepository> preferencesRepository = inject(PreferencesRepository.class);
 
     static final int RUNTIME_TICKS_TO_MS = 10000;
 
@@ -147,6 +156,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     static final String API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER = "MEDIA_BROWSER_USE_RT_MEDIA_PLAYER";
     static final String API_ZIDOO_SEEK_POSITION = "currentPosition";
     static final String API_ZIDOO_PLAYMODEL = "playModel";
+    // http://apidoc.zidoo.tv/s/98365225/Gmwqxawu/BI0Cv1r2
     static final String API_ZIDOO_HTTP_API_IP = "127.0.0.1:9529";
     static final String API_ZIDOO_HTTP_API_TARGET_VIDEOPLAY = "ZidooVideoPlay";
     static final String API_ZIDOO_HTTP_API_JSON_STATUS = "status";
@@ -169,7 +179,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         mItemsToPlay = mediaManager.getValue().getCurrentVideoQueue();
 
-        if (mItemsToPlay == null || mItemsToPlay.size() == 0) {
+        if (isEmpty(mItemsToPlay)) {
             Utils.showToast(this, getString(R.string.msg_no_playable_items));
             finish();
             return;
@@ -181,8 +191,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
             Timber.d("XXX onCreate SendPath enabled!");
         }
 
-        mAudioLangCodes.addAll(List.of("jpn","kor","eng","und"));
-        mSubLangCodes.addAll(List.of("eng"));
+        // fallback logic, just get default
+//        mAudioLangCode = Locale.JAPANESE.getISO3Language().toLowerCase(Locale.US);
+        mAudioLangCode = Locale.getDefault().getISO3Language().toLowerCase(Locale.US);
+        mSubLangCode = Locale.getDefault().getISO3Language().toLowerCase(Locale.US);
+        Timber.d("xxx onCreate audio <%s> sub <%s>",mAudioLangCode,mSubLangCode);
 
         launchExternalPlayer(0);
     }
@@ -259,7 +272,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             finish();
             return;
         }
-        if (mItemsToPlay == null || mItemsToPlay.size() == 0) {
+        if (isEmpty(mItemsToPlay)) {
             finish();
             return;
         }
@@ -436,7 +449,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     @Nullable
     private JSONObject getFromZidooHTTP_API(@NonNull String url_api_target, String url_cmd, String url_parameter, String json_objId) {
-        if (url_api_target.isEmpty() || url_cmd.isEmpty()) {
+        if (isEmptyTrim(url_api_target) || isEmptyTrim(url_cmd)) {
             Timber.e("getFromZidooHTTP_API failed, empty input parameters.");
             return null;
         }
@@ -447,7 +460,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         try {
             String url_string = "http://" + API_ZIDOO_HTTP_API_IP + "/" + url_api_target + "/" + url_cmd;
-            if (!url_parameter.isEmpty()) {
+            if (isNonEmptyTrim(url_parameter)) {
                 url_string += "?" + url_parameter;
             }
             URL url = new URL(url_string);
@@ -469,7 +482,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 // try parse json, only return if valid status
                 JSONObject zidoo_obj = new JSONObject(responseContent.toString());
                 if (zidoo_obj.optInt(API_ZIDOO_HTTP_API_JSON_STATUS) == API_ZIDOO_HTTP_API_SUCCESS) {
-                    if (!json_objId.isEmpty()) {
+                    if (isNonEmptyTrim(json_objId)) {
                         zidoo_obj = zidoo_obj.getJSONObject(json_objId);
                     }
                    return zidoo_obj;
@@ -487,13 +500,13 @@ public class ExternalPlayerActivity extends FragmentActivity {
         return null;
     }
 
-    //GET/VideoPlay/setAudio?index=1
+    //GET/VideoPlay/setAudio?index=0        NOTE: Audio index start at 0
     private boolean setZidooAudioTrack(int idx) {
         JSONObject zidoo_obj = getFromZidooHTTP_API(API_ZIDOO_HTTP_API_TARGET_VIDEOPLAY, "setAudio", "index=" + idx, "");
         return zidoo_obj != null;
     }
 
-    //GET/VideoPlay/setSubtitle?index=1
+    //GET/VideoPlay/setSubtitle?index=1     NOTE: index=0 turns off, so Subtitle index start at 1 !!!
     private boolean setZidooSubtitleTrack(int idx) {
         JSONObject zidoo_obj = getFromZidooHTTP_API(API_ZIDOO_HTTP_API_TARGET_VIDEOPLAY, "setSubtitle", "index=" + idx, "");
         return zidoo_obj != null;
@@ -520,6 +533,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
         return new Pair<Integer, Integer>(API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR,-1);
     }
 
+    final static int SUBTITLE_DISABLED = -1;
+    final static int INVALID_TRACK_NR = -99;
+
     @NonNull
     private Map<String, Integer> getZidooPlayStatusEx() {
         Map<String, Integer> outMap = new HashMap<>();
@@ -529,21 +545,24 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 JSONObject video_obj = zidoo_obj.getJSONObject("video" );
                 Integer duration = video_obj.optInt("duration", -1);
                 if (duration > 0) { // sanity check if we have valid data
-                    outMap.put("status", video_obj.optInt("status", -1));
+                    if (video_obj.has("status")) {
+                        outMap.put("status", video_obj.optInt("status", API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR));
+                    }
                     outMap.put("currentPosition", video_obj.optInt("currentPosition", 0));
                     String path = video_obj.optString("path", "");
-                    if (!path.trim().isEmpty()) {
+                    if (isNonEmptyTrim(path)) {
                         outMap.put("id_hash", video_obj.optString("path").hashCode());
                     } else {
                         outMap.put("id_hash", duration.hashCode());
                     }
                     JSONObject audio_obj = zidoo_obj.getJSONObject("audio" );
-                    outMap.put("audio_index", audio_obj.optInt("index", -1));
-//                    Timber.d("getZidooPlayStatusEx audioIdx <%s> audioInfo <%s>", audio_obj.optInt("index", -1), audio_obj.optString("information",""));
-
+                    if (audio_obj.has("index")) {
+                        outMap.put("audio_index", audio_obj.optInt("index", INVALID_TRACK_NR));
+                    }
                     JSONObject subtitle_obj = zidoo_obj.getJSONObject("subtitle" );
-                    outMap.put("subtitle_index", subtitle_obj.optInt("index", -1));
-//                    Timber.d("getZidooPlayStatusEx subIdx <%s> subInfo <%s>", subtitle_obj.optInt("index", -1), subtitle_obj.optString("information",""));
+                    if (subtitle_obj.has("index")) {
+                        outMap.put("subtitle_index", subtitle_obj.optInt("index", INVALID_TRACK_NR));
+                    }
                 }
             } catch (Exception ignored) {   }
         }
@@ -552,16 +571,18 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     protected abstract class ZidooTask implements Runnable {
         final public BaseItemDto mItem;
-        final long mActivityStartTime;
-        public Long mActivityStopTime;
+        final public StreamInfo streamInfo;
+        final public long mActivityStartTime;
+        protected Long mActivityStopTime;
         protected boolean isStopped;
-        public Integer mCurrentAudioIdx;
-        public Integer mCurrentSubIdx;
+        protected Integer mCurrentAudioIdx;
+        protected Integer mCurrentSubIdx;
+        protected Integer mZidooIdentifierHash;
         public Integer mPlayPos;
-        public Integer mZidooIdentifierHash;
 
-        public ZidooTask(BaseItemDto item) {
+        public ZidooTask(@NonNull BaseItemDto item, StreamInfo streamInfo) {
             this.mItem = item;
+            this.streamInfo = streamInfo;
             this.mActivityStartTime = System.currentTimeMillis();
             this.isStopped = false;
             this.mCurrentAudioIdx = null;
@@ -570,7 +591,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             this.mZidooIdentifierHash = null;
         }
 
-        protected void stop() {
+        public void stop() {
             this.isStopped = true;
             if (mHandler != null) {
                 mHandler.removeCallbacks(this);
@@ -579,17 +600,67 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 mActivityStopTime = System.currentTimeMillis();
             }
         }
+
+        @NonNull
+        public static Pair<Integer, Integer> convertToZidooIndex(@NonNull Pair<Integer, Integer> audioSubIndex) {
+            Integer audioIdx = null; // "first" track
+            Integer subIdx = null; // no subs
+            if (audioSubIndex.first != null && audioSubIndex.first >= 0) {
+                audioIdx = audioSubIndex.first; // nothing needed starts at base 0
+            }
+            if (audioSubIndex.second != null) {
+                if (audioSubIndex.second == SUBTITLE_DISABLED) {
+                    subIdx = 0; // disable subs
+                } else {
+                    subIdx = audioSubIndex.second + 1; // index starts at 1, so offset
+                }
+            }
+            return new Pair<>(audioIdx, subIdx);
+        }
+
+        // this is in none Zidoo format!
+        @NonNull
+        public Pair<Integer, Integer> getLastReportedAudioSubIndex() {
+            Integer subIdx = null;
+            Integer audioIdx = null;
+            if (mCurrentSubIdx != null && mCurrentSubIdx >= 0) {
+                if (mCurrentSubIdx == 0) {
+                    subIdx = SUBTITLE_DISABLED;
+                } else {
+                    subIdx = mCurrentSubIdx - 1;
+                }
+            }
+            if (mCurrentAudioIdx != null && mCurrentAudioIdx >= 0) {
+                audioIdx = mCurrentAudioIdx;
+            }
+            return new Pair<>(audioIdx, subIdx);
+        }
     }
 
     private class ZidooStartupTask extends ZidooTask {
         final public int mSeekPos;
-        final public Pair<Integer, Integer> expectedAudioSubIdx;
+        public Pair<Integer, Integer> bestAudioSubIdxZidoo;
         public boolean mZidooStartupOK;
 
-        public ZidooStartupTask(BaseItemDto item, Pair<Integer, Integer> audioSubIdx, int seekPos)  {
-            super(item);
+        public ZidooStartupTask(@NonNull BaseItemDto item, int seekPos)  {
+            super(item, null);
             this.mSeekPos = seekPos;
-            this.expectedAudioSubIdx = audioSubIdx;
+            this.bestAudioSubIdxZidoo = convertToZidooIndex(getBestAudioSubtitleIdx(this.mItem.getMediaStreams()));
+            this.mZidooStartupOK = false;
+        }
+
+        public ZidooStartupTask(@NonNull BaseItemDto item, int seekPos, StreamInfo streamInfo)  {
+            super(item, streamInfo);
+            this.mSeekPos = seekPos;
+            if (streamInfo != null) {
+                MediaSourceInfo mediaInfo = streamInfo.getMediaSource();
+                if (isNonEmpty(mediaInfo.getMediaStreams())) {
+                    this.bestAudioSubIdxZidoo = convertToZidooIndex(getBestAudioSubtitleIdx(mediaInfo.getMediaStreams()));
+                }
+            }
+            if (this.bestAudioSubIdxZidoo == null) {
+                this.bestAudioSubIdxZidoo = convertToZidooIndex(getBestAudioSubtitleIdx(this.mItem.getMediaStreams()));
+            }
             this.mZidooStartupOK = false;
         }
 
@@ -600,16 +671,14 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 if (this.isStopped) {
                     return;
                 }
-                Timber.d("zidooStartupTask testing via Zidoo http/api");
                 if (!this.mZidooStartupOK) {
                     Map<String, Integer> statusMap = getZidooPlayStatusEx();
                     Integer status = statusMap.getOrDefault("status", API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR);
                     if (status != null && status >= API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE) {
                         this.mZidooStartupOK = true;
-                        this.mPlayPos = statusMap.getOrDefault("currentPosition", 0);
-                        this.mCurrentAudioIdx = statusMap.getOrDefault("audio_index", null);
-                        this.mCurrentSubIdx = statusMap.getOrDefault("subtitle_index", null);
-                        this.mCurrentSubIdx = statusMap.getOrDefault("subtitle_index", null);
+                        this.mPlayPos = statusMap.getOrDefault("currentPosition", this.mPlayPos);
+                        this.mCurrentAudioIdx = statusMap.getOrDefault("audio_index", this.mCurrentAudioIdx);
+                        this.mCurrentSubIdx = statusMap.getOrDefault("subtitle_index", this.mCurrentSubIdx);
                         this.mZidooIdentifierHash = statusMap.getOrDefault("id_hash", null);
                         Timber.d("zidooStartupTask for hash <%s> audio <%s> sub <%s>", this.mZidooIdentifierHash, this.mCurrentAudioIdx, this.mCurrentSubIdx);
                     }
@@ -617,16 +686,16 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 // carefully only try send those once
                 if (this.mZidooStartupOK) {
                     // handle audio/sub tracks
-                    if (this.expectedAudioSubIdx.first != null && this.mCurrentAudioIdx != null && !this.expectedAudioSubIdx.first.equals(this.mCurrentAudioIdx)) {
-                        if (setZidooAudioTrack(this.expectedAudioSubIdx.first)) {
-                            Timber.d("zidooStartupTask setZidooAudioTrack success <%s>", this.expectedAudioSubIdx.first);
+                    if (this.bestAudioSubIdxZidoo.first != null && this.mCurrentAudioIdx != null && !this.bestAudioSubIdxZidoo.first.equals(this.mCurrentAudioIdx)) {
+                        if (setZidooAudioTrack(this.bestAudioSubIdxZidoo.first)) {
+                            Timber.d("zidooStartupTask setZidooAudioTrack success <%s>", this.bestAudioSubIdxZidoo.first);
                         } else {
                             Timber.e("zidooStartupTask setZidooAudioTrack failed!" );
                         }
                     }
-                    if (this.expectedAudioSubIdx.second != null && this.mCurrentSubIdx != null && !this.expectedAudioSubIdx.second.equals(this.mCurrentSubIdx)) {
-                        if (setZidooSubtitleTrack(this.expectedAudioSubIdx.second)) {
-                            Timber.d("zidooStartupTask setZidooSubtitleTrack success <%s>", this.expectedAudioSubIdx.second);
+                    if (this.bestAudioSubIdxZidoo.second != null && this.mCurrentSubIdx != null && !this.bestAudioSubIdxZidoo.second.equals(this.mCurrentSubIdx)) {
+                        if (setZidooSubtitleTrack(this.bestAudioSubIdxZidoo.second)) {
+                            Timber.d("zidooStartupTask setZidooSubtitleTrack success <%s>", this.bestAudioSubIdxZidoo.second);
                         } else {
                             Timber.e("zidooStartupTask setZidooSubtitleTrack failed!" );
                         }
@@ -644,7 +713,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 long activityPlayTime = System.currentTimeMillis() - this.mActivityStartTime;
                 if (this.mZidooStartupOK) {
                     this.stop();
-                    mZidooTask = new ZidooReportTask(this.mItem, this.mZidooIdentifierHash);
+                    mZidooTask = new ZidooReportTask(this);
                     mHandler.postDelayed(mZidooTask, 2000);
                     Timber.d("zidooStartupTask detected ZidooPlayer running!");
                 } else if (activityPlayTime < API_ZIDOO_STARTUP_TIMEOUT) {
@@ -661,11 +730,13 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     private class ZidooReportTask extends ZidooTask {
         private int mZidooReportTaskErrorCount;
+        public Pair<Integer, Integer> mInitialAudioSubIdx;
 
-        public ZidooReportTask(BaseItemDto item, Integer zidooIdentifierHash) {
-            super(item);
-            this.mZidooIdentifierHash = zidooIdentifierHash;
+        public ZidooReportTask(@NonNull ZidooStartupTask startupTask) {
+            super(startupTask.mItem, startupTask.streamInfo);
+            this.mZidooIdentifierHash = startupTask.mZidooIdentifierHash;
             this.mZidooReportTaskErrorCount = 0;
+            this.mInitialAudioSubIdx = new Pair<>(null,null);
         }
 
         @Override
@@ -675,57 +746,58 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 if (this.isStopped) {
                     return;
                 }
-                if (this.mItem != null) {
-                    Map<String, Integer> statusMap = getZidooPlayStatusEx();
-                    Integer status = statusMap.getOrDefault("status", API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR);
-                    if (status != null && status >= API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE) {
-                        Integer id_hash = statusMap.getOrDefault("id_hash", null);
-                        if (!this.mZidooIdentifierHash.equals(id_hash)) {
-                            Timber.w("ZidooReportTask wrong id_hash <%s> expected <%s>", id_hash, mZidooIdentifierHash);
-                            this.stop();
-                            finish();
-                            return;
-                        }
+                Map<String, Integer> statusMap = getZidooPlayStatusEx();
+                Integer status = statusMap.getOrDefault("status", API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR);
+                if (status != null && status >= API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PAUSE) {
+                    Integer id_hash = statusMap.getOrDefault("id_hash", null);
+                    if (!this.mZidooIdentifierHash.equals(id_hash)) {
+                        Timber.w("ZidooReportTask wrong id_hash <%s> expected <%s>", id_hash, mZidooIdentifierHash);
+                        this.stop();
+                        finish();
+                        return;
                     }
-                    if (status != null && status == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING) {
-                        Integer currentPos = statusMap.getOrDefault("currentPosition", -1);
-                        if (this.mPlayPos == null && currentPos != null && currentPos > 0) {
-                            this.mPlayPos = currentPos;
-                            ReportingHelper.reportStart(this.mItem, (long) this.mPlayPos * RUNTIME_TICKS_TO_MS);
-                            Timber.d("ZidooReportTask reportStart Status: <%s> Position: <%s>",status,getMillisecondsFormated(this.mPlayPos));
-                        } else if (currentPos != null && currentPos > 0) {
-                            this.mPlayPos = currentPos;
-                            ReportingHelper.reportProgress(null, this.mItem, mCurrentStreamInfo, (long) this.mPlayPos * RUNTIME_TICKS_TO_MS, false);
-                            Timber.d("ZidooReportTask reportProgress Status: <%s> Position: <%s>",status,getMillisecondsFormated(this.mPlayPos));
-                        }
-                        this.mCurrentAudioIdx = statusMap.getOrDefault("audio_index", null);
-                        this.mCurrentSubIdx = statusMap.getOrDefault("subtitle_index", null);
+                }
+                if (status != null && status == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING) {
+                    this.mCurrentAudioIdx = statusMap.getOrDefault("audio_index", this.mCurrentAudioIdx);
+                    this.mCurrentSubIdx = statusMap.getOrDefault("subtitle_index", this.mCurrentSubIdx);
+                    Integer currentPos = statusMap.getOrDefault("currentPosition", this.mPlayPos);
+                    if (this.mPlayPos == null && currentPos != null && currentPos > 0) {
+                        this.mPlayPos = currentPos;
+                        this.mInitialAudioSubIdx = new Pair<>(this.mCurrentAudioIdx, this.mCurrentSubIdx);
+                        ReportingHelper.reportStart(this.mItem, (long) this.mPlayPos * RUNTIME_TICKS_TO_MS);
+                        Timber.d("ZidooReportTask reportStart Status: <%s> Position: <%s>",status,getMillisecondsFormated(this.mPlayPos));
+                        Timber.d("ZidooReportTask Start audioIdx: <%s> subTitleIdx: <%s>",this.mCurrentAudioIdx,this.mCurrentSubIdx);
+                    } else if (currentPos != null && currentPos > 0) {
+                        this.mPlayPos = currentPos;
+                        ReportingHelper.reportProgress(null, this.mItem, mCurrentStreamInfo, (long) this.mPlayPos * RUNTIME_TICKS_TO_MS, false);
+                        Timber.d("ZidooReportTask reportProgress Status: <%s> Position: <%s>",status,getMillisecondsFormated(this.mPlayPos));
                     }
+                }
 
-                    if (status == null || status == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR) {
-                        this.mZidooReportTaskErrorCount++;
-                        if (this.mZidooReportTaskErrorCount > API_ZIDOO_HTTP_API_MAX_ERROR_COUNT) { // ended/error, allow for some hiccups since its a http api
-                            Timber.e("ZidooReportTask detected invalid Zidoo player status, ending Activity!");
-                            this.stop();
-                            finish();
-                        } else {
-                            mHandler.postDelayed(this, 1000); // try again in a second
-                            Timber.d("ZidooReportTask detected Zidoo player http-api status error, trying again in 1000 ms.");
-                        }
+                if (status == null || status == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_ERROR) {
+                    this.mZidooReportTaskErrorCount++;
+                    if (this.mZidooReportTaskErrorCount > API_ZIDOO_HTTP_API_MAX_ERROR_COUNT) { // ended/error, allow for some hiccups since its a http api
+                        Timber.e("ZidooReportTask detected invalid Zidoo player status, ending Activity!");
+                        this.stop();
+                        finish();
                     } else {
-                        mHandler.postDelayed(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
-                        this.mZidooReportTaskErrorCount = 0; // reset
+                        mHandler.postDelayed(this, 1000); // try again in a second
+                        Timber.d("ZidooReportTask detected Zidoo player http-api status error, trying again in 1000 ms.");
                     }
+                } else {
+                    mHandler.postDelayed(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
+                    this.mZidooReportTaskErrorCount = 0; // reset
                 }
             });
         }
 
         @Override
-        protected void stop() {
+        public void stop() {
             // only report once on Stop
             if (!isStopped && this.mPlayPos != null) {
                 ReportingHelper.reportStopped(this.mItem, mCurrentStreamInfo, (long) this.mPlayPos * RUNTIME_TICKS_TO_MS);
                 Timber.d("ZidooReportTask reportStopped Position: <%s>",getMillisecondsFormated(this.mPlayPos));
+                Timber.d("ZidooReportTask Stopped audioIdx: <#%s><%s> subTitleIdx: <#%s><%s>",this.mCurrentAudioIdx,this.mInitialAudioSubIdx.first,this.mCurrentSubIdx,this.mInitialAudioSubIdx.second);
             }
             super.stop();
          }
@@ -790,8 +862,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
     }
 
+    final static int DEFAULT_FLAG_MERIT = 30; // should this override even best picks?
     // setup our filter merits
-    final static Map<String, Integer> SUB_FILTERS = Map.of(
+    final static Map<String, Integer> SUBTITLE_FILTERS = Map.of(
             "dialog", 10,
             "full", 9,
             "non_honorific", 2,
@@ -837,185 +910,304 @@ public class ExternalPlayerActivity extends FragmentActivity {
         return stream.getIsDefault() || (stream.getTitle() != null && stream.getTitle().toLowerCase().contains("default" )); // FIX for bad tagged stuff
     }
 
-    private boolean isSameLanguage(MediaStream streamA, MediaStream streamB) {
-        if (streamA != null && streamB != null) {
-            String langA = streamA.getLanguage();
-            String langB = streamB.getLanguage();
-            if (langA != null && !langA.trim().isEmpty() && langB != null && !langB.trim().isEmpty()) {
-                if (langA.trim().toLowerCase().equals(langB.trim().toLowerCase())) {
-                    return true;
-                }
-            }
+    private boolean isSameLanguage(@NonNull MediaStream streamA, @NonNull MediaStream streamB) {
+        String langA = streamA.getLanguage();
+        String langB = streamB.getLanguage();
+        if (isNonEmptyTrim(langA) && isNonEmptyTrim(langB)) {
+            return equalsIgnoreCaseTrim(langA, langB);
         }
         return false;
     }
 
-    // <audio index, subtitle index> those are type relative index, starting at 0 ! Zidoo uses 0 based idx, but displays human 1 based
-    protected Pair<Integer, Integer> getBestAudioSubtitleIdx(ArrayList<MediaStream> mediaStreams) {
-        if (mediaStreams == null || mediaStreams.isEmpty()) {
-            Timber.e("Invalid MediaStreams!");
-            return new Pair<Integer, Integer>(null, null);
+    protected int calcMeritAudio(@NonNull MediaStream audioStream) {
+        if (audioStream.getType() != MediaStreamType.Audio) {
+            Timber.w("Not an Audio stream!");
+            return 0;
         }
-        // build merit maps
-        Map<String, Integer> audio_codecs = new HashMap<>(AUDIO_CODECS);
-        Map<String, Integer> subTrack_filters = new HashMap<>(SUB_FILTERS);
-        if (mPreferSdhSubs) {
-            subTrack_filters.put("sdh", 50);
-            subTrack_filters.put("caption", 40);
-        }
-        if (mHasDtsDecoder) {
-            audio_codecs.put(Codec.Audio.DTS, 7); // match eac3 with MA ?
-        }
-        TreeMap<Integer, Pair<MediaStream, Integer>> audioIdxMap = new TreeMap<>();
-        TreeMap<Integer, Pair<MediaStream, Integer>> subtitleIdxMap = new TreeMap<>();
-        Map<String, Integer> audioLanguageMap = new HashMap<>();
-        int langMerit = 200;
-        for (String langCode : mAudioLangCodes) {
-            audioLanguageMap.put(langCode.trim().toLowerCase(), langMerit);
-            langMerit -= 20;
-        }
-        Map<String, Integer> subLanguageMap = new HashMap<>();
-        langMerit = 100;
-        for (String langCode : mSubLangCodes) {
-            subLanguageMap.put(langCode.trim().toLowerCase(), langMerit);
-            langMerit -= 10;
-        }
-        TreeMap<Integer, Pair<MediaStream, Integer>> subForcedIdxMap = new TreeMap<>();
+        int sampleRate = getSafeValue(audioStream.getSampleRate(), 44000);
+        int bitDepth = getSafeValue(audioStream.getBitDepth(), 16);
+        int numChannels = getSafeValue(audioStream.getChannels(), 0);
 
-        // NOTE: We see total stream idx here so replace to relative audio/sub stream, numbers!
-        int audioIdxNr = 0;
-        int subIdxNr = 0;
+        int merit = 0;
+        if (numChannels > 2) {
+            if (numChannels <= 5) {
+                merit += 1;
+            } else {
+                if (mPrefer6ChAudio && numChannels == 6) {
+                    merit += 6;
+                } else if (numChannels > 6) {
+                    merit += 3;
+                } else {
+                    merit += 2;
+                }
+            }
+        }
+        if (sampleRate > 48000) {
+            merit += 1;
+        }
+        if (bitDepth > 16) {
+            merit += 1;
+        }
+
+        return merit;
+    }
+
+    @NonNull
+    protected TreeMap<Integer, Pair<MediaStream, Integer>> evaluateMediaStreams(@NonNull ArrayList<MediaStream> mediaStreams, MediaStreamType mediaType, @Nullable String langCodeFilter, boolean ignoreForced) {
+        if (!(mediaType == MediaStreamType.Audio || mediaType == MediaStreamType.Subtitle)) {
+            Timber.w("Unsupported media type <%s>", mediaType);
+            return new TreeMap<>();
+        }
+        if (isNonEmptyTrim(langCodeFilter) && langCodeFilter.length() != 3) {
+            Timber.w("langCodeFilter is not a 3 letter code <%s>", langCodeFilter);
+            return new TreeMap<>();
+        }
+        // setup our merit maps
+        Map<String, Integer> merit_codec = null;
+        Map<String, Integer> merit_filter = null;
+        Map<String, Integer> merit_profile = null;
+
+        if (mediaType == MediaStreamType.Audio) {
+            merit_codec = new HashMap<>(AUDIO_CODECS);
+            merit_filter = new HashMap<>(AUDIO_FILTERS);
+            merit_profile = new HashMap<>(AUDIO_PROFILES);
+            if (mHasDtsDecoder) {
+                merit_codec.put(Codec.Audio.DTS, 7); // match eac3 with MA ?
+            }
+        } else if (mediaType == MediaStreamType.Subtitle) {
+            merit_codec = new HashMap<>(SUBTITLE_CODECS);
+            merit_filter = new HashMap<>(SUBTITLE_FILTERS);
+            merit_profile = new HashMap<>();
+            if (mPreferSdhSubs) {
+                merit_filter.put("sdh", 50);
+                merit_filter.put("caption", 40);
+            }
+        }
+        TreeMap<Integer, Pair<MediaStream, Integer>> outMeritMap = new TreeMap<>();
+        // NOTE: We need the natural per type index, not absolute.
+        int naturalIdx = 0;
         // calculate merits for all streams
         for (MediaStream stream : mediaStreams) {
-            if (stream.getIsExternal()) {
+            int merit = 0;
+            if (stream.getType() != mediaType) {
                 continue;
             }
-            if (stream.getType() == MediaStreamType.Audio) {
-                String codec = stream.getCodec();
-                String profile = stream.getProfile();
-                String languageCode = stream.getLanguage();
-                String title = stream.getTitle();
-                Integer sampleRate = stream.getSampleRate();
-                Integer bitDepth = stream.getBitDepth();
-                Integer numChannels = stream.getChannels();
-                int merit = 0;
-                if (numChannels != null && numChannels > 2) {
-                    if (numChannels <= 5) {
-                        merit += 1;
-                    } else {
-                        if (mPrefer6ChAudio && numChannels == 6) {
-                            merit += 6;
-                        } else if (numChannels > 6) {
-                            merit += 3;
-                        } else {
-                            merit += 2;
-                        }
-                    }
-                }
-                if (sampleRate != null && sampleRate > 48000) {
-                    merit += 1;
-                }
-                if (bitDepth != null && bitDepth > 16) {
-                    merit += 1;
-                }
-                if (codec != null && !codec.trim().isEmpty()) {
-                    merit += audio_codecs.getOrDefault(codec.trim().toLowerCase(), 0);
-                }
-                if (profile != null && !profile.trim().isEmpty()) {
-                    merit += AUDIO_PROFILES.getOrDefault(profile.trim().toLowerCase(), 0);
-                }
-                if (languageCode != null && !languageCode.trim().isEmpty()) {
-                    merit += audioLanguageMap.getOrDefault(languageCode.trim().toLowerCase(), 0);
-                }
-                if (title != null && !title.trim().isEmpty()) {
-                    for (Map.Entry<String, Integer> entry : AUDIO_FILTERS.entrySet()) {
-                        if (title.trim().toLowerCase().contains(entry.getKey())) {
-                            merit += entry.getValue();
-                        }
-                    }
-                }
-                if (isDefaultTrack(stream)) {
-                    if (mPreferDefault) {
-                        merit += 20;
-                    } else {
-                        merit += 2; // slightly boost defaults
-                    }
-                }
-                audioIdxMap.put(merit, new Pair<>(stream,audioIdxNr));
-                audioIdxNr++;
-            } else if (stream.getType() == MediaStreamType.Subtitle) {
-                String codec = stream.getCodec();
-                String languageCode = stream.getLanguage();
-                String title = stream.getTitle();
-                int merit = 0;
-                if (codec != null && !codec.trim().isEmpty()) {
-                    merit += SUBTITLE_CODECS.getOrDefault(codec.trim().toLowerCase(), 0);
-                }
-                if (languageCode != null && !languageCode.trim().isEmpty()) {
-                    merit += subLanguageMap.getOrDefault(languageCode.trim().toLowerCase(), 0);
-                }
-                if (title != null && !title.trim().isEmpty()) {
-                    for (Map.Entry<String, Integer> entry : subTrack_filters.entrySet()) {
-                        if (title.trim().toLowerCase().contains(entry.getKey())) {
-                            merit += entry.getValue();
-                        }
-                    }
-                }
-                if (isDefaultTrack(stream)) {
-                    if (mPreferDefault) {
-                        merit += 20;
-                    } else {
-                        merit += 1; // slightly boost defaults
-                    }
-                }
-                if (mUseForced && isForcedTrack(stream)) {
-                    subForcedIdxMap.put(merit, new Pair<>(stream,subIdxNr));
-                }
-                subtitleIdxMap.put(merit, new Pair<>(stream,subIdxNr));
-                subIdxNr++;
+            if (stream.getIsExternal()) {
+//                naturalIdx++; // ??? test this
+                continue;
             }
+            if (ignoreForced && isForcedTrack(stream)) {
+                naturalIdx++;
+                continue;
+            }
+            String langCode = getSafeValue(stream.getLanguage(), "").trim().toLowerCase(US);
+            if (isNonEmptyTrim(langCodeFilter) && !langCode.equals(langCodeFilter)) {
+                naturalIdx++;
+                continue;
+            }
+            String codec = getSafeValue(stream.getCodec(), "").trim().toLowerCase(US);
+            String profile = getSafeValue(stream.getProfile(),"").trim().toLowerCase(US);
+            String title = getSafeValue(stream.getTitle(),"").trim().toLowerCase(US);
+
+            merit += getSafeValue(merit_codec.get(codec), 0);
+            merit += getSafeValue(merit_profile.get(profile), 0);
+            for (Map.Entry<String, Integer> entry : merit_filter.entrySet()) {
+                String filter = getSafeValue(entry.getKey(),"").trim().toLowerCase(US);
+                if (!filter.isEmpty() && !title.isEmpty() && title.contains(filter)) {
+                    merit += getSafeValue(entry.getValue(), 0);
+                }
+            }
+            if (isDefaultTrack(stream)) {
+                if (mPreferDefault) {
+                    merit += DEFAULT_FLAG_MERIT;
+                } else {
+                    merit += 1; // slightly boost defaults, if all is equal we favor defaults
+                }
+            }
+            if (stream.getType() == MediaStreamType.Audio) {
+                merit += calcMeritAudio(stream); // rate channels bitDepth sampleRate (we miss more audioProfiles)
+            }
+            // only use positive merits!
+            if (merit >= 0) {
+                outMeritMap.put(merit, new Pair<>(stream, naturalIdx));
+            }
+            naturalIdx++;
+        }
+        return outMeritMap;
+    }
+
+    @NonNull
+    protected ArrayList<Pair<MediaStream,Integer>> getForcedStreams(@NonNull ArrayList<MediaStream> mediaStreams, MediaStreamType mediaType, @Nullable String langCodeFilter) {
+        ArrayList<Pair<MediaStream,Integer>> outmap = new ArrayList<>();
+        // NOTE: We need the natural per type index, not absolute.
+        int naturalIdx = 0;
+        for (MediaStream stream : mediaStreams) {
+            if (stream.getType() != mediaType) {
+                continue;
+            }
+            if (stream.getIsExternal()) {
+//                naturalIdx++; // ??? test this
+                continue;
+            }
+            String langCode = getSafeValue(stream.getLanguage(), "").trim().toLowerCase(US);
+            if (isNonEmptyTrim(langCodeFilter) && !langCode.equals(langCodeFilter)) {
+                naturalIdx++;
+                continue;
+            }
+            if (isForcedTrack(stream)) {
+                outmap.add(new Pair<>(stream, naturalIdx));
+            }
+            naturalIdx++;
+        }
+        return outmap;
+    }
+
+    @NonNull
+    protected ArrayList<Pair<MediaStream,Integer>> getDefaultStreams(@NonNull ArrayList<MediaStream> mediaStreams, MediaStreamType mediaType, @Nullable String langCodeFilter) {
+        ArrayList<Pair<MediaStream,Integer>> outmap = new ArrayList<>();
+        // NOTE: We need the natural per type index, not absolute.
+        int naturalIdx = 0;
+        for (MediaStream stream : mediaStreams) {
+            int merit = 0;
+            if (stream.getType() != mediaType) {
+                continue;
+            }
+            if (stream.getIsExternal()) {
+//                naturalIdx++; // ??? test this
+                continue;
+            }
+            String langCode = getSafeValue(stream.getLanguage(), "").trim().toLowerCase(US);
+            if (isNonEmptyTrim(langCodeFilter) && !langCode.equals(langCodeFilter)) {
+                naturalIdx++;
+                continue;
+            }
+            if (isDefaultTrack(stream)) {
+                outmap.add(new Pair<>(stream, naturalIdx));
+            }
+            naturalIdx++;
+        }
+        return outmap;
+    }
+
+    // <audio index, subtitle index> those are type relative index, starting at 0! Zidoo uses 0 based idx, but displays human 1 based.
+    @NonNull
+    protected Pair<Integer, Integer> getBestAudioSubtitleIdx(@NonNull ArrayList<MediaStream> mediaStreams) {
+        if (isEmpty(mediaStreams)) {
+            Timber.e("Invalid MediaStreams!");
+            return new Pair<>(null,null);
         }
         Integer audIdx = null;
         Integer subIdx = null;
-        // only use positive merits?
-        if (audioIdxMap.lastEntry().getKey() >= 0 && audioIdxMap.lastEntry().getValue().first != null) {
-            MediaStream audioStream = audioIdxMap.lastEntry().getValue().first;
-            audIdx = audioIdxMap.lastEntry().getValue().second;
-            Timber.d("xxx AudioTrack idx <%s> title <%s>", audIdx, audioStream.getDisplayTitle());
-            if (subtitleIdxMap.lastEntry().getKey() >= 0 && subtitleIdxMap.lastEntry().getValue().first != null) {
-                MediaStream subStream = subtitleIdxMap.lastEntry().getValue().first;
-                if (isSameLanguage(audioStream, subStream)) {
-                    if (mAllowSameLanguageSubs) { // kinda "smart" SDH
-                        subIdx = subtitleIdxMap.lastEntry().getValue().second;
-                        Timber.d("xxx SubTrack idx <%s> title <%s>", subIdx, subStream.getDisplayTitle());
-                    }
-                } else {
-                    subIdx = subtitleIdxMap.lastEntry().getValue().second;
-                    Timber.d("xxx SubTrack idx <%s> title <%s>", subIdx, subStream.getDisplayTitle());
+        MediaStream audioTrack = null;
+        MediaStream subTrack = null;
+
+        // 1) check if we get a native audio stream
+        TreeMap<Integer, Pair<MediaStream, Integer>> nativeAudioMerits = evaluateMediaStreams(mediaStreams, MediaStreamType.Audio, mAudioLangCode, false);
+        if (!nativeAudioMerits.isEmpty()) {
+            audIdx = nativeAudioMerits.lastEntry().getValue().second; // great found native audio!
+            audioTrack = nativeAudioMerits.lastEntry().getValue().first;
+            // check if we find native forced subs
+            if (!mIgnoreForced) {
+                ArrayList<Pair<MediaStream, Integer>> nativeForcedSubTracks = getForcedStreams(mediaStreams, MediaStreamType.Subtitle, mAudioLangCode);
+                if (!nativeForcedSubTracks.isEmpty()) {
+                    subIdx = nativeForcedSubTracks.get(0).second; // found native forced subtitles
+                    subTrack = nativeForcedSubTracks.get(0).first;
                 }
             }
-            // check for forcedSubs
-            if (subIdx == null && mUseForced && subForcedIdxMap.lastEntry() != null) {
-                MediaStream forcedSubStream = subForcedIdxMap.lastEntry().getValue().first;
-                if (isSameLanguage(audioStream, forcedSubStream)) {
-                    subIdx = subForcedIdxMap.lastEntry().getValue().second;
-                    Timber.d("xxx SubTrack idx <%s> title <%s>", subIdx, forcedSubStream.getDisplayTitle());
+            // find "good" same language subtitles
+            if (subIdx == null && mAllowSameLanguageSubs) {
+                TreeMap<Integer, Pair<MediaStream, Integer>> nativeSubtitleMerits = evaluateMediaStreams(mediaStreams, MediaStreamType.Subtitle, mAudioLangCode, true);
+                if (!nativeSubtitleMerits.isEmpty()) {
+                    subIdx = nativeSubtitleMerits.lastEntry().getValue().second; // found matching subtitle track
+                    subTrack = nativeSubtitleMerits.lastEntry().getValue().first;
+                }
+            }
+            if (subIdx == null) {
+                subIdx = SUBTITLE_DISABLED;
+            }
+        }
+        // 2) no audio yet, try none native audio, with native subtitles!
+        if (audIdx == null) {
+            TreeMap<Integer, Pair<MediaStream, Integer>> nativeSubMerits = evaluateMediaStreams(mediaStreams, MediaStreamType.Subtitle, mSubLangCode, true); // filter forced?
+            if (!nativeSubMerits.isEmpty()) {
+                subIdx = nativeSubMerits.lastEntry().getValue().second; // great found native subtitles!
+                subTrack = nativeSubMerits.lastEntry().getValue().first;
+                // prefer ANY default audio track
+                ArrayList<Pair<MediaStream,Integer>> defaultAudioTracks = getDefaultStreams(mediaStreams, MediaStreamType.Audio, null);
+                if (!defaultAudioTracks.isEmpty()) {
+                    audIdx = defaultAudioTracks.get(0).second; // found default audio
+                    audioTrack = defaultAudioTracks.get(0).first;
+                } else {
+                    // now we can evaluate or just use track 0 ??
+                    TreeMap<Integer, Pair<MediaStream, Integer>> audioTrackMerits = evaluateMediaStreams(mediaStreams, MediaStreamType.Audio, null, false);
+                    if (!audioTrackMerits.isEmpty()) {
+                        audIdx = audioTrackMerits.lastEntry().getValue().second; // found "best" none native audio track
+                        audioTrack = audioTrackMerits.lastEntry().getValue().first;
+                    }
                 }
             }
         }
-        return new Pair<Integer, Integer>(audIdx, subIdx);
+        // 3) still no audio track, try defaults
+        if (audIdx == null) {
+            ArrayList<Pair<MediaStream,Integer>> defaultAudioTracks = getDefaultStreams(mediaStreams, MediaStreamType.Audio, null);
+            if (!defaultAudioTracks.isEmpty()) {
+                audIdx = defaultAudioTracks.get(0).second; // found default audio
+                audioTrack = defaultAudioTracks.get(0).first;
+            }
+            if (subIdx == null) {
+                ArrayList<Pair<MediaStream,Integer>> defaultSubTracks = getDefaultStreams(mediaStreams, MediaStreamType.Subtitle, null);
+                if (!defaultSubTracks.isEmpty()) {
+                    subIdx = defaultSubTracks.get(0).second; // found default subtitles
+                    subTrack = defaultSubTracks.get(0).first;
+                }
+            }
+        }
+
+        Timber.d("getBestAudioSubtitleIdx <%s> <%s>",audIdx,subIdx);
+        Timber.d("getBestAudioSubtitleIdx audio: <%s> subtitle: <%s>",audioTrack != null ? audioTrack.getDisplayTitle() : audioTrack,subTrack != null ? subTrack.getDisplayTitle() : subTrack);
+        return new Pair<>(audIdx, subIdx);
     }
 
     protected void launchExternalPlayer(int ndx) {
+        mCurrentNdx = 0;
         if (ndx >= mItemsToPlay.size()) {
             Timber.e("Attempt to play index beyond items: %s", ndx);
+            Utils.showToast(this, getString(R.string.msg_no_playable_items));
+            finish();
             return;
         }
-
-        //Get playback info for current item
+        final BaseItemDto item = mItemsToPlay.get(ndx);
+        if (isEmpty(item.getMediaStreams())) {
+            Timber.e("Attempt to play a empty media item <%s>", item.getName());
+            Utils.showToast(this, getString(R.string.msg_no_playable_items));
+            finish();
+            return;
+        }
         mCurrentNdx = ndx;
-        final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
         isLiveTv = item.getBaseItemType() == BaseItemType.TvChannel;
+
+//        SystemPreferences systemPreferences = KoinJavaComponent.<SystemPreferences>get(SystemPreferences.class);
+//        UserConfiguration userConf = KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getConfiguration();
+//        UserDto user = KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue();
+//
+//        apiClient.getValue().GetItemAsync(item.getSeriesId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
+//            @Override
+//            public void onResponse(BaseItemDto response) {
+//                Timber.e("xxx item changed?");
+//                LibraryPreferences libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(response.getDisplayPreferencesId()));
+//                ImageType mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
+//                GridDirection mGridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
+//            }
+//        });
+
+//        apiClient.getValue().getSubtitles();
+//        apiClient.getValue().UpdateItem(item.getId(), item, new EmptyResponse() {
+//            @Override
+//            public void onResponse() {
+//                Timber.e("xxx item changed?");
+//            }
+//        });
+
 //        if (ndx == 0) {
 //            finish();
 //            return;
@@ -1026,8 +1218,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             mCurrentStreamInfo = new StreamInfo();
             mCurrentStreamInfo.setPlayMethod(PlayMethod.DirectPlay);
 
-            Pair<Integer, Integer> bestTracks = getBestAudioSubtitleIdx(item.getMediaStreams());
-            startExternalZidooZDMCActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*", bestTracks);
+            startExternalZidooZDMCActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*", item);
 //            startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
         } else {
             //Build options for player
@@ -1041,14 +1232,23 @@ public class ExternalPlayerActivity extends FragmentActivity {
             KoinJavaComponent.<PlaybackManager>get(PlaybackManager.class).getVideoStreamInfo(api.getValue().getDeviceInfo(), options, item.getResumePositionTicks(), apiClient.getValue(), new Response<StreamInfo>() {
                 @Override
                 public void onResponse(StreamInfo response) {
+                    if (isEmpty(response.getMediaSource().getMediaStreams())) {
+                        Timber.e("Attempt to play a empty media item <%s>", response.getMediaSource().getName());
+                        finish();
+                        return;
+                    }
                     mCurrentStreamInfo = response;
-                    Pair<Integer, Integer> bestTracks = getBestAudioSubtitleIdx(response.getMediaSource().getMediaStreams());
                     //Construct a static URL to sent to player
                     //String url = KoinJavaComponent.<ApiClient>get(ApiClient.class).getApiUrl() + "/videos/" + response.getItemId() + "/stream?static=true&mediaSourceId=" + response.getMediaSourceId();
 
                     String url = response.getMediaUrl();
+                    if (!response.getItemId().equals(item.getId())) {
+                        Timber.e("Id's dont match for startExternalZidooMovieActivity <%s> <%s>", response.getItemId(), item.getId());
+                        finish();
+                        return;
+                    }
                     //And request an activity to play it
-                    startExternalZidooMovieActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*", bestTracks);
+                    startExternalZidooMovieActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*", response, item);
 //                    startExternalActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
                 }
 
@@ -1070,13 +1270,12 @@ public class ExternalPlayerActivity extends FragmentActivity {
                         }
                     }
                 }
-
             });
         }
     }
 
     protected String preparePath(String rawPath) {
-        if (rawPath == null || rawPath.isEmpty() || rawPath.trim().isEmpty()) {
+        if (isEmptyTrim(rawPath)) {
             return "";
         }
         if (!rawPath.contains("://")) {
@@ -1105,7 +1304,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         if (context != null) {
             full_title = BaseItemUtils.getDisplayName(item, context);
         }
-        if (full_title.isEmpty()) {
+        if (isEmptyTrim(full_title)) {
             full_title = item.getName();
         }
         if (item.getProductionYear() != null && item.getProductionYear() > 0) {
@@ -1121,14 +1320,14 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
         external.putExtra(API_VIMU_RESUME, false);
         external.putExtra(API_MX_RETURN_RESULT, true);
-        if (!full_title.isEmpty()) {
+        if (isNonEmptyTrim(full_title)) {
             external.putExtra(API_MX_TITLE, full_title);
             external.putExtra(API_VIMU_TITLE, full_title);
         }
         String filepath = item.getPath();
-        if (filepath != null && !filepath.isEmpty()) {
+        if (isNonEmptyTrim(filepath)) {
             File file = new File(filepath);
-            if (!file.getName().isEmpty()) {
+            if (isNonEmptyTrim(file.getName())) {
                 external.putExtra(API_MX_FILENAME, file.getName());
             }
         }
@@ -1147,15 +1346,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
     }
 
-    private void startExternalZidooZDMCActivity(String path, String container, Pair<Integer, Integer> audioSubTracks) {
-        if (path == null || path.isEmpty() || path.trim().isEmpty()) {
+    private void startExternalZidooZDMCActivity(String path, String container, @NonNull BaseItemDto item) {
+        if (isEmptyTrim(path)) {
             Timber.e("Error null/empty input path given!");
-            finish();
-            return;
-        }
-        final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
-        if (item == null) {
-            Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
             finish();
             return;
         }
@@ -1177,17 +1370,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
             zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_SMB);
             Timber.d("Using SMB NET_MODE for ZDMCActivity!");
             String userInfo = path_uri.getUserInfo();
-            if (userInfo != null && !userInfo.trim().isEmpty()) {
+            if (isNonEmptyTrim(userInfo)) {
                 String[] splitArray = userInfo.split(":", 2);
                 if (splitArray.length >= 1) {
                     final String smb_username = splitArray[0].trim();
-                    if (!smb_username.isEmpty()) {
+                    if (isNonEmptyTrim(smb_username)) {
                         zidooIntent.putExtra(API_ZIDOO_NET_SMB_USERNAME, smb_username);
                         Timber.d("Using SMB username <%s> for ZDMCActivity!",smb_username);
                     }
                     if (splitArray.length >= 2) {
                         final String smb_password = splitArray[1].trim();
-                        if (!smb_password.isEmpty()) {
+                        if (isNonEmptyTrim(smb_password)) {
                             zidooIntent.putExtra(API_ZIDOO_NET_SMB_PASSWORD, smb_password);
                             Timber.d("Using SMB password ******* for ZDMCActivity!");
                         }
@@ -1214,7 +1407,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         zidooIntent.setDataAndType(path_uri, "video/"+container);
         try {
             mLastPlayerStart = System.currentTimeMillis();
-            mZidooTask = new ZidooStartupTask(item, audioSubTracks, mPosition);
+            mZidooTask = new ZidooStartupTask(item, mPosition);
             mHandler.postDelayed(mZidooTask, 2000); // 2s initial delay = quickest time zidoo can start something
             startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while both don't set any results!
         } catch (ActivityNotFoundException e) {
@@ -1241,15 +1434,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     // will crash via mountSambaServer() in internal player? URI data is correct?
-    private void startExternalZidooMovieActivity(String path, String container, Pair<Integer, Integer> audioSubTracks) {
-        if (path == null || path.isEmpty() || path.trim().isEmpty()) {
+    private void startExternalZidooMovieActivity(String path, String container, @NonNull StreamInfo streamInfo, @NonNull BaseItemDto item) {
+        if (isEmptyTrim(path)) {
             Timber.e("Error null/empty input path given!");
-            finish();
-            return;
-        }
-        final BaseItemDto item = mItemsToPlay.get(mCurrentNdx);
-        if (item == null) {
-            Timber.e("Error getting item to play for Ndx: <%d>.", mCurrentNdx);
             finish();
             return;
         }
@@ -1275,7 +1462,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         try {
             mLastPlayerStart = System.currentTimeMillis();
-            mZidooTask = new ZidooStartupTask(item, audioSubTracks, mPosition);
+            mZidooTask = new ZidooStartupTask(item, mPosition, streamInfo);
             mHandler.postDelayed(mZidooTask, 2000); // 2s initial delay = quickest time zidoo can start something
             startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while both don't set any results!
         } catch (ActivityNotFoundException e) {

@@ -13,6 +13,8 @@ import org.jellyfin.sdk.model.api.UserDto;
 import org.koin.java.KoinJavaComponent;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 
 import timber.log.Timber;
@@ -72,6 +74,16 @@ public class Utils {
         return str1.equalsIgnoreCase(str2);
     }
 
+    public static boolean equalsIgnoreCaseTrim(String str1, String str2) {
+        if (str1 == null && str2 == null) {
+            return true;
+        }
+        if (str1 == null || str2 == null) {
+            return false;
+        }
+        return equalsIgnoreCase(str1.trim(), str2.trim());
+    }
+
     public static <T> T getSafeValue(T value, T defaultValue) {
         if (value == null) return defaultValue;
         return value;
@@ -83,6 +95,22 @@ public class Utils {
 
     public static boolean isNonEmpty(String value) {
         return value != null && !value.equals("");
+    }
+
+    public static boolean isEmptyTrim(String value) {
+        return value == null || value.trim().equals("");
+    }
+
+    public static boolean isNonEmptyTrim(String value) {
+        return value != null && !value.trim().equals("");
+    }
+
+    public static <T> boolean isEmpty(Collection<T> coll) {
+        return coll == null || coll.isEmpty();
+    }
+
+    public static <T> boolean isNonEmpty(Collection<T> coll) {
+        return coll != null && !coll.isEmpty();
     }
 
     public static String join(String separator, Iterable<String> items) {
