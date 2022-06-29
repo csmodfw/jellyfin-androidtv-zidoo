@@ -23,7 +23,7 @@
 <img alt="Join our Subreddit" src="https://img.shields.io/badge/reddit-r%2Fjellyfin-%23FF5700.svg"/>  
 </a>  
   
-Jellyfin Android TV Zidoo-Edition is a Jellyfin client adapted to better run on [Zidoo media players](https://www.zidoo.tv) running Android 9+.  
+"Zidoo-Edition" is a unofficial community fork of the Jellyfin Android TV client, adapted to better run on [Zidoo media players](https://www.zidoo.tv) running Android 9+.
 ### Release [downloads here](https://github.com/Andy2244/jellyfin-androidtv-zidoo/releases)
 TIP: you can directly install from your browser via `http://zidoo_ip:18888` web interface
 ### App ONLY works with latest 10.8 server!
