@@ -204,6 +204,16 @@
     <string name="lbl_show_premieres">Show season premieres</string>
     <string name="desc_premieres">Show a row of new episode pilots for any series you watch</string>
     <string name="lbl_bitstream_dts">Bitstream DTS audio</string>
+    <string name="lbl_dts_enabled_device">DTS capable device?</string>
+    <string name="desc_dts_enabled_device">Is tv, receiver capable of decoding DTS audio?</string>
+    <string name="lbl_prefer_6ch">Prefer 6 channel audio</string>
+    <string name="desc_prefer_6ch">In case tv, receiver has issues with 8,10+ channels.</string>
+    <string name="lbl_no_forced_subs">No forced subtitle</string>
+    <string name="desc_no_forced_subs">Do not display forced subtitles.</string>
+    <string name="lbl_allow_same_lang_subs">Allow same language subtitles?</string>
+    <string name="desc_allow_same_lang_subs">Display subtitles, even if matching audio language.</string>
+    <string name="lbl_use_sdh_subs">Prefer SDH subtitles</string>
+    <string name="desc_use_sdh_subs">Prefer subtitles for hearing impaired people.</string>
     <string name="lbl_in_x_days">In %d days</string>
     <string name="lbl_select_date">Select Date</string>
     <string name="lbl_just_this_once">Just this once</string>
@@ -244,8 +254,6 @@
     <string name="lbl_song_title">Song Title</string>
     <string name="pref_use_direct_path_title">Pass Direct Path for external player</string>
     <string name="pref_use_direct_path_summary">Pass the file system path instead of streaming URL</string>
-    <string name="pref_use_zidoo_player_title">Use Zidoo player</string>
-    <string name="pref_use_zidoo_player_text">Use Zidoo internal player for http streams and via smb/nfs Direct Path.</string>
     <string name="pref_acra_category">Crash reporting</string>
     <string name="pref_enable_acra">Send crash reports to developers</string>
     <string name="pref_acra_enabled">You will be prompted to submit crash reports</string>
@@ -293,6 +301,8 @@
     <string name="pref_libvlc_subtitle_delay_title">Default subtitle delay for LibVLC</string>
     <string name="pref_app_theme">App theme</string>
     <string name="pref_device_model">Device model</string>
+    <string name="pref_languages_subtitle">Subtitle Language</string>
+    <string name="pref_languages_audio">Audio Language</string>
     <string name="grid_direction">Grid Direction</string>
     <string name="grid_direction_horizontal">Horizontal</string>
     <string name="grid_direction_vertical">Vertical</string>

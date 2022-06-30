@@ -132,14 +132,19 @@ public class Utils {
         return join(separator, Arrays.asList(items));
     }
 
+    // FIXME: this is broken on Zidoo? I get like 1/10 of the actual bitrate, which triggers transcode on "Auto"
     public static int getMaxBitrate() {
         String maxRate = KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getMaxBitrate());
-        Long autoRate = KoinJavaComponent.<AutoBitrate>get(AutoBitrate.class).getBitrate();
-        if (maxRate.equals(UserPreferences.MAX_BITRATE_AUTO) && autoRate != null) {
-            return autoRate.intValue();
-        } else {
-            return (int) (Float.parseFloat(maxRate) * 1_000_000);
+        if (maxRate.equals(UserPreferences.MAX_BITRATE_AUTO)) {
+            maxRate = "100.0"; // avoid transcode via bitrate
         }
+        return (int) (Float.parseFloat(maxRate) * 1_000_000);
+//        Long autoRate = KoinJavaComponent.<AutoBitrate>get(AutoBitrate.class).getBitrate();
+//        if (maxRate.equals(UserPreferences.MAX_BITRATE_AUTO) && autoRate != null) {
+//            return autoRate.intValue();
+//        } else {
+//            return (int) (Float.parseFloat(maxRate) * 1_000_000);
+//        }
     }
 
     public static int getThemeColor(@NonNull Context context, int resourceId) {

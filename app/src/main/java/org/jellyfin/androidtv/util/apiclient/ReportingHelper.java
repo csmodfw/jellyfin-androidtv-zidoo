@@ -20,7 +20,7 @@ import java.util.UUID;
 import timber.log.Timber;
 
 public class ReportingHelper {
-    public static void reportStopped(BaseItemDto item, StreamInfo streamInfo, long pos) {
+    public static void reportStopped(BaseItemDto item, StreamInfo streamInfo, Long pos) {
         if (item != null && streamInfo != null) {
             UUID userId = KoinJavaComponent.<SessionRepository>get(SessionRepository.class).getCurrentSession().getValue().getUserId();
 
@@ -42,7 +42,7 @@ public class ReportingHelper {
         }
     }
 
-    public static void reportStart(BaseItemDto item, long pos) {
+    public static void reportStart(BaseItemDto item, Long pos) {
         PlaybackStartInfo startInfo = new PlaybackStartInfo();
         startInfo.setItemId(item.getId());
         startInfo.setPositionTicks(pos);
