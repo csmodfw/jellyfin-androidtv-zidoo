@@ -14,7 +14,7 @@ import org.jellyfin.apiclient.model.dlna.TranscodingProfile
 class ZidooPlayerProfile : DeviceProfile() {
 	init {
 		name = "AndroidTV-Zidoo-External"
-		maxStaticBitrate = 120_000_000 // 120 mbps
+		maxStaticBitrate = 200_000_000 // 200 mbps
 
 		directPlayProfiles = arrayOf(
 			DirectPlayProfile().apply {
@@ -43,8 +43,8 @@ class ZidooPlayerProfile : DeviceProfile() {
 				).joinToString(",")
 
 				audioCodec = arrayOf(
-//					Codec.Audio.AAC,
-//					Codec.Audio.AAC_LATM,
+					Codec.Audio.AAC,
+					Codec.Audio.AAC_LATM,
 					Codec.Audio.MP3,
 					Codec.Audio.MP2,
 					Codec.Audio.AC3,
@@ -69,10 +69,10 @@ class ZidooPlayerProfile : DeviceProfile() {
 				type = DlnaProfileType.Video
 				context = EncodingContext.Streaming
 				container = Codec.Container.TS
-//				videoCodec = arrayOf(Codec.Video.HEVC, Codec.Video.H264).joinToString(",")
+				videoCodec = arrayOf(Codec.Video.HEVC, Codec.Video.H264).joinToString(",")
 				audioCodec = arrayOf(Codec.Audio.AC3).joinToString(",")
 				copyTimestamps = false
-				segmentLength = 20
+				segmentLength = 10
 				protocol = "hls"
 				enableMpegtsM2TsMode = true
 //				enableSubtitlesInManifest = true
@@ -87,10 +87,10 @@ class ZidooPlayerProfile : DeviceProfile() {
 		)
 
 		subtitleProfiles = arrayOf(
-			subtitleProfile(Codec.Subtitle.SRT, SubtitleDeliveryMethod.Embed),
-			subtitleProfile(Codec.Subtitle.SUBRIP, SubtitleDeliveryMethod.Embed),
 			subtitleProfile(Codec.Subtitle.ASS, SubtitleDeliveryMethod.Embed),
 			subtitleProfile(Codec.Subtitle.SSA, SubtitleDeliveryMethod.Embed),
+			subtitleProfile(Codec.Subtitle.SRT, SubtitleDeliveryMethod.Embed),
+			subtitleProfile(Codec.Subtitle.SUBRIP, SubtitleDeliveryMethod.Embed),
 			subtitleProfile(Codec.Subtitle.PGS, SubtitleDeliveryMethod.Embed),
 			subtitleProfile(Codec.Subtitle.PGSSUB, SubtitleDeliveryMethod.Embed),
 			subtitleProfile(Codec.Subtitle.DVDSUB, SubtitleDeliveryMethod.Embed),

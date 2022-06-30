@@ -249,9 +249,9 @@ public class StdGridFragment extends GridFragment {
             Timber.e("Invalid presenter, cant calculate CardGridValues!");
             return;
         }
-        final double cardScaling = Math.max(mCardFocusScale - 1.0, 0.0);
-        final int grid_height = getGridHeight();
-        final int grid_width = getGridWidth();
+        double cardScaling = Math.max(mCardFocusScale - 1.0, 0.0);
+        int grid_height = getGridHeight();
+        int grid_width = getGridWidth();
         int cardHeightInt = 100;
         int spacingHorizontalInt = 0;
         int spacingVerticalInt = 0;
