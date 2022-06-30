@@ -105,7 +105,7 @@
             android:exported="true"
             android:noHistory="true"
             android:clearTaskOnLaunch="true"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTask"
             android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustNothing">
             <intent-filter>
@@ -191,6 +191,7 @@
 
         <activity
             android:name=".ui.playback.ExternalPlayerActivity"
+            android:launchMode="singleTask"
             android:screenOrientation="landscape" />
 
         <activity

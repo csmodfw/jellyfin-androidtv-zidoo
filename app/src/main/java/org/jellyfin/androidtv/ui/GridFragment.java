@@ -65,7 +65,7 @@ public class GridFragment extends Fragment {
         super.onCreate(savedInstanceState);
 
         // init with some working defaults
-        final DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
+        DisplayMetrics display = requireContext().getResources().getDisplayMetrics();
         mGridHeight = display.heightPixels - (int) Math.round(display.density * 130.6); // top + bottom in dp, elements scale with density so adjust accordingly
         mGridWidth = display.widthPixels;
 

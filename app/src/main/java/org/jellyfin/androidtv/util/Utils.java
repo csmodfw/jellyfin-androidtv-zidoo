@@ -6,6 +6,7 @@ import android.media.AudioManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.jellyfin.androidtv.preference.UserPreferences;
 import org.jellyfin.androidtv.preference.constant.AudioBehavior;
@@ -16,6 +17,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import timber.log.Timber;
 
@@ -132,6 +135,20 @@ public class Utils {
         return join(separator, Arrays.asList(items));
     }
 
+    static public final long RUNTIME_TICKS_TO_MS = 10000;
+
+    @NonNull
+    public static String getMillisecondsFormated(@Nullable Integer milliseconds) {
+        if (milliseconds != null) {
+            try {
+                long HH = TimeUnit.MILLISECONDS.toHours(milliseconds);
+                long MM = TimeUnit.MILLISECONDS.toMinutes(milliseconds) % 60;
+                long SS = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60;
+                return String.format(Locale.US,"%02d:%02d:%02d", HH, MM, SS);
+            } catch (Exception ignored) { }
+        }
+        return String.format(Locale.US,"%02d:%02d:%02d", 0, 0, 0);
+    }
     // FIXME: this is broken on Zidoo? I get like 1/10 of the actual bitrate, which triggers transcode on "Auto"
     public static int getMaxBitrate() {
         String maxRate = KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getMaxBitrate());
