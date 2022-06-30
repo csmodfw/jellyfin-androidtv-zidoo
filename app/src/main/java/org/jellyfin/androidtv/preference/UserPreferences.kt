@@ -7,6 +7,8 @@ import org.acra.ACRA
 import org.jellyfin.androidtv.preference.constant.AppTheme
 import org.jellyfin.androidtv.preference.constant.AudioBehavior
 import org.jellyfin.androidtv.preference.constant.ClockBehavior
+import org.jellyfin.androidtv.preference.constant.LanguagesAudio
+import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior
 import org.jellyfin.androidtv.preference.constant.PreferredVideoPlayer
 import org.jellyfin.androidtv.preference.constant.RatingType
@@ -209,6 +211,41 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 * Set default subtitles font size
 		 */
 		var defaultSubtitlesSize = intPreference("subtitles_size", 28)
+
+		/**
+		 * Subtitle Language
+		 */
+		var subtitleLanguage = enumPreference("pref_subtitle_language", LanguagesSubtitle.AUTO)
+
+		/**
+		 * Audio Language
+		 */
+		var audioLanguage = enumPreference("pref_audio_language", LanguagesAudio.AUTO)
+
+		/**
+		 * DTS capable audio device
+		 */
+		var dtsCapableDevice = booleanPreference("pref_dts_capable_device", false)
+
+		/**
+		 * Prefer 6 channel audio
+		 */
+		var prefer6chAudio = booleanPreference("pref_prefer_6ch_audio", false)
+
+		/**
+		 * No forced subtitles
+		 */
+		var noForcedSubtitles = booleanPreference("pref_no_forced_subtitles", false)
+
+		/**
+		 * Allow same language subtitles
+		 */
+		var allowSameLanguageSubs = booleanPreference("pref_allow_same_language_subs", false)
+
+		/**
+		 * Use SDH subtitles
+		 */
+		var useSdhSubtitles = booleanPreference("pref_use_sdh_subtitles", false)
 	}
 
 	init {

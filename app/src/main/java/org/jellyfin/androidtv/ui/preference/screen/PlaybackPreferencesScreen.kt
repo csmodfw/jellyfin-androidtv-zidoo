@@ -5,6 +5,8 @@ import android.os.Build
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.AudioBehavior
+import org.jellyfin.androidtv.preference.constant.LanguagesAudio
+import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle
 import org.jellyfin.androidtv.preference.constant.NEXTUP_TIMER_DISABLED
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior
 import org.jellyfin.androidtv.preference.constant.PreferredVideoPlayer
@@ -100,8 +102,8 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 			list {
 				setTitle(R.string.pref_max_bitrate_title)
 				entries = setOf(
-					0.0, // auto
-					120.0, 110.0, 100.0, // 100 >=
+//					0.0, // auto
+					150.0, 140.0, 130.0, 120.0, 110.0, 100.0, // 100 >=
 					90.0, 80.0, 70.0, 60.0, 50.0, 40.0, 30.0, 21.0, 15.0, 10.0, // 10 >=
 					5.0, 3.0, 2.0, 1.0, // 1 >=
 					0.72, 0.42 // 0 >=
@@ -145,38 +147,26 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 //			}
 		}
 
-//		category {
-//			setTitle(R.string.pref_subtitles)
-//
-//			checkbox {
-//				setTitle(R.string.pref_subtitles_background_title)
-//				setContent(R.string.pref_subtitles_background_summary)
-//				bind(userPreferences, UserPreferences.subtitlesBackgroundEnabled)
-//			}
-//
-//			@Suppress("MagicNumber")
-//			seekbar {
-//				setTitle(R.string.pref_libvlc_subtitle_delay_title)
-//				min = -50_000
-//				max = 50_000
-//				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
-//					override fun display(value: Int) = "${value}ms"
-//				}
-//				bind(userPreferences, UserPreferences.libVLCSubtitleDelay)
-//			}
-//
-//			@Suppress("MagicNumber")
-//			seekbar {
-//				setTitle(R.string.pref_subtitles_size)
-//				min = 10
-//				max = 38
-//				bind(userPreferences, UserPreferences.defaultSubtitlesSize)
-//			}
-//		}
+		category {
+			setTitle(R.string.pref_audio)
 
-//		category {
-//			setTitle(R.string.pref_audio)
-//
+			enum<LanguagesAudio> {
+				setTitle(R.string.pref_languages_audio)
+				bind(userPreferences, UserPreferences.audioLanguage)
+			}
+
+			checkbox {
+				setTitle(R.string.lbl_dts_enabled_device)
+				setContent(R.string.desc_dts_enabled_device)
+				bind(userPreferences, UserPreferences.dtsCapableDevice)
+			}
+
+			checkbox {
+				setTitle(R.string.lbl_prefer_6ch)
+				setContent(R.string.desc_prefer_6ch)
+				bind(userPreferences, UserPreferences.prefer6chAudio)
+			}
+
 //			enum<AudioBehavior> {
 //				setTitle(R.string.lbl_audio_output)
 //				bind(userPreferences, UserPreferences.audioBehaviour)
@@ -207,7 +197,59 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 //				}
 //				bind(userPreferences, UserPreferences.libVLCAudioDelay)
 //			}
-//		}
+		}
+
+		category {
+			setTitle(R.string.pref_subtitles)
+
+			enum<LanguagesSubtitle> {
+				setTitle(R.string.pref_languages_subtitle)
+				bind(userPreferences, UserPreferences.subtitleLanguage)
+			}
+
+			checkbox {
+				setTitle(R.string.lbl_no_forced_subs)
+				setContent(R.string.desc_no_forced_subs)
+				bind(userPreferences, UserPreferences.noForcedSubtitles)
+			}
+
+			checkbox {
+				setTitle(R.string.lbl_allow_same_lang_subs)
+				setContent(R.string.desc_allow_same_lang_subs)
+				bind(userPreferences, UserPreferences.allowSameLanguageSubs)
+			}
+
+			checkbox {
+				setTitle(R.string.lbl_use_sdh_subs)
+				setContent(R.string.desc_use_sdh_subs)
+				bind(userPreferences, UserPreferences.useSdhSubtitles)
+			}
+
+//			checkbox {
+//				setTitle(R.string.pref_subtitles_background_title)
+//				setContent(R.string.pref_subtitles_background_summary)
+//				bind(userPreferences, UserPreferences.subtitlesBackgroundEnabled)
+//			}
+
+//			@Suppress("MagicNumber")
+//			seekbar {
+//				setTitle(R.string.pref_libvlc_subtitle_delay_title)
+//				min = -50_000
+//				max = 50_000
+//				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
+//					override fun display(value: Int) = "${value}ms"
+//				}
+//				bind(userPreferences, UserPreferences.libVLCSubtitleDelay)
+//			}
+//
+//			@Suppress("MagicNumber")
+//			seekbar {
+//				setTitle(R.string.pref_subtitles_size)
+//				min = 10
+//				max = 38
+//				bind(userPreferences, UserPreferences.defaultSubtitlesSize)
+//			}
+		}
 
 //		category {
 //			setTitle(R.string.pref_live_tv_cat)
