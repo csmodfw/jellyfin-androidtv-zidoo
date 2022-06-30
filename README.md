@@ -27,19 +27,12 @@
 ### Release [downloads here](https://github.com/Andy2244/jellyfin-androidtv-zidoo/releases)
 TIP: you can directly install from your browser via `http://zidoo_ip:18888` web interface
 ### App ONLY works with latest 10.8 server!
-- beta1:
-  - initial release to get all basic functionality working
-- beta2
-  - fixed http streaming case
-  - disabled confusing player options not related to Zidoo player
-  - force use of Zidoo player always
-- beta3
-  - working nfs playback mode
-- beta4
-  - grid layout improvements and fixes
-- future plans
-    - add/improve default player audio/subtitle handling
-    - add support for vlclib software decode fallback on Hi10 *(H264/10 bit)* files
+- feature roadmap
+    - add smart "original language" audio selection logic based on tmdb id's
+    - add better transcoding support and fallback's for unsupported codecs
+    - add more audio-only transcoding options (DD only, PCM 5.1 -> DD5.1)
+    - add atmos, dv logos
+    - improve layouts
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
    - working resume, seek and playback position reporting
