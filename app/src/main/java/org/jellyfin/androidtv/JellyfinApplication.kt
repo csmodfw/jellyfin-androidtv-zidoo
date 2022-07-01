@@ -96,18 +96,22 @@ class JellyfinApplication : Application() {
 			buildConfigClass = BuildConfig::class.java
 			reportFormat = StringFormat.JSON
 
-			httpSender {
-				uri = "https://collector.tracepot.com/a2eda9d9"
-				httpMethod = HttpSender.Method.POST
+			if (BuildConfig.DEBUG) {
+				httpSender {
+					enabled = false
+					uri = "https://collector.tracepot.com/a2eda9d9"
+					httpMethod = HttpSender.Method.POST
+				}
+
+				dialog {
+					enabled = false
+					title = getString(R.string.acra_dialog_title)
+					text = getString(R.string.acra_dialog_text)
+					resTheme = R.style.Theme_Jellyfin
+				}
 			}
 
-			dialog {
-				title = getString(R.string.acra_dialog_title)
-				text = getString(R.string.acra_dialog_text)
-				resTheme = R.style.Theme_Jellyfin
-			}
-
-			limiter {}
+			limiter { }
 		}
 	}
 }
