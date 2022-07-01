@@ -950,8 +950,8 @@ public class ExternalPlayerActivity extends FragmentActivity {
             "song", -200
     );
     final static Map<String, Integer> AUDIO_FILTERS = Map.of(
-            "dialog", 10,
-            "commentar", -99
+            "commentar", -99,
+            "description", -99
     );
     final static Map<String, Integer> SUBTITLE_CODECS = Map.of(
             Codec.Subtitle.ASS, 5,
@@ -1067,6 +1067,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
             if (mHasDtsDecoder) {
                 merit_codec.put(Codec.Audio.DTS, AUDIO_CODECS.get(Codec.Audio.AC3) - 1); // match eac3 with MA
             }
+            if (mAudioLangSetting == LanguagesAudio.ORIGINAL) {
+                merit_filter.put("original", 20);
+            }
         } else if (mediaType == MediaStreamType.Subtitle) {
             merit_codec = new HashMap<>(SUBTITLE_CODECS);
             merit_filter = new HashMap<>(SUBTITLE_FILTERS);
@@ -1074,6 +1077,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             if (mPreferSdhSubs) {
                 merit_filter.put("sdh", 50);
                 merit_filter.put("caption", 40);
+                merit_filter.put("hearing impaired", 30);
             }
         }
         TreeMap<Integer, Pair<MediaStream, Integer>> outMeritMap = new TreeMap<>();
