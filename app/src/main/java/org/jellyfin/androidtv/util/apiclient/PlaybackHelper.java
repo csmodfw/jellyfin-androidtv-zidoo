@@ -282,7 +282,7 @@ public class PlaybackHelper {
                             intent.putExtra("Position", pos);
                             if (!(activity instanceof Activity)) {
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                             }
                             activity.startActivity(intent);
                         }
@@ -300,7 +300,7 @@ public class PlaybackHelper {
                         intent.putExtra("Position", pos);
                         if (!(activity instanceof Activity)) {
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         }
                         activity.startActivity(intent);
                 }
