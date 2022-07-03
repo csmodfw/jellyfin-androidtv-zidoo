@@ -113,6 +113,8 @@ public class StdGridFragment extends GridFragment {
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), requireActivity().getIntent().getStringExtra(Extras.Folder));
         mParentId = mFolder.getId();
         MainTitle = mFolder.getName();
+        mediaManager.getValue().setFolderViewDisplayPreferencesId(mFolder);
+
         libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()));
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
@@ -127,6 +129,12 @@ public class StdGridFragment extends GridFragment {
         setDefaultGridRowCols(mPosterSizeSetting, mImageType);
         setAutoCardGridValues();
         mJumplistPopup = new JumplistPopup();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mediaManager.getValue().setFolderViewDisplayPreferencesId(null);
     }
 
     protected boolean isDirty() {
@@ -693,10 +701,13 @@ public class StdGridFragment extends GridFragment {
                 mediaManager.getValue().setCurrentMediaAdapter(mGridAdapter);
                 mediaManager.getValue().setCurrentMediaPosition(mCurrentItem.getIndex());
                 mediaManager.getValue().setCurrentMediaTitle(mFolder.getName());
-                mediaManager.getValue().mFolderViewItem = mFolder;
-                //default play action
-                Long pos = mCurrentItem.getBaseItem().getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS;
-                PlaybackHelper.play(mCurrentItem.getBaseItem(), pos.intValue(), false, requireActivity());
+                //default play action, resume will be 0 for series type !
+                if (mCurrentItem.getBaseItem().getIsFolderItem()) {
+                    PlaybackHelper.play(mCurrentItem.getBaseItem(), Utils.MAGIC_TIME_CODE_RESUME, false, requireActivity()); // HACK: mark gridActivity timecode for resume logic...
+                } else {
+                    Long pos = mCurrentItem.getBaseItem().getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS;
+                    PlaybackHelper.play(mCurrentItem.getBaseItem(), pos.intValue(), false, requireActivity());
+                }
                 return true;
             }
             return false;
