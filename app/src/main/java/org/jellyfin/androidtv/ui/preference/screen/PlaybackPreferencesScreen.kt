@@ -159,12 +159,14 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 				setTitle(R.string.lbl_dts_enabled_device)
 				setContent(R.string.desc_dts_enabled_device)
 				bind(userPreferences, UserPreferences.dtsCapableDevice)
+				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
 			}
 
 			checkbox {
 				setTitle(R.string.lbl_prefer_6ch)
 				setContent(R.string.desc_prefer_6ch)
 				bind(userPreferences, UserPreferences.prefer6chAudio)
+				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
 			}
 
 //			enum<AudioBehavior> {
@@ -205,24 +207,28 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 			enum<LanguagesSubtitle> {
 				setTitle(R.string.pref_languages_subtitle)
 				bind(userPreferences, UserPreferences.subtitleLanguage)
+				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
 			}
 
 			checkbox {
 				setTitle(R.string.lbl_no_forced_subs)
 				setContent(R.string.desc_no_forced_subs)
 				bind(userPreferences, UserPreferences.noForcedSubtitles)
+				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
 			}
 
 			checkbox {
 				setTitle(R.string.lbl_allow_same_lang_subs)
 				setContent(R.string.desc_allow_same_lang_subs)
 				bind(userPreferences, UserPreferences.allowSameLanguageSubs)
+				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
 			}
 
 			checkbox {
 				setTitle(R.string.lbl_use_sdh_subs)
 				setContent(R.string.desc_use_sdh_subs)
 				bind(userPreferences, UserPreferences.useSdhSubtitles)
+				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
 			}
 
 //			checkbox {

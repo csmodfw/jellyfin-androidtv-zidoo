@@ -444,7 +444,6 @@ public class ItemLauncher {
                             if (first != null && first.getUserData() != null) {
                                 Long resume = first.getUserData().getPlaybackPositionTicks() / 10000;
                                 queueIntent.putExtra("Position", resume.intValue());
-
                             }
                         }
 

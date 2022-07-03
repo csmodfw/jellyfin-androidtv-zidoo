@@ -3,6 +3,7 @@ package org.jellyfin.androidtv.preference
 import org.jellyfin.androidtv.constant.GridDirection
 import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.constant.PosterSize
+import org.jellyfin.androidtv.preference.constant.LanguagesAudio
 import org.jellyfin.androidtv.preference.store.DisplayPreferencesStore
 import org.jellyfin.apiclient.model.entities.SortOrder
 import org.jellyfin.apiclient.model.querying.ItemSortBy
@@ -31,5 +32,9 @@ class LibraryPreferences(
 		// Item sorting
 		val sortBy = stringPreference("SortBy", ItemSortBy.SortName)
 		val sortOrder = enumPreference("SortOrder", SortOrder.Ascending)
+
+		// Audio settings
+		val enableAudioSettings = booleanPreference("EnableAudioSettings", false)
+		val audioLanguage = enumPreference("AudioLanguage", LanguagesAudio.AUTO)
 	}
 }

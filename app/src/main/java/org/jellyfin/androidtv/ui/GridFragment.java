@@ -58,7 +58,6 @@ public class GridFragment extends Fragment {
     private int mGridItemSpacingVertical = 0;
     private int mGridPaddingLeft = 0;
     private int mGridPaddingTop = 0;
-    private boolean mFixPadding = false;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -195,7 +194,7 @@ public class GridFragment extends Fragment {
             if (Objects.requireNonNull(option).value.equals(value)) return option;
         }
 
-        return new SortOption("Unknown","",SortOrder.Ascending);
+        return new SortOption("Unknown", "", SortOrder.Ascending);
     }
 
     public void setTitle(String text) {
@@ -221,7 +220,9 @@ public class GridFragment extends Fragment {
         mStatusText.setText(text);
     }
 
-    public LinearLayout getToolBar() { return mToolBar; }
+    public LinearLayout getToolBar() {
+        return mToolBar;
+    }
 
     final private OnItemViewSelectedListener mRowSelectedListener =
             new OnItemViewSelectedListener() {
@@ -233,17 +234,6 @@ public class GridFragment extends Fragment {
                     onRowSelected(position);
                     if (mOnItemViewSelectedListener != null && position >= 0) {
                         mOnItemViewSelectedListener.onItemSelected(itemViewHolder, item, rowViewHolder, row);
-                    }
-
-                    // keep 0 padding for initial view
-                    if (mFixPadding && position > 3) {
-                        if (mGridPresenter instanceof HorizontalGridPresenter && mGridView.getPaddingRight() != mGridView.getPaddingLeft()) {
-                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingLeft(), mGridView.getPaddingBottom()); // match left/right
-                        }
-                        else if (mGridPresenter instanceof VerticalGridPresenter && mGridView.getPaddingTop() != mGridView.getPaddingBottom()) {
-                            mGridView.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingRight(), mGridView.getPaddingTop()); // match top/bottom
-                        }
-                        mFixPadding = false;
                     }
                 }
             };
@@ -260,14 +250,13 @@ public class GridFragment extends Fragment {
             mSelectedPosition = position;
         }
         // Update the counter
-        updateCounter(position+1);
+        updateCounter(position + 1);
     }
 
     public void updateCounter(int position) {
         if (mAdapter != null) {
             mCounter.setText(MessageFormat.format("{0} | {1}", position, mAdapter.getTotalItems()));
         }
-
     }
 
     /**
@@ -277,9 +266,9 @@ public class GridFragment extends Fragment {
         mOnItemViewClickedListener = listener;
         if (mGridPresenter != null) {
             if (mGridPresenter instanceof HorizontalGridPresenter)
-                ((HorizontalGridPresenter)mGridPresenter).setOnItemViewClickedListener(mOnItemViewClickedListener);
+                ((HorizontalGridPresenter) mGridPresenter).setOnItemViewClickedListener(mOnItemViewClickedListener);
             else if (mGridPresenter instanceof VerticalGridPresenter)
-                ((VerticalGridPresenter)mGridPresenter).setOnItemViewClickedListener(mOnItemViewClickedListener);
+                ((VerticalGridPresenter) mGridPresenter).setOnItemViewClickedListener(mOnItemViewClickedListener);
         }
     }
 
@@ -308,9 +297,9 @@ public class GridFragment extends Fragment {
 
         // NOTE: we only get the 100% correct grid size if we render it once, so hook into it here
         mGridDock.post(() -> {
-                if (mGridDock.getHeight() > 0 && mGridDock.getWidth() > 0) {
-                    onGridSizeMeasurements(mGridDock.getHeight(), mGridDock.getWidth());
-                }
+            if (mGridDock.getHeight() > 0 && mGridDock.getWidth() > 0) {
+                onGridSizeMeasurements(mGridDock.getHeight(), mGridDock.getWidth());
+            }
         });
 
         return binding.getRoot();
@@ -319,7 +308,8 @@ public class GridFragment extends Fragment {
     /**
      * Callback for measured GridSize.
      */
-    protected void onGridSizeMeasurements(int gridHeight, int gridWidth) {    }
+    protected void onGridSizeMeasurements(int gridHeight, int gridWidth) {
+    }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -333,11 +323,14 @@ public class GridFragment extends Fragment {
         if (mGridViewHolder instanceof HorizontalGridPresenter.ViewHolder) {
             mGridView = ((HorizontalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
             mGridView.setGravity(Gravity.CENTER_VERTICAL);
-            mGridView.setPadding(mGridPaddingLeft,mGridPaddingTop,0,mGridPaddingTop); // prevent initial card cutoffs
+            mGridView.setPadding(mGridPaddingLeft, mGridPaddingTop, mGridPaddingLeft, mGridPaddingTop); // prevent initial card cutoffs
+            // Don't use fading, breaks initial view and needs special handling, while not providing much of a visual difference!
+//            ((HorizontalGridView)mGridView).setFadingRightEdge(true);
+//            ((HorizontalGridView)mGridView).setFadingRightEdgeLength(100);
         } else if (mGridViewHolder instanceof VerticalGridPresenter.ViewHolder) {
             mGridView = ((VerticalGridPresenter.ViewHolder) mGridViewHolder).getGridView();
             mGridView.setGravity(Gravity.CENTER_HORIZONTAL);
-            mGridView.setPadding(mGridPaddingLeft,mGridPaddingTop,mGridPaddingLeft,0); // prevent initial card cutoffs
+            mGridView.setPadding(mGridPaddingLeft, mGridPaddingTop, mGridPaddingLeft, mGridPaddingTop); // prevent initial card cutoffs
         }
         mGridView.setHorizontalSpacing(mGridItemSpacingHorizontal);
         mGridView.setVerticalSpacing(mGridItemSpacingVertical);
@@ -346,7 +339,6 @@ public class GridFragment extends Fragment {
         mGridDock.removeAllViews();
         mGridDock.addView(mGridViewHolder.view);
 
-        mFixPadding = true;
         updateAdapter();
     }
 

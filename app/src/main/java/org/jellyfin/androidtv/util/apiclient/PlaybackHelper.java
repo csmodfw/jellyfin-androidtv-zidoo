@@ -279,8 +279,10 @@ public class PlaybackHelper {
                             Intent intent = new Intent(activity, newActivity);
                             KoinJavaComponent.<MediaManager>get(MediaManager.class).setCurrentVideoQueue(response);
                             intent.putExtra("Position", pos);
-                            if (!(activity instanceof Activity))
+                            if (!(activity instanceof Activity)) {
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                            }
                             activity.startActivity(intent);
                         }
                         break;
@@ -295,8 +297,10 @@ public class PlaybackHelper {
                         Intent intent = new Intent(activity, newActivity);
                         KoinJavaComponent.<MediaManager>get(MediaManager.class).setCurrentVideoQueue(response);
                         intent.putExtra("Position", pos);
-                        if (!(activity instanceof Activity))
+                        if (!(activity instanceof Activity)) {
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                        }
                         activity.startActivity(intent);
                 }
             }
