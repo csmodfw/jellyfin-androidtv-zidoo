@@ -6,6 +6,9 @@ import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.constant.PosterSize
 import org.jellyfin.androidtv.preference.LibraryPreferences
 import org.jellyfin.androidtv.preference.PreferencesRepository
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.constant.LanguagesAudio
+import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle
 import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
 import org.jellyfin.androidtv.ui.preference.dsl.checkbox
 import org.jellyfin.androidtv.ui.preference.dsl.enum
@@ -26,9 +29,11 @@ class DisplayPreferencesScreen : OptionsFragment() {
 		get() = arrayOf(libraryPreferences)
 
 	override val screen by optionsScreen {
-		setTitle(R.string.lbl_display_preferences)
+		setTitle(R.string.lbl_library_preferences)
 
 		category {
+			setTitle(R.string.lbl_display_preferences)
+
 			enum<PosterSize> {
 				setTitle(R.string.lbl_image_size)
 				bind(libraryPreferences, LibraryPreferences.posterSize)
@@ -50,6 +55,22 @@ class DisplayPreferencesScreen : OptionsFragment() {
 
 					bind(libraryPreferences, LibraryPreferences.enableSmartScreen)
 				}
+			}
+		}
+
+		category {
+			setTitle(R.string.pref_audio)
+
+			checkbox {
+				setTitle(R.string.lbl_enable_library_audio_settings)
+				setContent(R.string.desc_enable_library_audio_settings)
+				bind(libraryPreferences, LibraryPreferences.enableAudioSettings)
+			}
+
+			enum<LanguagesAudio> {
+				setTitle(R.string.pref_languages_audio)
+				bind(libraryPreferences, LibraryPreferences.audioLanguage)
+				depends { libraryPreferences[LibraryPreferences.enableAudioSettings] }
 			}
 		}
 	}

@@ -136,7 +136,8 @@
     <string name="lbl_rating">Rating</string>
     <string name="lbl_starting_with">beginning with those whose name starts with</string>
     <string name="btn_done">Done</string>
-    <string name="lbl_display_preferences">Display Preferences</string>
+    <string name="lbl_display_preferences">Display</string>
+    <string name="lbl_library_preferences">Library Preferences</string>
     <string name="lbl__continuing"> CONTINUING </string>
     <string name="lbl_ended"> ENDED </string>
     <string name="btn_filter">Filter</string>
@@ -192,7 +193,11 @@
     <string name="lbl_audio_track">Select audio track</string>
     <string name="lbl_playback_speed">Playback Speed</string>
     <string name="lbl_subtitle_track">Select subtitle track</string>
-    <string name="msg_external_path">This feature will only work if you have properly set up your library on the server with network paths or path substitution and the client you are using can directly access these locations over the network.</string>
+    <string name="msg_external_path">This feature will only work if you have properly set up your library on the server with network paths or path substitution and the client you are using can directly access these locations over the network.\n
+        Path substitution is the \'Shared network folder:\' option on the server, in library/folders.\n\n
+        Formats:\n smb://smb_user:smb_password@server_ip/share/folder\n nfs://server_ip/nfs_export/:\n nfs://server_ip/nfs_export/:/media \n\n
+        Examples:\n smb://andy:1234@192.168.1.101/htpc-share/series\n nfs://192.168.1.101/home/andy/movies/:\n nfs://192.168.1.101/home/andy/:/series
+    </string>
     <string name="btn_got_it">Got it</string>
     <string name="lbl_current_queue">Current Queue</string>
     <string name="desc_current_video_queue">Video items currently queued for playback</string>
@@ -212,6 +217,8 @@
     <string name="desc_no_forced_subs">Do not display forced subtitles.</string>
     <string name="lbl_allow_same_lang_subs">Allow same language subtitles?</string>
     <string name="desc_allow_same_lang_subs">Display subtitles, even if matching audio language.</string>
+    <string name="lbl_enable_library_audio_settings">Enable library audio settings</string>
+    <string name="desc_enable_library_audio_settings">Override global audio settings for this library.</string>
     <string name="lbl_use_sdh_subs">Prefer SDH subtitles</string>
     <string name="desc_use_sdh_subs">Prefer subtitles for hearing impaired people.</string>
     <string name="lbl_in_x_days">In %d days</string>
@@ -252,8 +259,8 @@
     <string name="lbl_next_episode">Next Episode</string>
     <string name="lbl_album_name">Album name</string>
     <string name="lbl_song_title">Song Title</string>
-    <string name="pref_use_direct_path_title">Pass Direct Path for external player</string>
-    <string name="pref_use_direct_path_summary">Pass the file system path instead of streaming URL</string>
+    <string name="pref_use_direct_path_title">Enable Direct Path</string>
+    <string name="pref_use_direct_path_summary">Use the server network paths (smb, nfs) instead of a http stream.</string>
     <string name="pref_acra_category">Crash reporting</string>
     <string name="pref_enable_acra">Send crash reports to developers</string>
     <string name="pref_acra_enabled">You will be prompted to submit crash reports</string>

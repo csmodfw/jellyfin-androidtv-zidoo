@@ -93,6 +93,7 @@ public class MediaManager {
     private boolean mRepeat;
 
     private List<BaseItemDto> mCurrentVideoQueue;
+    public org.jellyfin.sdk.model.api.BaseItemDto mFolderViewItem;
 
     public MediaManager(Context context) {
         this.context = context;
@@ -1041,5 +1042,6 @@ public class MediaManager {
     public void clearVideoQueue() {
         mCurrentVideoQueue = new ArrayList<>();
         videoQueueModified = false;
+        mFolderViewItem = null;
     }
 }

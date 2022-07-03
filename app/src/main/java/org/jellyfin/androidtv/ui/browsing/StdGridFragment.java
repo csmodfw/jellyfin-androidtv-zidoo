@@ -53,6 +53,8 @@ import org.jellyfin.androidtv.util.CoroutineUtils;
 import org.jellyfin.androidtv.util.ImageUtils;
 import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.Utils;
+import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
+import org.jellyfin.androidtv.util.apiclient.PlaybackHelper;
 import org.jellyfin.apiclient.interaction.EmptyResponse;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.querying.ItemSortBy;
@@ -127,7 +129,9 @@ public class StdGridFragment extends GridFragment {
         mJumplistPopup = new JumplistPopup();
     }
 
-    protected boolean isDirty() { return mDirty; }
+    protected boolean isDirty() {
+        return mDirty;
+    }
 
     protected BrowseRowDef getRowDef() {
         return mRowDef;
@@ -151,20 +155,21 @@ public class StdGridFragment extends GridFragment {
         return mCardHeight;
     }
 
-    public void printViewStats(View view)
-    {
-        Timber.d("XXX ------ <%s> ------", view.getTag() != null ? view.getTag().toString() : view);
-        Timber.d("XXX getWidth: <%s> getHeight: <%s>", view.getWidth(), view.getHeight());
-        Timber.d("XXX getPadding: L<%s> R<%s> T<%s> B<%s>", view.getPaddingLeft(), view.getPaddingRight(), view.getPaddingTop(), view.getPaddingBottom());
+    public void printViewStats(View view) {
+        Timber.d("------ <%s> ------", view.getTag() != null ? view.getTag().toString() : view);
+        Timber.d("getWidth: <%s> getHeight: <%s>", view.getWidth(), view.getHeight());
+        Timber.d("getPadding: L<%s> R<%s> T<%s> B<%s>", view.getPaddingLeft(), view.getPaddingRight(), view.getPaddingTop(), view.getPaddingBottom());
         try {
             ViewGroup.MarginLayoutParams layout = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
-            Timber.d("XXX layout.topMargin: <%s> layout.bottomMargin: <%s>", layout.topMargin, layout.bottomMargin);
-        } catch (Exception ignored) {        }
+            Timber.d("layout.topMargin: <%s> layout.bottomMargin: <%s>", layout.topMargin, layout.bottomMargin);
+        } catch (Exception ignored) {
+        }
         try {
-            BaseGridView gridview = (BaseGridView)view;
-            Timber.d("XXX mGridView.getHorizontalSpacing <%s> mGridView.getVerticalSpacing <%s>", gridview.getHorizontalSpacing(), gridview.getVerticalSpacing());
-            Timber.d("XXX mGridView.WindowAlignment Offset <%s> OffsetPercent <%s> Alignment <%s>", gridview.getWindowAlignmentOffset(), gridview.getWindowAlignmentOffsetPercent(), gridview.getWindowAlignment());
-        } catch (Exception ignored) {        }
+            BaseGridView gridview = (BaseGridView) view;
+            Timber.d("mGridView.getHorizontalSpacing <%s> mGridView.getVerticalSpacing <%s>", gridview.getHorizontalSpacing(), gridview.getVerticalSpacing());
+            Timber.d("mGridView.WindowAlignment Offset <%s> OffsetPercent <%s> Alignment <%s>", gridview.getWindowAlignmentOffset(), gridview.getWindowAlignmentOffsetPercent(), gridview.getWindowAlignment());
+        } catch (Exception ignored) {
+        }
     }
 
     protected double getCardWidthBy(final double cardHeight, ImageType imageType) {
@@ -288,7 +293,7 @@ public class StdGridFragment extends GridFragment {
 
             int sumSize = (cardHeightInt * numRows) + (spacingVerticalInt * (numRows - 1)) + (paddingTopInt * 2);
             if (Math.abs(sumSize - grid_height) > 2) {
-                Timber.w("XXX setAutoCardGridValues calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", grid_height, sumSize);
+                Timber.w("setAutoCardGridValues calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", grid_height, sumSize);
             }
             int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType);
             paddingLeftInt = (int) Math.round((cardWidthInt * cardScaling) / 2.0);
@@ -296,7 +301,7 @@ public class StdGridFragment extends GridFragment {
             if (mImageType == ImageType.BANNER) {
                 spacingHorizontalInt = Math.max((int) (Math.round(paddingLeftInt * CARD_SPACING_HORIZONTAL_BANNER_PCT)), 0); // round spacing
             }
-            int cardsCol = (int) Math.round(((double)grid_width / (cardWidthInt + spacingHorizontalInt)) + 0.5);
+            int cardsCol = (int) Math.round(((double) grid_width / (cardWidthInt + spacingHorizontalInt)) + 0.5);
             mCardsScreenEst = numRows * cardsCol;
             mCardsScreenStride = numRows;
         } else if (numCols > 0) {
@@ -323,16 +328,16 @@ public class StdGridFragment extends GridFragment {
 
             int sumSize = (cardWidthInt * numCols) + (spacingHorizontalInt * (numCols - 1)) + (paddingLeftInt * 2);
             if (Math.abs(sumSize - grid_width) > 2) {
-                Timber.w("XXX setAutoCardGridValues calculation delta > 2, something is off GridWidth <%s> sumSize <%s>!", grid_width, sumSize);
+                Timber.w("setAutoCardGridValues calculation delta > 2, something is off GridWidth <%s> sumSize <%s>!", grid_width, sumSize);
             }
             paddingTopInt = (int) Math.round((cardHeightInt * cardScaling) / 2.0);
             spacingVerticalInt = Math.max((int) (Math.round(paddingTopInt * CARD_SPACING_PCT)), 0); // round spacing
-            int cardsRow = (int) Math.round(((double)grid_height / (cardHeightInt + spacingVerticalInt)) + 0.5);
+            int cardsRow = (int) Math.round(((double) grid_height / (cardHeightInt + spacingVerticalInt)) + 0.5);
             mCardsScreenEst = numCols * cardsRow;
             mCardsScreenStride = numCols;
         }
 
-        Timber.d("XXX numCardsScreen <%s>", numCardsScreen);
+        Timber.d("numCardsScreen <%s>", numCardsScreen);
 
         setCardHeight(cardHeightInt);
         setGridItemSpacing(spacingHorizontalInt, spacingVerticalInt);
@@ -342,9 +347,9 @@ public class StdGridFragment extends GridFragment {
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
-        Timber.d("XXX: onActivityCreated");
+        Timber.d("onActivityCreated");
 
-        if (getActivity() instanceof BaseActivity) mActivity = (BaseActivity)getActivity();
+        if (getActivity() instanceof BaseActivity) mActivity = (BaseActivity) getActivity();
 
         backgroundService.getValue().attach(requireActivity());
 
@@ -360,12 +365,12 @@ public class StdGridFragment extends GridFragment {
     @Override
     public void onStart() {
         super.onStart();
-        Timber.d("XXX: onStart");
+        Timber.d("onStart");
     }
 
     @Override
     protected void onGridSizeMeasurements(int gridHeight, int gridWidth) {
-        Timber.d("XXX: onGridSizeMeasurements");
+        Timber.d("onGridSizeMeasurements");
         BaseGridView gridView = getGridView();
         if (gridView == null) {
             return;
@@ -416,13 +421,14 @@ public class StdGridFragment extends GridFragment {
             //Re-retrieve anything that needs it but delay slightly so we don't take away gui landing
             if (mGridAdapter != null) {
                 mHandler.postDelayed(() -> {
-                    if (mActivity == null || mActivity.isFinishing()) return;
+                    if (mActivity != null && mActivity.isFinishing()) return;
+                    if (getActivity() != null && getActivity().isFinishing()) return;
                     if (mGridAdapter != null && mGridAdapter.size() > 0) {
                         if (!mGridAdapter.ReRetrieveIfNeeded()) {
                             refreshCurrentItem();
                         }
                     }
-                },500);
+                }, 500);
             }
         } else {
             justLoaded = false;
@@ -431,13 +437,13 @@ public class StdGridFragment extends GridFragment {
 
     protected void buildAdapter() {
         mCardPresenter = new CardPresenter(false, mImageType, getCardHeight());
-        Timber.d("XXX buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int)getCardWidthBy(mCardHeight, mImageType), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
+        Timber.d("XXX buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int) getCardWidthBy(mCardHeight, mImageType), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
 
         // adapt chunk size if needed
         int chunkSize = mRowDef.getChunkSize();
         if (mCardsScreenEst > 0 && mCardsScreenEst >= chunkSize) {
             chunkSize = Math.min(mCardsScreenEst + mCardsScreenStride, 150); // cap at 150
-            Timber.d("XXX buildAdapter adjusting chunkSize to <%s> screenEst <%s>",chunkSize,mCardsScreenEst);
+            Timber.d("XXX buildAdapter adjusting chunkSize to <%s> screenEst <%s>", chunkSize, mCardsScreenEst);
         }
 
         switch (mRowDef.getQueryType()) {
@@ -497,7 +503,7 @@ public class StdGridFragment extends GridFragment {
 
     public void loadGrid() {
         Timber.d("XXX loadGrid");
-        if (mCardPresenter == null || mGridAdapter == null || isDirty())  {
+        if (mCardPresenter == null || mGridAdapter == null || isDirty()) {
             buildAdapter();
         }
 
@@ -540,7 +546,8 @@ public class StdGridFragment extends GridFragment {
                     SortOption option = sortOptions.get(key);
                     if (option == null) option = sortOptions.get(0);
                     MenuItem item = sortMenu.getMenu().add(0, key, key, Objects.requireNonNull(option).name);
-                    if (option.value.equals(libraryPreferences.get(LibraryPreferences.Companion.getSortBy()))) item.setChecked(true);
+                    if (option.value.equals(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())))
+                        item.setChecked(true);
                 }
                 sortMenu.getMenu().setGroupCheckable(0, true, true);
                 sortMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
@@ -639,6 +646,7 @@ public class StdGridFragment extends GridFragment {
     }
 
     private JumplistPopup mJumplistPopup;
+
     class JumplistPopup {
 
         private final int WIDTH = Utils.convertDpToPixel(requireContext(), 900);
@@ -678,8 +686,24 @@ public class StdGridFragment extends GridFragment {
         }
     }
 
-    protected void setupEventListeners() {
+    private BaseGridView.OnKeyInterceptListener keyListener = new BaseGridView.OnKeyInterceptListener() {
+        @Override
+        public boolean onInterceptKeyEvent(KeyEvent event) {
+            if (mCurrentItem != null && event.getAction() == KeyEvent.ACTION_DOWN && (event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY || event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) && BaseItemUtils.canPlay(mCurrentItem.getBaseItem())) {
+                mediaManager.getValue().setCurrentMediaAdapter(mGridAdapter);
+                mediaManager.getValue().setCurrentMediaPosition(mCurrentItem.getIndex());
+                mediaManager.getValue().setCurrentMediaTitle(mFolder.getName());
+                mediaManager.getValue().mFolderViewItem = mFolder;
+                //default play action
+                Long pos = mCurrentItem.getBaseItem().getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS;
+                PlaybackHelper.play(mCurrentItem.getBaseItem(), pos.intValue(), false, requireActivity());
+                return true;
+            }
+            return false;
+        }
+    };
 
+    protected void setupEventListeners() {
         setOnItemViewClickedListener(mClickedListener);
         mClickedListener.registerListener(new ItemViewClickedListener());
 
@@ -710,6 +734,8 @@ public class StdGridFragment extends GridFragment {
                     }
                 }
             });
+        } else if (getGridView() != null) {
+            getGridView().setOnKeyInterceptListener(keyListener);
         }
     }
 
@@ -773,7 +799,7 @@ public class StdGridFragment extends GridFragment {
                                   RowPresenter.ViewHolder rowViewHolder, Row row) {
 
             if (!(item instanceof BaseRowItem)) return;
-            ItemLauncher.launch((BaseRowItem) item, mGridAdapter, ((BaseRowItem)item).getIndex(), getActivity());
+            ItemLauncher.launch((BaseRowItem) item, mGridAdapter, ((BaseRowItem) item).getIndex(), getActivity());
         }
     }
 
@@ -797,12 +823,13 @@ public class StdGridFragment extends GridFragment {
                 //fill in default background
                 backgroundService.getValue().clearBackgrounds();
             } else {
-                mCurrentItem = (BaseRowItem)item;
+                mCurrentItem = (BaseRowItem) item;
                 mTitleView.setText(mCurrentItem.getName(requireContext()));
                 mInfoRow.removeAllViews();
                 mHandler.postDelayed(mDelayedSetItem, VIEW_SELECT_UPDATE_DELAY);
 
-                if (!determiningPosterSize) mGridAdapter.loadMoreItemsIfNeeded(mCurrentItem.getIndex());
+                if (!determiningPosterSize)
+                    mGridAdapter.loadMoreItemsIfNeeded(mCurrentItem.getIndex());
 
             }
 
