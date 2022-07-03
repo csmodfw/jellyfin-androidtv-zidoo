@@ -35,7 +35,8 @@ import java.util.UUID;
 import timber.log.Timber;
 
 public class PlaybackHelper {
-    private static final int ITEM_QUERY_LIMIT = 150; // limit the number of items retrieved for playback
+    private static final int ITEM_QUERY_LIMIT = 15; // use sane default for series
+    private static final int ITEM_QUERY_LIMIT_MUSIC = 150; // limit the number of items retrieved for playback
 
     public static void getItemsToPlay(final BaseItemDto mainItem, boolean allowIntros, final boolean shuffle, final Response<List<BaseItemDto>> outerResponse) {
         UUID userId = KoinJavaComponent.<SessionRepository>get(SessionRepository.class).getCurrentSession().getValue().getUserId();
@@ -138,7 +139,7 @@ public class PlaybackHelper {
                         new String[] {ItemSortBy.Album,ItemSortBy.SortName} :
                             new String[] {ItemSortBy.SortName});
                 query.setRecursive(true);
-                query.setLimit(ITEM_QUERY_LIMIT);
+                query.setLimit(ITEM_QUERY_LIMIT_MUSIC);
                 query.setFields(new ItemFields[] {
                         ItemFields.PrimaryImageAspectRatio,
                         ItemFields.Genres,
@@ -163,7 +164,7 @@ public class PlaybackHelper {
                 query.setIsVirtualUnaired(false);
                 if (shuffle) query.setSortBy(new String[] {ItemSortBy.Random});
                 query.setRecursive(true);
-                query.setLimit(ITEM_QUERY_LIMIT);
+                query.setLimit(ITEM_QUERY_LIMIT_MUSIC);
                 query.setFields(new ItemFields[] {
                         ItemFields.MediaSources,
                         ItemFields.MediaStreams,

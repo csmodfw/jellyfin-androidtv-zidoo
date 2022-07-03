@@ -26,6 +26,9 @@ import timber.log.Timber;
  * A collection of utility methods, all static.
  */
 public class Utils {
+    static public final long RUNTIME_TICKS_TO_MS = 10000;
+    static public final int MAGIC_TIME_CODE_RESUME = -9991234;
+
     /**
      * Shows a (long) toast
      *
@@ -135,8 +138,6 @@ public class Utils {
         return join(separator, Arrays.asList(items));
     }
 
-    static public final long RUNTIME_TICKS_TO_MS = 10000;
-
     @NonNull
     public static String getMillisecondsFormated(@Nullable Integer milliseconds) {
         if (milliseconds != null) {
@@ -144,11 +145,13 @@ public class Utils {
                 long HH = TimeUnit.MILLISECONDS.toHours(milliseconds);
                 long MM = TimeUnit.MILLISECONDS.toMinutes(milliseconds) % 60;
                 long SS = TimeUnit.MILLISECONDS.toSeconds(milliseconds) % 60;
-                return String.format(Locale.US,"%02d:%02d:%02d", HH, MM, SS);
-            } catch (Exception ignored) { }
+                return String.format(Locale.US, "%02d:%02d:%02d", HH, MM, SS);
+            } catch (Exception ignored) {
+            }
         }
-        return String.format(Locale.US,"%02d:%02d:%02d", 0, 0, 0);
+        return String.format(Locale.US, "%02d:%02d:%02d", 0, 0, 0);
     }
+
     // FIXME: this is broken on Zidoo? I get like 1/10 of the actual bitrate, which triggers transcode on "Auto"
     public static int getMaxBitrate() {
         String maxRate = KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getMaxBitrate());
