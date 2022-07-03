@@ -20,11 +20,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.os.HandlerCompat;
 import androidx.core.util.Pair;
 import androidx.fragment.app.FragmentActivity;
 
@@ -89,9 +87,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
     BaseItemDto mCurrentItem;
     StreamInfo mCurrentStreamInfo;
 
-    final Handler mHandler = HandlerCompat.createAsync(Looper.getMainLooper());
-    Handler mHandlerBackground;
-    HandlerThread mHandlerThread;
+    final Handler mHandler = new Handler();
+    Handler mHandlerZidoo;
+    HandlerThread mHandlerThreadZidoo;
+    Handler mHandlerTmdb;
+    HandlerThread mHandlerThreadTmdb;
 
     Runnable mReportLoop;
     static final int REPORT_LOOP_INTERVAL = 15000; // interval between playback report ticks
@@ -115,14 +115,14 @@ public class ExternalPlayerActivity extends FragmentActivity {
     private static HttpURLConnection mHttpConnZidooApi;
     private static HttpURLConnection mHttpConnTmdbApi;
 
-    private Lazy<ApiClient> apiClient = inject(ApiClient.class);
-    private Lazy<UserPreferences> userPreferences = inject(UserPreferences.class);
-    private Lazy<BackgroundService> backgroundService = inject(BackgroundService.class);
-    private Lazy<MediaManager> mediaManager = inject(MediaManager.class);
-    private Lazy<org.jellyfin.sdk.api.client.ApiClient> api = inject(org.jellyfin.sdk.api.client.ApiClient.class);
-    private Lazy<PlaybackControllerContainer> playbackControllerContainer = inject(PlaybackControllerContainer.class);
-    private Lazy<PreferencesRepository> preferencesRepository = inject(PreferencesRepository.class);
-    private Lazy<UserViewsRepository> userViewsRepository = inject(UserViewsRepository.class);
+    private final Lazy<ApiClient> apiClient = inject(ApiClient.class);
+    private final Lazy<UserPreferences> userPreferences = inject(UserPreferences.class);
+    private final Lazy<BackgroundService> backgroundService = inject(BackgroundService.class);
+    private final Lazy<MediaManager> mediaManager = inject(MediaManager.class);
+    private final Lazy<org.jellyfin.sdk.api.client.ApiClient> api = inject(org.jellyfin.sdk.api.client.ApiClient.class);
+    private final Lazy<PlaybackControllerContainer> playbackControllerContainer = inject(PlaybackControllerContainer.class);
+    private final Lazy<PreferencesRepository> preferencesRepository = inject(PreferencesRepository.class);
+    private final Lazy<UserViewsRepository> userViewsRepository = inject(UserViewsRepository.class);
 
     // https://sites.google.com/site/mxvpen/api
     static final String API_MX_TITLE = "title";
@@ -204,9 +204,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
         mItemsToPlay = mediaManager.getValue().getCurrentVideoQueue();
 
         try {
-            mHandlerThread = new HandlerThread("ExternalPlayerHandlerThread");
-            mHandlerThread.start();
-            mHandlerBackground = HandlerCompat.createAsync(mHandlerThread.getLooper());
+            mHandlerThreadZidoo = new HandlerThread("ExternalPlayerZidooTaskThread");
+            mHandlerThreadZidoo.start();
+            mHandlerZidoo = new Handler(mHandlerThreadZidoo.getLooper());
         } catch (Exception e) {
             e.printStackTrace();
             finish();
@@ -272,8 +272,12 @@ public class ExternalPlayerActivity extends FragmentActivity {
         super.onDestroy();
         Timber.d("onDestroy");
         resetPlayStatus();
-        mHandlerThread.quitSafely();
-        mHandlerThread.interrupt();
+        mHandlerThreadZidoo.quitSafely();
+        mHandlerThreadZidoo.interrupt();
+        if (mHandlerThreadTmdb != null) {
+            mHandlerThreadTmdb.quitSafely();
+            mHandlerThreadTmdb.interrupt();
+        }
         if (!mediaManager.getValue().isVideoQueueModified()) mediaManager.getValue().clearVideoQueue();
     }
 
@@ -555,9 +559,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
                     }
                     return tmdb_obj;
                 }
+            } else {
+                Timber.d("getFromTmdbHttp_API status error <%s>", http_status);
             }
         } catch (JSONException | IOException e) {
-            Timber.d("getFromZidooHTTP_API failed, could not reach target or status error.");
+            Timber.d("getFromTmdbHttp_API failed, could not reach target or status error.");
         } finally {
             if (mHttpConnTmdbApi != null) {
                 mHttpConnTmdbApi.disconnect();
@@ -700,6 +706,21 @@ public class ExternalPlayerActivity extends FragmentActivity {
         return outMap;
     }
 
+    private boolean createTmdbThread() {
+        if (mHandlerThreadTmdb != null && mHandlerTmdb != null) {
+            return true;
+        } else {
+            try {
+                mHandlerThreadTmdb = new HandlerThread("ExternalPlayerTmdbTaskThread");
+                mHandlerThreadTmdb.start();
+                mHandlerTmdb = new Handler(mHandlerThreadTmdb.getLooper());
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+    }
+
     protected class TmdbTask implements Runnable {
         final public BaseItemDto mParentItem;
         final public BaseItemDto mItem;
@@ -715,14 +736,16 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         @Override
         public void run() {
-            if (mItem.getBaseItemType() == BaseItemType.Episode && mItem.getSeriesId() != null) {
+            if (mItem.getBaseItemType() == BaseItemType.Episode && isNonEmptyTrim(mItem.getSeriesId())) {
                 apiClient.getValue().GetItemAsync(mItem.getSeriesId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
                     // NOTE: this runs in mainThread!
                     @Override
                     public void onResponse(BaseItemDto response) {
-                        if (response.getBaseItemType() == BaseItemType.Series && response.getProviderIds() != null && response.getProviderIds().containsKey("Tmdb")) {
-                            mTmdbTask = new TmdbTask(response, mItem);
-                            mHandlerBackground.post(mTmdbTask);
+                        if (response.getBaseItemType() == BaseItemType.Series && response.getProviderIds() != null) {
+                            if (response.getProviderIds().containsKey("Tmdb") || response.getProviderIds().containsKey("Tvdb")) {
+                                mTmdbTask = new TmdbTask(response, mItem);
+                                mHandlerTmdb.post(mTmdbTask);
+                            }
                         }
                         mFinished = true;
                     }
@@ -820,7 +843,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         public void stop() {
             isStopped = true;
-            mHandlerBackground.removeCallbacks(this);
+            mHandlerZidoo.removeCallbacks(this);
             if (mActivityStopTime == null) {
                 mActivityStopTime = System.currentTimeMillis();
             }
@@ -979,11 +1002,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
             if (mZidooStartupOK) {
                 this.stop();
                 mZidooTask = new ZidooReportTask(this);
-                mHandlerBackground.postDelayed(mZidooTask, 4000); // HACK delay more to make subtitle selection stick at Zidoo "Auto" settings
+                mHandlerZidoo.postDelayed(mZidooTask, 4000); // HACK delay more to make subtitle selection stick at Zidoo "Auto" settings
                 Timber.d("zidooStartupTask detected ZidooPlayer running!");
             } else if (activityPlayTime < API_ZIDOO_STARTUP_TIMEOUT) {
                 Timber.d("zidooStartupTask testing failed, try again in %s ms", API_ZIDOO_STARTUP_RETRY_INTERVAL);
-                mHandlerBackground.postDelayed(this, API_ZIDOO_STARTUP_RETRY_INTERVAL); // try again
+                mHandlerZidoo.postDelayed(this, API_ZIDOO_STARTUP_RETRY_INTERVAL); // try again
             } else {
                 Timber.e("zidooStartupTask timeout reached, giving-up!");
                 this.stop();
@@ -1050,11 +1073,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
                     this.stop();
                     finish();
                 } else {
-                    mHandlerBackground.postDelayed(this, 1000); // try again in a second
+                    mHandlerZidoo.postDelayed(this, 1000); // try again in a second
                     Timber.d("ZidooReportTask detected Zidoo player http-api status error, trying again in 1000 ms.");
                 }
             } else {
-                mHandlerBackground.postDelayed(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
+                mHandlerZidoo.postDelayed(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
                 mZidooReportTaskErrorCount = 0; // reset
             }
         }
@@ -1151,11 +1174,43 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
     final static int DEFAULT_FLAG_MERIT = 30; // should this override even best picks?
     // setup our filter merits
-    final static Map<String, Integer> SUBTITLE_FILTERS = Map.of("dialog", 10, "full", 9, "non_honorific", 2, "subtitle", 1, "commentar", -99, "sdh", -190, "caption", -190, "sign", -200, "sing", -200, "song", -200);
-    final static Map<String, Integer> AUDIO_FILTERS = Map.of("commentar", -99, "description", -99);
-    final static Map<String, Integer> SUBTITLE_CODECS = Map.of(Codec.Subtitle.ASS, 5, Codec.Subtitle.SSA, 4, Codec.Subtitle.SRT, 3, Codec.Subtitle.SUBRIP, 3, Codec.Subtitle.SUB, 2, Codec.Subtitle.PGSSUB, 1, Codec.Subtitle.PGS, 1);
-    final static Map<String, Integer> AUDIO_CODECS = Map.of(Codec.Audio.TRUEHD, 12, Codec.Audio.EAC3, 11, Codec.Audio.AC3, 10, Codec.Audio.DTS, 3, Codec.Audio.AAC, 2, Codec.Audio.OPUS, 1, Codec.Audio.OGG, 0);
-    final static Map<String, Integer> AUDIO_PROFILES = Map.of("dts-hd ma", 2);
+    final static Map<String, Integer> SUBTITLE_FILTERS = Map.of(
+            "dialog", 10,
+            "full", 9,
+            "non_honorific", 2,
+            "subtitle", 1,
+            "commentar", -99,
+            "sdh", -190,
+            "caption", -190,
+            "sign", -200,
+            "sing", -200,
+            "song", -200
+    );
+    final static Map<String, Integer> AUDIO_FILTERS = Map.of(
+            "commentar", -99,
+            "description", -99
+    );
+    final static Map<String, Integer> SUBTITLE_CODECS = Map.of(
+            Codec.Subtitle.ASS, 5,
+            Codec.Subtitle.SSA, 4,
+            Codec.Subtitle.SRT, 3,
+            Codec.Subtitle.SUBRIP, 3,
+            Codec.Subtitle.SUB, 2,
+            Codec.Subtitle.PGSSUB, 1,
+            Codec.Subtitle.PGS, 1
+    );
+    final static Map<String, Integer> AUDIO_CODECS = Map.of(
+            Codec.Audio.TRUEHD, 12,
+            Codec.Audio.EAC3, 11,
+            Codec.Audio.AC3, 10,
+            Codec.Audio.DTS, 3,
+            Codec.Audio.AAC, 2,
+            Codec.Audio.OPUS, 1,
+            Codec.Audio.OGG, 0
+    );
+    final static Map<String, Integer> AUDIO_PROFILES = Map.of(
+            "dts-hd ma", 2
+    );
 
     private boolean isForcedTrack(@NonNull MediaStream stream) {
         return stream.getIsForced() || (stream.getTitle() != null && stream.getTitle().toLowerCase().contains("forced")); // FIX for bad tagged stuff
@@ -1272,7 +1327,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 continue;
             }
             if (stream.getIsExternal()) {
-//                naturalIdx++; // ??? test this
+                //                naturalIdx++; // ??? test this
                 continue;
             }
             if (ignoreForced && isForcedTrack(stream)) {
@@ -1325,7 +1380,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 continue;
             }
             if (stream.getIsExternal()) {
-//                naturalIdx++; // ??? test this
+                //                naturalIdx++; // ??? test this
                 continue;
             }
             if (isNonEmptyTrim(langCodeFilter)) {
@@ -1353,7 +1408,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 continue;
             }
             if (stream.getIsExternal()) {
-//                naturalIdx++; // ??? test this
+                //                naturalIdx++; // ??? test this
                 continue;
             }
             if (isNonEmptyTrim(langCodeFilter)) {
@@ -1382,7 +1437,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 continue;
             }
             if (stream.getIsExternal()) {
-//                naturalIdx++; // ??? test this
+                //                naturalIdx++; // ??? test this
                 continue;
             }
             if (isNonEmptyTrim(langCodeFilter)) {
@@ -1433,6 +1488,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         try {
             if (mAudioLangSetting == LanguagesAudio.ORIGINAL && isNonEmptyTrim(originalLangCode)) {
                 audioCode = getISO3LanguageCode(originalLangCode);
+                Timber.d("Using Tmdb code <%s>", audioCode);
             } else if (mAudioLangSetting == LanguagesAudio.AUTO || mAudioLangSetting == LanguagesAudio.DEFAULT || mAudioLangSetting == LanguagesAudio.ORIGINAL) {
                 audioCode = Locale.getDefault().getISO3Language();
             } else {
@@ -1606,8 +1662,10 @@ public class ExternalPlayerActivity extends FragmentActivity {
         // try get org_language
         Pair<Integer, Integer> numAudioSubTracks = getNumAudioSubTracks(item.getMediaStreams());
         if (mAudioLangSetting == LanguagesAudio.ORIGINAL && numAudioSubTracks.first > 1) {
-            mTmdbTask = new TmdbTask(item, null);
-            mHandlerBackground.post(mTmdbTask);
+            if (createTmdbThread()) {
+                mTmdbTask = new TmdbTask(item, null);
+                mHandlerTmdb.post(mTmdbTask);
+            }
         }
 
         if (!isLiveTv && userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
@@ -1615,9 +1673,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
             mCurrentStreamInfo = new StreamInfo();
             mCurrentStreamInfo.setPlayMethod(PlayMethod.DirectPlay);
 
-            Utils.showToast(ExternalPlayerActivity.this, PlayMethod.DirectPlay.toString() + " --- " + getDisplayTitle(item));
+            Utils.showToast(ExternalPlayerActivity.this, PlayMethod.DirectPlay + " --- " + getDisplayTitle(item));
             startExternalZidooZDMCActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*", item);
-//            startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
+            //            startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
         } else {
             // try get best tracks
             Pair<Integer, Integer> audioSubIdx = getAudioSubIdxSafe(getBestAudioSubtitleIdx(item.getMediaStreams(), null));
@@ -1640,7 +1698,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                         Utils.showToast(ExternalPlayerActivity.this, response.getPlayMethod().toString() + " --- " + getDisplayTitle(item));
                         //And request an activity to play it
                         startExternalZidooMovieActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*", response, item);
-//                    startExternalActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
+                        //                    startExternalActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");
                     }
                 }
 
@@ -1679,13 +1737,16 @@ public class ExternalPlayerActivity extends FragmentActivity {
             return;
         }
 
-        if (isNonEmpty(item.getMediaStreams())) {
+        boolean needsUpdate = mAudioLangSetting == LanguagesAudio.ORIGINAL && item.getProviderIds() == null;
+        // some items come with broken provider data?
+
+        if (!needsUpdate && isNonEmpty(item.getMediaStreams())) {
             mCurrentItem = item;
             isLiveTv = item.getBaseItemType() == BaseItemType.TvChannel;
             launchExternalPlayer(item);
         } else {
             // try fix item
-            Timber.w("Invalid item <%s> detected, trying to refresh data.", item.getName());
+            Timber.w("Incomplete data detected: item <%s> trying to refresh data.", item.getName());
             apiClient.getValue().GetItemAsync(item.getId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
                 @Override
                 public void onResponse(BaseItemDto response) {
@@ -1783,7 +1844,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             noPlayerError = true;
             Timber.e(e, "Error launching external player");
             finish();
-//            handlePlayerError();
+            //            handlePlayerError();
         }
     }
 
@@ -1799,14 +1860,14 @@ public class ExternalPlayerActivity extends FragmentActivity {
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         zidooIntent.setPackage(API_ZIDOO_PACKAGE);
         zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_ZDMC);
 
         zidooIntent.putExtra(API_ZIDOO_PLAY_MODE, API_ZIDOO_PLAY_MODE_ZDMC);
-//        String netMode = API_ZIDOO_NET_MODE_LOCAL;
+        //        String netMode = API_ZIDOO_NET_MODE_LOCAL;
         if (path.contains("smb:")) {
             zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_SMB);
             Timber.d("Using SMB NET_MODE for ZDMCActivity!");
@@ -1849,7 +1910,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         try {
             mLastPlayerStart = System.currentTimeMillis();
             mZidooTask = new ZidooStartupTask(item, mSeekPosition, null);
-            if (mHandlerBackground.postDelayed(mZidooTask, 2000)) { // 2s initial delay = quickest time zidoo can start something
+            if (mHandlerZidoo.postDelayed(mZidooTask, 2000)) { // 2s initial delay = quickest time zidoo can start something
                 startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while both don't set any results!
             } else {
                 Timber.e("Error launching external Zidoo player, postDelayed");
@@ -1871,7 +1932,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         String nfs_root = initIntent.getStringExtra("nfs_root");
         mPath = mPath.replace(nfs_root, "");
         String ip2 = nfs_root.substring(0, nfs_root.indexOf("/"));
-        String id = nfs_root.substring(nfs_root.lastIndexOf("/"), nfs_root.length());
+        String id = nfs_root.substring(nfs_root.lastIndexOf("/"));
 
         String outPath = ip2 + id + mPath;
         Timber.d("ZDMCActivity = out mPath = %s", outPath);
@@ -1887,11 +1948,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         Uri path_uri = Uri.parse(path);
         Intent zidooIntent = new Intent(Intent.ACTION_VIEW);
-//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-//        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+        //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         zidooIntent.setPackage(API_ZIDOO_PACKAGE);
         zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_MOVIE);
         zidooIntent.setDataAndType(path_uri, "video/" + container);
@@ -1899,15 +1960,15 @@ public class ExternalPlayerActivity extends FragmentActivity {
         zidooIntent.putExtra(API_ZIDOO_PLAY_BROADCAST_STATUS, false);
         zidooIntent.putExtra(API_ZIDOO_SEEK_POSITION, mSeekPosition);
         zidooIntent.putExtra(API_ZIDOO_SOURCEFROM, API_ZIDOO_SOURCEFROM_LOCAL);
-//        zidooIntent.putExtra(API_ZIDOO_PLAYMODEL, 5); // >= 0 isStream only = no overlay/menus!
-//        zidooIntent.putExtra(API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER, true);
+        //        zidooIntent.putExtra(API_ZIDOO_PLAYMODEL, 5); // >= 0 isStream only = no overlay/menus!
+        //        zidooIntent.putExtra(API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER, true);
 
         Timber.i("Starting external Zidoo MovieActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ", path_uri.getHost(), container, mSeekPosition, getMillisecondsFormated(mSeekPosition), path_uri.getPath());
 
         try {
             mLastPlayerStart = System.currentTimeMillis();
             mZidooTask = new ZidooStartupTask(item, mSeekPosition, streamInfo);
-            if (mHandlerBackground.postDelayed(mZidooTask, 2000)) {
+            if (mHandlerZidoo.postDelayed(mZidooTask, 2000)) {
                 startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while both don't set any results!
             } else {
                 Timber.e("Error launching external Zidoo player, postDelayed");
