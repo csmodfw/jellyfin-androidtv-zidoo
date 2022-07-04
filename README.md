@@ -28,17 +28,17 @@
 TIP: you can directly install from your browser via `http://zidoo_ip:18888` web interface
 ### App ONLY works with latest 10.8 server!
 - feature roadmap
-    - add smart "original language" audio selection logic based on tmdb id's
+    - ~add smart "original language" audio selection logic based on tmdb id's~ _done_
     - add better transcoding support and fallback's for unsupported codecs
     - add more audio-only transcoding options (DD only, PCM 5.1 -> DD5.1)
     - add atmos, dv logos
     - improve layouts
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
-   - working resume, seek and playback position reporting
-   - working watched state reporting
+   - working resume, seek, watched states and server playback reporting 
    - http streaming support
    - smb, nfs support via `Direct Path` option
+   - "smart" audio/subtitle selection logic
  - UI layout fixes
 	 - cutoff grids, ui scaling fixed
 ### How to use with "Direct Path" option (smb/nfs):
