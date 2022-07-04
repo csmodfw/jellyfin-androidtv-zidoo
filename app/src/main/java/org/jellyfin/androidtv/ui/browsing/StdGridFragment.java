@@ -705,7 +705,7 @@ public class StdGridFragment extends GridFragment {
                 mediaManager.getValue().setCurrentMediaPosition(mCurrentItem.getIndex());
                 mediaManager.getValue().setCurrentMediaTitle(mFolder.getName());
                 //default play action
-                mHandler.postDelayed(() -> PlaybackHelper.playOrPlayNext(mCurrentItem.getBaseItem(), requireActivity()), 10);
+                mHandler.postDelayed(() -> PlaybackHelper.playOrPlayNextUp(mCurrentItem.getBaseItem(), requireActivity()), 10);
                 return true;
             }
             return false;
