@@ -1742,16 +1742,16 @@ public class ExternalPlayerActivity extends FragmentActivity {
             return;
         }
 
+        // some items come with broken provider data
         boolean needsUpdate = mAudioLangSetting == LanguagesAudio.ORIGINAL && item.getProviderIds() == null;
-        // some items come with broken provider data?
 
         if (!needsUpdate && isNonEmpty(item.getMediaStreams())) {
             mCurrentItem = item;
             isLiveTv = item.getBaseItemType() == BaseItemType.TvChannel;
             launchExternalPlayer(item);
         } else {
-            // try fix item
-            Timber.w("Incomplete data detected: item <%s> trying to refresh data.", item.getName());
+            // try fix item, we need at least streams/path filled
+            Timber.d("Incomplete data detected: item <%s> trying to refresh data.", item.getName());
             apiClient.getValue().GetItemAsync(item.getId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
                 @Override
                 public void onResponse(BaseItemDto response) {
@@ -1760,7 +1760,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                         isLiveTv = response.getBaseItemType() == BaseItemType.TvChannel;
                         launchExternalPlayer(response);
                     } else {
-                        Timber.e("onResponse getting playable item data!");
+                        Timber.e("launchExternalPlayer can't get playable item data!");
                         mCurrentItem = null;
                         finish();
                     }

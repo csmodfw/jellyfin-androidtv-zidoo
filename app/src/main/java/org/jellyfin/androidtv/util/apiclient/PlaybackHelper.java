@@ -260,9 +260,6 @@ public class PlaybackHelper {
     }
 
     public static void playOrPlayNextUp(final BaseItemDto item, final Context activity) {
-        PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
-        if (playbackLauncher.interceptPlayRequest(activity, item)) return;
-
         if (item.getBaseItemType() == BaseItemType.Series) {
             //play next up
             NextUpQuery nextUpQuery = new NextUpQuery();
@@ -314,12 +311,7 @@ public class PlaybackHelper {
                 }
             });
         } else {
-            //resume
-            int pos = 0;
-            if (item.getCanResume()) {
-                pos = (int) (item.getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS);
-            }
-            play(item, pos - getResumePreroll(), false, activity);
+            retrieveAndPlay(item.getId(), false, activity);
         }
     }
 

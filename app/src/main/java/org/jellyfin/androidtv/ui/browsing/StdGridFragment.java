@@ -70,7 +70,7 @@ import kotlin.Lazy;
 import kotlinx.serialization.json.Json;
 import timber.log.Timber;
 
-public class StdGridFragment extends GridFragment {
+public class StdGridFragment extends GridFragment implements MessageListener {
     protected String MainTitle;
     protected BaseActivity mActivity;
     protected BaseRowItem mCurrentItem;
@@ -700,7 +700,10 @@ public class StdGridFragment extends GridFragment {
 
         @Override
         public boolean onInterceptKeyEvent(KeyEvent event) {
-            if (mCurrentItem != null && event.getAction() == KeyEvent.ACTION_DOWN && (event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY || event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) && BaseItemUtils.canPlay(mCurrentItem.getBaseItem())) {
+            if (mCurrentItem == null || event.getAction() != KeyEvent.ACTION_UP) {
+                return false;
+            }
+            if ((event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY || event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) && BaseItemUtils.canPlay(mCurrentItem.getBaseItem())) {
                 mediaManager.getValue().setCurrentMediaAdapter(mGridAdapter);
                 mediaManager.getValue().setCurrentMediaPosition(mCurrentItem.getIndex());
                 mediaManager.getValue().setCurrentMediaTitle(mFolder.getName());
@@ -708,9 +711,18 @@ public class StdGridFragment extends GridFragment {
                 mHandler.postDelayed(() -> PlaybackHelper.playOrPlayNextUp(mCurrentItem.getBaseItem(), requireActivity()), 10);
                 return true;
             }
-            return false;
+            return KeyProcessor.HandleKey(event.getKeyCode(), mCurrentItem, requireActivity());
         }
     };
+
+    @Override
+    public void onMessageReceived(CustomMessage message) {
+        switch (message) {
+            case RefreshCurrentItem:
+                refreshCurrentItem();
+                break;
+        }
+    }
 
     protected void setupEventListeners() {
         setOnItemViewClickedListener(mClickedListener);
