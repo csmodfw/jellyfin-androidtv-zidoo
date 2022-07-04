@@ -381,7 +381,7 @@ public class KeyProcessor {
                     query.setIsMissing(false);
                     query.setSortBy(new String[]{ItemSortBy.SortName});
                     query.setSortOrder(SortOrder.Ascending);
-                    query.setLimit(10);
+                    query.setLimit(1);
                     // NOTE: exclude filters seem broken?
 //                    query.setExcludeItemTypes(new String[]{"Series", "Season", "Folder", "MusicAlbum", "Playlist", "BoxSet"});
                     query.setIncludeItemTypes(new String[]{"Episode", "Movie", "Video"});
