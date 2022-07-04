@@ -23,6 +23,7 @@ import org.jellyfin.apiclient.model.querying.ItemFilter;
 import org.jellyfin.apiclient.model.querying.ItemQuery;
 import org.jellyfin.apiclient.model.querying.ItemSortBy;
 import org.jellyfin.apiclient.model.querying.ItemsResult;
+import org.jellyfin.apiclient.model.querying.NextUpQuery;
 import org.jellyfin.apiclient.model.querying.SimilarItemsQuery;
 import org.koin.java.KoinJavaComponent;
 
@@ -258,11 +259,75 @@ public class PlaybackHelper {
         }
     }
 
+    public static void playOrPlayNext(final BaseItemDto item, final Context activity) {
+        PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
+        if (playbackLauncher.interceptPlayRequest(activity, item)) return;
+
+        if (item.getBaseItemType() == BaseItemType.Series) {
+            //play next up
+            NextUpQuery nextUpQuery = new NextUpQuery();
+            UUID userId = KoinJavaComponent.<SessionRepository>get(SessionRepository.class).getCurrentSession().getValue().getUserId();
+            nextUpQuery.setUserId(userId.toString());
+            nextUpQuery.setSeriesId(item.getId());
+            KoinJavaComponent.<ApiClient>get(ApiClient.class).GetNextUpEpisodesAsync(nextUpQuery, new Response<ItemsResult>() {
+                @Override
+                public void onResponse(ItemsResult response) {
+                    if (response.getItems().length > 0) {
+                        Timber.d("Success found next up episode");
+                        play(response.getItems()[0], 0 , false, activity);
+                    } else {
+                        // try resume
+                        ItemQuery query = new ItemQuery();
+                        query.setParentId(item.getId());
+                        query.setIsMissing(false);
+                        query.setIsVirtualUnaired(false);
+                        query.setIncludeItemTypes(new String[]{"Episode", "Video"});
+                        query.setFilters(new ItemFilter[]{ItemFilter.IsResumable, ItemFilter.IsUnplayed});
+                        query.setRecursive(true);
+                        query.setLimit(1);
+                        query.setUserId(userId.toString());
+                        KoinJavaComponent.<ApiClient>get(ApiClient.class).GetItemsAsync(query, new Response<ItemsResult>() {
+                            @Override
+                            public void onResponse(ItemsResult response) {
+                                if (response.getItems().length > 0) {
+                                    Timber.d("Success found resume episode");
+                                    //resume
+                                    int pos = 0;
+                                    BaseItemDto foundItem = response.getItems()[0];
+                                    if (foundItem.getCanResume()) {
+                                        pos = (int) (foundItem.getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS);
+                                    }
+                                    play(foundItem, pos - getResumePreroll(), false, activity);
+                                } else {
+                                    Timber.w("Error playOrPlayNext() could not find playable episode");
+                                    Utils.showToast(activity, activity.getString(R.string.msg_video_playback_error));
+                                }
+                            }
+                        });
+                    }
+                }
+
+                @Override
+                public void onError(Exception exception) {
+                    Timber.e(exception, "Error finding next up episode");
+                    Utils.showToast(activity, activity.getString(R.string.msg_video_playback_error));
+                }
+            });
+        } else {
+            //resume
+            int pos = 0;
+            if (item.getCanResume()) {
+                pos = (int) (item.getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS);
+            }
+            play(item, pos - getResumePreroll(), false, activity);
+        }
+    }
+
     public static void play(final BaseItemDto item, final int pos, final boolean shuffle, final Context activity) {
         PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
         if (playbackLauncher.interceptPlayRequest(activity, item)) return;
 
-        getItemsToPlay(item, pos == 0 && item.getBaseItemType() == BaseItemType.Movie, shuffle, new Response<List<BaseItemDto>>() {
+        getItemsToPlay(item, pos <= 0 && item.getBaseItemType() == BaseItemType.Movie, shuffle, new Response<List<BaseItemDto>>() {
             @Override
             public void onResponse(List<BaseItemDto> response) {
                 switch (item.getBaseItemType()) {
@@ -279,7 +344,7 @@ public class PlaybackHelper {
                             Class newActivity = playbackLauncher.getPlaybackActivityClass(itemType);
                             Intent intent = new Intent(activity, newActivity);
                             KoinJavaComponent.<MediaManager>get(MediaManager.class).setCurrentVideoQueue(response);
-                            intent.putExtra("Position", pos);
+                            intent.putExtra("Position", Math.max(pos,0));
                             if (!(activity instanceof Activity)) {
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -297,7 +362,7 @@ public class PlaybackHelper {
                         Class newActivity = playbackLauncher.getPlaybackActivityClass(item.getBaseItemType());
                         Intent intent = new Intent(activity, newActivity);
                         KoinJavaComponent.<MediaManager>get(MediaManager.class).setCurrentVideoQueue(response);
-                        intent.putExtra("Position", pos);
+                        intent.putExtra("Position", Math.max(pos,0));
                         if (!(activity instanceof Activity)) {
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);

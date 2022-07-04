@@ -213,17 +213,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             return;
         }
 
-        int timeCode = getIntent().getIntExtra("Position", 0);
-        if (timeCode == Utils.MAGIC_TIME_CODE_RESUME) {
-            Timber.d("onCreate MagicTimeCode detected, trying to resume!");
-            if (mItemsToPlay.get(0) != null && mItemsToPlay.get(0).getUserData() != null) {
-                mSeekPosition = (int) Math.max(mItemsToPlay.get(0).getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS, 0); // use resume if playlist
-            } else {
-                mSeekPosition = 0;
-            }
-        } else {
-            mSeekPosition = Math.max(timeCode, 0);
-        }
+        mSeekPosition = Math.max(getIntent().getIntExtra("Position", 0), 0);
 
         if (userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath())) {
             Timber.d("onCreate SendPath enabled!");
@@ -460,7 +450,6 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
         mCurrentItem = null;
         mZidooTask = null;
-        mTmdbTask = null;
         mSeekPosition = 0;
         mLastPlayerStart = 0;
     }
@@ -722,48 +711,61 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     protected class TmdbTask implements Runnable {
-        final public BaseItemDto mParentItem;
+        static final long MAX_TMDB_TASK_TIME_MS = 10000;
+        final public long mActivityStartTime;
+        public BaseItemDto mParentItem;
         final public BaseItemDto mItem;
         private boolean mFinished;
         private String mOriginalLanguageTmdb;
 
-        public TmdbTask(@NonNull BaseItemDto item, @Nullable BaseItemDto parent) {
+        public TmdbTask(@NonNull BaseItemDto item) {
+            Timber.d("New TmdbTask");
+            mActivityStartTime = System.currentTimeMillis();
             mItem = item;
-            mParentItem = parent;
+            mParentItem = null;
             mFinished = false;
             mOriginalLanguageTmdb = null;
         }
 
         @Override
         public void run() {
-            if (mItem.getBaseItemType() == BaseItemType.Episode && isNonEmptyTrim(mItem.getSeriesId())) {
-                apiClient.getValue().GetItemAsync(mItem.getSeriesId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
+            // Safeguard against recursive runs
+            long activityRunTime = System.currentTimeMillis() - mActivityStartTime;
+            if (activityRunTime > MAX_TMDB_TASK_TIME_MS) {
+                mFinished = true;
+                return;
+            }
+            BaseItemDto checkItem = mItem;
+            if (mParentItem != null) {
+                checkItem = mParentItem;
+            }
+            if (checkItem.getBaseItemType() == BaseItemType.Episode && isNonEmptyTrim(checkItem.getSeriesId())) {
+                apiClient.getValue().GetItemAsync(checkItem.getSeriesId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
                     // NOTE: this runs in mainThread!
                     @Override
                     public void onResponse(BaseItemDto response) {
                         if (response.getBaseItemType() == BaseItemType.Series && response.getProviderIds() != null) {
                             if (response.getProviderIds().containsKey("Tmdb") || response.getProviderIds().containsKey("Tvdb")) {
-                                mTmdbTask = new TmdbTask(response, mItem);
+                                mParentItem = response;
                                 mHandlerTmdb.post(mTmdbTask);
                             }
                         }
-                        mFinished = true;
                     }
                 });
-            } else if (mItem.getBaseItemType() == BaseItemType.Movie && mItem.getProviderIds() != null && mItem.getProviderIds().containsKey("Tmdb")) {
-                JSONObject tmdb_obj = getFromTmdbHttp_API("movie", mItem.getProviderIds().get("Tmdb"), null, null);
+            } else if (checkItem.getBaseItemType() == BaseItemType.Movie && checkItem.getProviderIds() != null && checkItem.getProviderIds().containsKey("Tmdb")) {
+                JSONObject tmdb_obj = getFromTmdbHttp_API("movie", checkItem.getProviderIds().get("Tmdb"), null, null);
                 if (tmdb_obj != null && tmdb_obj.has("original_language")) {
                     mOriginalLanguageTmdb = tmdb_obj.optString("original_language");
                 }
                 mFinished = true;
-            } else if (mItem.getBaseItemType() == BaseItemType.Series && mItem.getProviderIds() != null) {
-                if (mItem.getProviderIds().containsKey("Tmdb")) {
-                    JSONObject tmdb_obj = getFromTmdbHttp_API("tv", mItem.getProviderIds().get("Tmdb"), null, null);
+            } else if (checkItem.getBaseItemType() == BaseItemType.Series && checkItem.getProviderIds() != null) {
+                if (checkItem.getProviderIds().containsKey("Tmdb")) {
+                    JSONObject tmdb_obj = getFromTmdbHttp_API("tv", checkItem.getProviderIds().get("Tmdb"), null, null);
                     if (tmdb_obj != null && tmdb_obj.has("original_language")) {
                         mOriginalLanguageTmdb = tmdb_obj.optString("original_language");
                     }
-                } else if (mItem.getProviderIds().containsKey("Tvdb")) {
-                    JSONObject tmdb_find_obj = getFromTmdbHttp_API("find", mItem.getProviderIds().get("Tvdb"), "external_source=tvdb_id", null);
+                } else if (checkItem.getProviderIds().containsKey("Tvdb")) {
+                    JSONObject tmdb_find_obj = getFromTmdbHttp_API("find", checkItem.getProviderIds().get("Tvdb"), "external_source=tvdb_id", null);
                     if (tmdb_find_obj != null && tmdb_find_obj.has("tv_results")) {
                         try {
                             JSONArray tv_results = tmdb_find_obj.getJSONArray("tv_results");
@@ -781,7 +783,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 mFinished = true;
             }
             if (mOriginalLanguageTmdb != null) {
-                Timber.d("TmdbTask <%s> success: id <%s> org_langauge <%s>", mItem.getBaseItemType().toString(), mItem.getName(), mOriginalLanguageTmdb);
+                Timber.d("TmdbTask <%s> success: id <%s> org_langauge <%s>", checkItem.getBaseItemType().toString(), checkItem.getName(), mOriginalLanguageTmdb);
             }
         }
 
@@ -790,15 +792,15 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
 
         @Nullable
-        public String getOriginalLanguage(@NonNull String id) {
+        public String getOriginalLanguage(@Nullable String id, @Nullable String parentId) {
             if (mFinished) {
-                if (mItem.getId().equals(id)) {
+                if (isNonEmptyTrim(id) && mItem != null && mItem.getId().equals(id)) {
                     return mOriginalLanguageTmdb;
-                } else if (mParentItem != null && mParentItem.getId().equals(id)) {
-                    return mOriginalLanguageTmdb;
-                } else {
-                    Timber.w("getOriginalLanguage id's don't match!");
                 }
+                if (isNonEmptyTrim(parentId) && mParentItem != null && mParentItem.getId().equals(parentId)) {
+                    return mOriginalLanguageTmdb;
+                }
+                Timber.w("getOriginalLanguage id's don't match!");
             }
             return null;
         }
@@ -881,7 +883,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         protected void evaluateAudioSubTracks() {
             String orgLangCode = null;
             if (mTmdbTask != null) {
-                orgLangCode = mTmdbTask.getOriginalLanguage(mItem.getId());
+                orgLangCode = mTmdbTask.getOriginalLanguage(mItem.getId(), mItem.getSeriesId());
             }
             if (mStreamInfo != null && mStreamInfo.getPlayMethod() == PlayMethod.DirectStream) {
                 MediaSourceInfo mediaInfo = mStreamInfo.getMediaSource();
@@ -1663,8 +1665,11 @@ public class ExternalPlayerActivity extends FragmentActivity {
         Pair<Integer, Integer> numAudioSubTracks = getNumAudioSubTracks(item.getMediaStreams());
         if (mAudioLangSetting == LanguagesAudio.ORIGINAL && numAudioSubTracks.first > 1) {
             if (createTmdbThread()) {
-                mTmdbTask = new TmdbTask(item, null);
-                mHandlerTmdb.post(mTmdbTask);
+                // check if we already have a good result (case: series playlist)
+                if (mTmdbTask == null || mTmdbTask.getOriginalLanguage(item.getId(), item.getSeriesId()) == null) {
+                    mTmdbTask = new TmdbTask(item);
+                    mHandlerTmdb.post(mTmdbTask);
+                }
             }
         }
 
@@ -1673,7 +1678,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             mCurrentStreamInfo = new StreamInfo();
             mCurrentStreamInfo.setPlayMethod(PlayMethod.DirectPlay);
 
-            Utils.showToast(ExternalPlayerActivity.this, PlayMethod.DirectPlay + " --- " + getDisplayTitle(item));
+            Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle(item) + "\n\n" + PlayMethod.DirectPlay);
             startExternalZidooZDMCActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*", item);
             //            startExternalActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*");
         } else {
@@ -1695,7 +1700,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                         //String url = KoinJavaComponent.<ApiClient>get(ApiClient.class).getApiUrl() + "/videos/" + response.getItemId() + "/stream?static=true&mediaSourceId=" + response.getMediaSourceId();
 
                         String url = response.getMediaUrl();
-                        Utils.showToast(ExternalPlayerActivity.this, response.getPlayMethod().toString() + " --- " + getDisplayTitle(item));
+                        Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle(item) + "\n\n" + response.getPlayMethod().toString());
                         //And request an activity to play it
                         startExternalZidooMovieActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*", response, item);
                         //                    startExternalActivity(url, response.getMediaSource().getContainer() != null ? response.getMediaSource().getContainer() : "*");

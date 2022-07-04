@@ -27,7 +27,6 @@ import timber.log.Timber;
  */
 public class Utils {
     static public final long RUNTIME_TICKS_TO_MS = 10000;
-    static public final int MAGIC_TIME_CODE_RESUME = -9991234;
 
     /**
      * Shows a (long) toast
