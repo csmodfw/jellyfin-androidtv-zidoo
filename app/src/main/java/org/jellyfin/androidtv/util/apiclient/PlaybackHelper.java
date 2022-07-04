@@ -259,7 +259,7 @@ public class PlaybackHelper {
         }
     }
 
-    public static void playOrPlayNext(final BaseItemDto item, final Context activity) {
+    public static void playOrPlayNextUp(final BaseItemDto item, final Context activity) {
         PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
         if (playbackLauncher.interceptPlayRequest(activity, item)) return;
 
