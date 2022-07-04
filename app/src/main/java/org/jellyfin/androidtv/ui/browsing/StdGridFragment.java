@@ -57,6 +57,7 @@ import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
 import org.jellyfin.androidtv.util.apiclient.PlaybackHelper;
+import org.jellyfin.apiclient.interaction.ApiClient;
 import org.jellyfin.apiclient.interaction.EmptyResponse;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.querying.ItemSortBy;
@@ -703,13 +704,8 @@ public class StdGridFragment extends GridFragment {
                 mediaManager.getValue().setCurrentMediaAdapter(mGridAdapter);
                 mediaManager.getValue().setCurrentMediaPosition(mCurrentItem.getIndex());
                 mediaManager.getValue().setCurrentMediaTitle(mFolder.getName());
-                //default play action, resume will be 0 for series type !
-                if (mCurrentItem.getBaseItem().getIsFolderItem()) {
-                    mHandler.postDelayed(() -> PlaybackHelper.play(mCurrentItem.getBaseItem(), Utils.MAGIC_TIME_CODE_RESUME, false, requireActivity()),10); // HACK: mark gridActivity timecode for resume logic...
-                } else {
-                    Long pos = mCurrentItem.getBaseItem().getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS;
-                    mHandler.postDelayed(() -> PlaybackHelper.play(mCurrentItem.getBaseItem(), pos.intValue(), false, requireActivity()), 10);
-                }
+                //default play action
+                mHandler.postDelayed(() -> PlaybackHelper.playOrPlayNext(mCurrentItem.getBaseItem(), requireActivity()), 10);
                 return true;
             }
             return false;
