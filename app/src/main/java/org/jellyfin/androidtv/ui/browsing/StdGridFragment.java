@@ -15,6 +15,8 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.PopupWindow;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.leanback.widget.BaseGridView;
 import androidx.leanback.widget.OnItemViewClickedListener;
 import androidx.leanback.widget.OnItemViewSelectedListener;
@@ -110,6 +112,9 @@ public class StdGridFragment extends GridFragment {
         super.onCreate(savedInstanceState);
         Timber.d("XXX onCreate");
 
+        if (getActivity() instanceof BaseActivity) mActivity = (BaseActivity) getActivity();
+        backgroundService.getValue().attach(requireActivity());
+
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), requireActivity().getIntent().getStringExtra(Extras.Folder));
         mParentId = mFolder.getId();
         MainTitle = mFolder.getName();
@@ -129,6 +134,9 @@ public class StdGridFragment extends GridFragment {
         setDefaultGridRowCols(mPosterSizeSetting, mImageType);
         setAutoCardGridValues();
         mJumplistPopup = new JumplistPopup();
+
+        setupQueries();
+        setupEventListeners();
     }
 
     @Override
@@ -353,18 +361,11 @@ public class StdGridFragment extends GridFragment {
     }
 
     @Override
-    public void onActivityCreated(Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-        Timber.d("onActivityCreated");
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
 
-        if (getActivity() instanceof BaseActivity) mActivity = (BaseActivity) getActivity();
-
-        backgroundService.getValue().attach(requireActivity());
-
-        setupQueries();
         loadGrid();
         addTools();
-        setupEventListeners();
     }
 
     protected void setupQueries() {
@@ -694,7 +695,8 @@ public class StdGridFragment extends GridFragment {
         }
     }
 
-    private BaseGridView.OnKeyInterceptListener keyListener = new BaseGridView.OnKeyInterceptListener() {
+    protected BaseGridView.OnKeyInterceptListener mKeyListener = new BaseGridView.OnKeyInterceptListener() {
+
         @Override
         public boolean onInterceptKeyEvent(KeyEvent event) {
             if (mCurrentItem != null && event.getAction() == KeyEvent.ACTION_DOWN && (event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY || event.getKeyCode() == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) && BaseItemUtils.canPlay(mCurrentItem.getBaseItem())) {
@@ -703,10 +705,10 @@ public class StdGridFragment extends GridFragment {
                 mediaManager.getValue().setCurrentMediaTitle(mFolder.getName());
                 //default play action, resume will be 0 for series type !
                 if (mCurrentItem.getBaseItem().getIsFolderItem()) {
-                    PlaybackHelper.play(mCurrentItem.getBaseItem(), Utils.MAGIC_TIME_CODE_RESUME, false, requireActivity()); // HACK: mark gridActivity timecode for resume logic...
+                    mHandler.postDelayed(() -> PlaybackHelper.play(mCurrentItem.getBaseItem(), Utils.MAGIC_TIME_CODE_RESUME, false, requireActivity()),10); // HACK: mark gridActivity timecode for resume logic...
                 } else {
                     Long pos = mCurrentItem.getBaseItem().getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS;
-                    PlaybackHelper.play(mCurrentItem.getBaseItem(), pos.intValue(), false, requireActivity());
+                    mHandler.postDelayed(() -> PlaybackHelper.play(mCurrentItem.getBaseItem(), pos.intValue(), false, requireActivity()), 10);
                 }
                 return true;
             }
@@ -745,8 +747,8 @@ public class StdGridFragment extends GridFragment {
                     }
                 }
             });
-        } else if (getGridView() != null) {
-            getGridView().setOnKeyInterceptListener(keyListener);
+        } else {
+            setOnKeyInterceptListener(mKeyListener);
         }
     }
 
