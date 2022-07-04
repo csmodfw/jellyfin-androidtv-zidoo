@@ -51,6 +51,7 @@ public class GridFragment extends Fragment {
     private BaseGridView mGridView;
     private OnItemViewSelectedListener mOnItemViewSelectedListener;
     private OnItemViewClickedListener mOnItemViewClickedListener;
+    private BaseGridView.OnKeyInterceptListener mOnKeyInterceptListener;
     private int mSelectedPosition = -1;
     private int mGridHeight = -1;
     private int mGridWidth = -1;
@@ -272,6 +273,13 @@ public class GridFragment extends Fragment {
         }
     }
 
+    public void setOnKeyInterceptListener(BaseGridView.OnKeyInterceptListener listener) {
+        mOnKeyInterceptListener = listener;
+        if (mGridView != null) {
+            mGridView.setOnKeyInterceptListener(listener);
+        }
+    }
+
     /**
      * Returns the item clicked listener.
      */
@@ -335,6 +343,7 @@ public class GridFragment extends Fragment {
         mGridView.setHorizontalSpacing(mGridItemSpacingHorizontal);
         mGridView.setVerticalSpacing(mGridItemSpacingVertical);
         mGridView.setFocusable(true);
+        mGridView.setOnKeyInterceptListener(mOnKeyInterceptListener);
 
         mGridDock.removeAllViews();
         mGridDock.addView(mGridViewHolder.view);
