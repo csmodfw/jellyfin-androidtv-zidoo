@@ -209,13 +209,15 @@
     <string name="lbl_show_premieres">Show season premieres</string>
     <string name="desc_premieres">Show a row of new episode pilots for any series you watch</string>
     <string name="lbl_bitstream_dts">Bitstream DTS audio</string>
-    <string name="lbl_dts_enabled_device">DTS capable device?</string>
+    <string name="lbl_dts_enabled_device">DTS capable device</string>
     <string name="desc_dts_enabled_device">Is tv, receiver capable of decoding DTS audio?</string>
+    <string name="lbl_enable_extra_surround_codecs">Enable none bitstream surround codecs</string>
+    <string name="desc_enable_extra_surround_codecs">Allow 5.1 audio output for more codecs (aac, ogg, opus, flac, mp3).</string>
     <string name="lbl_prefer_6ch">Prefer 6 channel audio</string>
     <string name="desc_prefer_6ch">In case tv, receiver has issues with 8,10+ channels.</string>
     <string name="lbl_no_forced_subs">No forced subtitle</string>
     <string name="desc_no_forced_subs">Do not display forced subtitles.</string>
-    <string name="lbl_allow_same_lang_subs">Allow same language subtitles?</string>
+    <string name="lbl_allow_same_lang_subs">Allow same language subtitles</string>
     <string name="desc_allow_same_lang_subs">Display subtitles, even if matching audio language.</string>
     <string name="lbl_enable_library_audio_settings">Enable library audio settings</string>
     <string name="desc_enable_library_audio_settings">Override global audio settings for this library.</string>
@@ -261,6 +263,8 @@
     <string name="lbl_song_title">Song Title</string>
     <string name="pref_use_direct_path_title">Enable Direct Path</string>
     <string name="pref_use_direct_path_summary">Use the server network paths (smb, nfs) instead of a http stream.</string>
+    <string name="lbl_allow_transcode_fallback">Allow transcode fallback</string>
+    <string name="desc_allow_transcode_fallback">Allow http transcode, if the video would not play natively.</string>
     <string name="pref_acra_category">Crash reporting</string>
     <string name="pref_enable_acra">Send crash reports to developers</string>
     <string name="pref_acra_enabled">You will be prompted to submit crash reports</string>
