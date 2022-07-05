@@ -140,6 +140,13 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 				depends { userPreferences[UserPreferences.videoPlayer] == PreferredVideoPlayer.EXTERNAL }
 			}
 
+			checkbox {
+				setTitle(R.string.lbl_allow_transcode_fallback)
+				setContent(R.string.desc_allow_transcode_fallback)
+				bind(userPreferences, UserPreferences.enableTranscodingFallback)
+				depends { userPreferences[UserPreferences.externalVideoPlayerSendPath] }
+			}
+
 //			enum<RefreshRateSwitchingBehavior> {
 //				setTitle(R.string.lbl_refresh_switching)
 //				bind(userPreferences, UserPreferences.refreshRateSwitchingBehavior)
@@ -159,7 +166,12 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 				setTitle(R.string.lbl_dts_enabled_device)
 				setContent(R.string.desc_dts_enabled_device)
 				bind(userPreferences, UserPreferences.dtsCapableDevice)
-				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
+			}
+
+			checkbox {
+				setTitle(R.string.lbl_enable_extra_surround_codecs)
+				setContent(R.string.desc_enable_extra_surround_codecs)
+				bind(userPreferences, UserPreferences.enableExtraSurroundCodecs)
 			}
 
 			checkbox {

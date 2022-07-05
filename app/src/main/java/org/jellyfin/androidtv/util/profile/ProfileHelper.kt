@@ -72,6 +72,7 @@ object ProfileHelper {
 				DeviceUtils.isFireTvStick4k() -> H264_LEVEL_5_2
 				DeviceUtils.isFireTv() -> H264_LEVEL_4_1
 				DeviceUtils.isShieldTv() -> H264_LEVEL_5_2
+				DeviceUtils.isZidooRTK() -> H264_LEVEL_5_2
 				else -> H264_LEVEL_5_1
 			}
 		)
@@ -81,11 +82,12 @@ object ProfileHelper {
 		ProfileCondition(
 			ProfileConditionType.EqualsAny,
 			ProfileConditionValue.VideoProfile,
-			arrayOf(
+			listOfNotNull(
 				"high",
 				"main",
 				"baseline",
-				"constrained baseline"
+				"constrained baseline",
+				if (MediaTest.supportsAVCHigh10()) "high 10" else null
 			).joinToString("|")
 		)
 	}
@@ -136,11 +138,35 @@ object ProfileHelper {
 			)
 		}
 
+	fun maxAudioChannelsCodecProfile(audioCodecs: Array<String>, channels: Int) = CodecProfile()
+		.apply {
+			type = CodecType.VideoAudio
+			codec = audioCodecs.joinToString(",")
+			conditions = arrayOf(
+				ProfileCondition(
+					ProfileConditionType.LessThanEqual,
+					ProfileConditionValue.AudioChannels,
+					channels.toString()
+				)
+			)
+		}
+
 	internal fun subtitleProfile(
 		format: String,
 		method: SubtitleDeliveryMethod
 	) = SubtitleProfile().apply {
 		this.format = format
 		this.method = method
+	}
+
+	// CaptionInfoEx, smi
+	internal fun subtitleProfile(
+		format: String,
+		method: SubtitleDeliveryMethod,
+		didlMode: String
+	) = SubtitleProfile().apply {
+		this.format = format
+		this.method = method
+		this.didlMode = didlMode
 	}
 }

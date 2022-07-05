@@ -26,6 +26,9 @@ public class DeviceUtils {
     private static final String FIRE_TV_MODEL_GEN_3 = "AFTN";
     // Nvidia Shield TV Model
     private static final String SHIELD_TV_MODEL = "SHIELD Android TV";
+    // Zidoo
+    private static final String ZIDOO_MODEL_Z9X = "Z9X";
+    private static final String ZIDOO_MANUFACTURER = "ZIDOO";
 
     private static final String UNKNOWN = "Unknown";
 
@@ -51,9 +54,9 @@ public class DeviceUtils {
         return getBuildModel().equals(FIRE_STICK_4K_MODEL);
     }
 
-    public static boolean isShieldTv() {
-        return getBuildModel().equals(SHIELD_TV_MODEL);
-    }
+    public static boolean isShieldTv() { return getBuildModel().equals(SHIELD_TV_MODEL); }
+
+    public static boolean isZidooRTK() { return Build.MANUFACTURER.equals(ZIDOO_MANUFACTURER) && Build.BRAND.equals("rtk"); }
 
     public static boolean has4kVideoSupport() {
         String buildModel = getBuildModel();

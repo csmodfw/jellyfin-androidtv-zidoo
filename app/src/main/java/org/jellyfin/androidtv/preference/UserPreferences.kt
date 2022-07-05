@@ -108,6 +108,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var externalVideoPlayerSendPath = booleanPreference("pref_send_path_external", false)
 
+		/**
+		 * Allow transcoding fallback in DirectPath Mode
+		 */
+		var enableTranscodingFallback = booleanPreference("pref_enable_transcoding_fallback", true)
+
 		/* Playback - Audio related */
 		/**
 		 * Preferred behavior for audio streaming.
@@ -226,6 +231,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 * DTS capable audio device
 		 */
 		var dtsCapableDevice = booleanPreference("pref_dts_capable_device", false)
+
+		/**
+		 * Enable none bitstream surround codecs
+		 */
+		var enableExtraSurroundCodecs = booleanPreference("pref_enable_extra_surround_codecs", false)
 
 		/**
 		 * Prefer 6 channel audio

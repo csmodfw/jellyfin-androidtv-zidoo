@@ -58,6 +58,8 @@ public class PlaybackManager {
         request.setDeviceProfile(options.getProfile());
         request.setMaxAudioChannels(options.getMaxAudioChannels());
 
+        request.setAllowAudioStreamCopy(true);
+
         apiClient.GetPlaybackInfoWithPost(request, new GetPlaybackInfoResponse(this, deviceInfo, apiClient, options, response, false, startPositionTicks));
     }
 
@@ -75,8 +77,10 @@ public class PlaybackManager {
         request.setEnableDirectPlay(options.getEnableDirectPlay());
         request.setMaxAudioChannels(options.getMaxAudioChannels());
 
-        apiClient.GetPlaybackInfoWithPost(request, new GetPlaybackInfoResponse(this, deviceInfo, apiClient, options, response, true, startPositionTicks));
+        request.setAllowVideoStreamCopy(true);
+        request.setAllowAudioStreamCopy(true);
 
+        apiClient.GetPlaybackInfoWithPost(request, new GetPlaybackInfoResponse(this, deviceInfo, apiClient, options, response, true, startPositionTicks));
     }
 
     public void changeVideoStream(final StreamInfo currentStreamInfo, DeviceInfo deviceInfo, final VideoOptions options, Long startPositionTicks, ApiClient apiClient, final Response<StreamInfo> response) {
