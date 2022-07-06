@@ -272,7 +272,6 @@ public class GridFragment extends Fragment {
                 ((VerticalGridPresenter) mGridPresenter).setOnItemViewClickedListener(mOnItemViewClickedListener);
         }
     }
-
     public void setOnKeyInterceptListener(BaseGridView.OnKeyInterceptListener listener) {
         mOnKeyInterceptListener = listener;
         if (mGridView != null) {

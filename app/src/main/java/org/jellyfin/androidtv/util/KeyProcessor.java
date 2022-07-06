@@ -96,15 +96,14 @@ public class KeyProcessor {
                                 return true;
                             case Series:
                             case Season:
-                            case BoxSet:
-                                createPlayMenu(rowItem.getBaseItem(), true, false, activity);
+                                // play next, resume or play
+                                PlaybackHelper.playOrPlayNextUp(item, activity);
                                 return true;
+                            case BoxSet:
                             case MusicAlbum:
                             case MusicArtist:
-                                createPlayMenu(rowItem.getBaseItem(), true, true, activity);
-                                return true;
                             case Playlist:
-                                createPlayMenu(rowItem.getBaseItem(), true, "Audio".equals(rowItem.getBaseItem().getMediaType()), activity);
+                                PlaybackHelper.retrieveAndPlay(item.getId(), false, activity);
                                 return true;
                             case Photo:
                                 // open photo player

@@ -1,5 +1,7 @@
 package org.jellyfin.androidtv.util.apiclient;
 
+import static org.jellyfin.androidtv.util.Utils.RUNTIME_TICKS_TO_MS;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -16,6 +18,7 @@ import org.jellyfin.apiclient.interaction.Response;
 import org.jellyfin.apiclient.model.dto.BaseItemDto;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.entities.LocationType;
+import org.jellyfin.apiclient.model.entities.SortOrder;
 import org.jellyfin.apiclient.model.livetv.ChannelInfoDto;
 import org.jellyfin.apiclient.model.querying.EpisodeQuery;
 import org.jellyfin.apiclient.model.querying.ItemFields;
@@ -36,7 +39,7 @@ import java.util.UUID;
 import timber.log.Timber;
 
 public class PlaybackHelper {
-    private static final int ITEM_QUERY_LIMIT = 15; // use sane default for series
+    private static final int ITEM_QUERY_LIMIT = 15; // use sane default for none music
     private static final int ITEM_QUERY_LIMIT_MUSIC = 150; // limit the number of items retrieved for playback
 
     public static void getItemsToPlay(final BaseItemDto mainItem, boolean allowIntros, final boolean shuffle, final Response<List<BaseItemDto>> outerResponse) {
@@ -131,6 +134,7 @@ public class PlaybackHelper {
                 });
                 break;
             case MusicAlbum:
+                query.setParentId(mainItem.getId());
             case MusicArtist:
                 //get all songs
                 query.setIsMissing(false);
@@ -147,7 +151,9 @@ public class PlaybackHelper {
                         ItemFields.ChildCount
                 });
                 query.setUserId(userId.toString());
-                query.setArtistIds(new String[]{mainItem.getId()});
+                if (mainItem.getBaseItemType() == BaseItemType.MusicArtist) {
+                    query.setArtistIds(new String[]{mainItem.getId()});
+                }
                 KoinJavaComponent.<ApiClient>get(ApiClient.class).GetItemsAsync(query, new Response<ItemsResult>() {
                     @Override
                     public void onResponse(ItemsResult response) {
@@ -234,7 +240,6 @@ public class PlaybackHelper {
                         @Override
                         public void onResponse(ItemsResult response) {
                             if (response.getTotalRecordCount() > 0){
-
                                 for (BaseItemDto intro : response.getItems()) {
                                     intro.setBaseItemType(BaseItemType.Trailer);
                                     items.add(intro);
@@ -260,54 +265,42 @@ public class PlaybackHelper {
     }
 
     public static void playOrPlayNextUp(final BaseItemDto item, final Context activity) {
-        if (item.getBaseItemType() == BaseItemType.Series) {
+        if (item.getBaseItemType() == BaseItemType.Series || item.getBaseItemType() == BaseItemType.Season) {
             //play next up
             NextUpQuery nextUpQuery = new NextUpQuery();
             UUID userId = KoinJavaComponent.<SessionRepository>get(SessionRepository.class).getCurrentSession().getValue().getUserId();
             nextUpQuery.setUserId(userId.toString());
-            nextUpQuery.setSeriesId(item.getId());
+            nextUpQuery.setSeriesId(item.getSeriesId() != null ? item.getSeriesId() : item.getId());
+            nextUpQuery.setLimit(1);
             KoinJavaComponent.<ApiClient>get(ApiClient.class).GetNextUpEpisodesAsync(nextUpQuery, new Response<ItemsResult>() {
                 @Override
                 public void onResponse(ItemsResult response) {
                     if (response.getItems().length > 0) {
-                        Timber.d("Success found next up episode");
-                        play(response.getItems()[0], 0 , false, activity);
+                        retrieveAndPlay(response.getItems()[0].getId(), false, activity);
                     } else {
                         // try resume
                         ItemQuery query = new ItemQuery();
+                        query.setUserId(userId.toString());
                         query.setParentId(item.getId());
                         query.setIsMissing(false);
                         query.setIsVirtualUnaired(false);
                         query.setIncludeItemTypes(new String[]{"Episode", "Video"});
                         query.setFilters(new ItemFilter[]{ItemFilter.IsResumable, ItemFilter.IsUnplayed});
+                        query.setSortBy(new String[]{ItemSortBy.DatePlayed});
+                        query.setSortOrder(SortOrder.Descending);
                         query.setRecursive(true);
                         query.setLimit(1);
-                        query.setUserId(userId.toString());
                         KoinJavaComponent.<ApiClient>get(ApiClient.class).GetItemsAsync(query, new Response<ItemsResult>() {
                             @Override
                             public void onResponse(ItemsResult response) {
                                 if (response.getItems().length > 0) {
-                                    Timber.d("Success found resume episode");
-                                    //resume
-                                    int pos = 0;
-                                    BaseItemDto foundItem = response.getItems()[0];
-                                    if (foundItem.getCanResume()) {
-                                        pos = (int) (foundItem.getUserData().getPlaybackPositionTicks() / Utils.RUNTIME_TICKS_TO_MS);
-                                    }
-                                    play(foundItem, pos - getResumePreroll(), false, activity);
+                                    retrieveAndPlay(response.getItems()[0].getId(), false, activity);
                                 } else {
-                                    Timber.w("Error playOrPlayNext() could not find playable episode");
-                                    Utils.showToast(activity, activity.getString(R.string.msg_video_playback_error));
+                                    retrieveAndPlay(item.getId(), false, activity);
                                 }
                             }
                         });
                     }
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    Timber.e(exception, "Error finding next up episode");
-                    Utils.showToast(activity, activity.getString(R.string.msg_video_playback_error));
                 }
             });
         } else {
@@ -330,7 +323,6 @@ public class PlaybackHelper {
                     case Playlist:
                         if ("Audio".equals(item.getMediaType())) {
                             KoinJavaComponent.<MediaManager>get(MediaManager.class).playNow(activity, response, shuffle);
-
                         } else {
                             BaseItemType itemType = response.size() > 0 ? response.get(0).getBaseItemType() : null;
                             Class newActivity = playbackLauncher.getPlaybackActivityClass(itemType);
@@ -383,7 +375,7 @@ public class PlaybackHelper {
         KoinJavaComponent.<ApiClient>get(ApiClient.class).GetItemAsync(id, userId.toString(), new Response<BaseItemDto>() {
             @Override
             public void onResponse(BaseItemDto response) {
-                Long pos = position != null ? position / 10000 : response.getUserData() != null ? (response.getUserData().getPlaybackPositionTicks() / 10000) - getResumePreroll() : 0;
+                Long pos = position != null ? position / RUNTIME_TICKS_TO_MS : response.getUserData() != null ? (response.getUserData().getPlaybackPositionTicks() / RUNTIME_TICKS_TO_MS) - getResumePreroll() : 0;
                 play(response, pos.intValue(), shuffle, activity);
             }
 
