@@ -738,6 +738,9 @@ public class StdGridFragment extends GridFragment implements MessageListener {
             mActivity.registerKeyListener(new KeyListener() {
                 @Override
                 public boolean onKeyUp(int key, KeyEvent event) {
+                    if (mGridDock == null || !mGridDock.hasFocus()) {
+                        return false;
+                    }
                     if (key == KeyEvent.KEYCODE_MEDIA_PLAY || key == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
                         mediaManager.getValue().setCurrentMediaAdapter(mGridAdapter);
                         mediaManager.getValue().setCurrentMediaPosition(mCurrentItem.getIndex());
