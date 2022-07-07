@@ -61,6 +61,7 @@ import org.jellyfin.apiclient.interaction.EmptyResponse;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.querying.ItemSortBy;
 import org.jellyfin.sdk.model.api.BaseItemDto;
+import org.jellyfin.sdk.model.api.BaseItemKind;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -98,8 +99,8 @@ public class StdGridFragment extends GridFragment implements MessageListener {
 
     private int mCardsScreenEst = 0;
     private int mCardsScreenStride = 0;
-    private double mCardFocusScale = 1.15; // 115%
-    private final int MIN_NUM_CARDS = 5;
+    private double mCardFocusScale = 1.15; // 115%, just a default we use the resource card_scale_focus otherwise
+    private final int MIN_NUM_CARDS = 5; // minimum number of visible cards we allow, this results in more empty space
     private final double CARD_SPACING_PCT = 1.0; // 100% expressed as relative to the padding_left/top, which depends on the mCardFocusScale and AspectRatio
     private final double CARD_SPACING_HORIZONTAL_BANNER_PCT = 0.5; // 50% allow horizontal card overlapping for banners, otherwise spacing is too large
     private final int MIN_GRIDSIZE_CHANGE_DELTA = 4; // minimum pixel size changes, to trigger a recreate of the grid via onGridSizeMeasurements
@@ -188,10 +189,18 @@ public class StdGridFragment extends GridFragment implements MessageListener {
         }
     }
 
-    protected double getCardWidthBy(final double cardHeight, ImageType imageType) {
+    protected double getCardWidthBy(final double cardHeight, ImageType imageType, BaseItemDto folder) {
         switch (imageType) {
             case POSTER:
-                return cardHeight * ImageUtils.ASPECT_RATIO_2_3;
+                // special handling for square posters
+                BaseItemKind fType = folder.getType();
+                if (fType == BaseItemKind.AUDIO || fType == BaseItemKind.GENRE || fType == BaseItemKind.MUSIC_ALBUM || fType == BaseItemKind.MUSIC_ARTIST || fType == BaseItemKind.MUSIC_GENRE) {
+                    return cardHeight;
+                } else if (fType == BaseItemKind.COLLECTION_FOLDER && "music".equals(folder.getCollectionType())) {
+                    return cardHeight;
+                } else {
+                    return cardHeight * ImageUtils.ASPECT_RATIO_2_3;
+                }
             case THUMB:
                 return cardHeight * ImageUtils.ASPECT_RATIO_16_9;
             case BANNER:
@@ -201,10 +210,18 @@ public class StdGridFragment extends GridFragment implements MessageListener {
         }
     }
 
-    protected double getCardHeightBy(final double cardWidth, ImageType imageType) {
+    protected double getCardHeightBy(final double cardWidth, ImageType imageType, BaseItemDto folder) {
         switch (imageType) {
             case POSTER:
-                return cardWidth / ImageUtils.ASPECT_RATIO_2_3;
+                // special handling for square posters
+                BaseItemKind fType = folder.getType();
+                if (fType == BaseItemKind.AUDIO || fType == BaseItemKind.GENRE || fType == BaseItemKind.MUSIC_ALBUM || fType == BaseItemKind.MUSIC_ARTIST || fType == BaseItemKind.MUSIC_GENRE) {
+                    return cardWidth;
+                }else if (fType == BaseItemKind.COLLECTION_FOLDER && "music".equals(folder.getCollectionType())) {
+                    return cardWidth;
+                } else {
+                    return cardWidth / ImageUtils.ASPECT_RATIO_2_3;
+                }
             case THUMB:
                 return cardWidth / ImageUtils.ASPECT_RATIO_16_9;
             case BANNER:
@@ -311,7 +328,7 @@ public class StdGridFragment extends GridFragment implements MessageListener {
             if (Math.abs(sumSize - grid_height) > 2) {
                 Timber.w("setAutoCardGridValues calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", grid_height, sumSize);
             }
-            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType);
+            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
             paddingLeftInt = (int) Math.round((cardWidthInt * cardScaling) / 2.0);
             spacingHorizontalInt = Math.max((int) (Math.round(paddingLeftInt * CARD_SPACING_PCT)), 0); // round spacing
             if (mImageType == ImageType.BANNER) {
@@ -332,8 +349,8 @@ public class StdGridFragment extends GridFragment implements MessageListener {
             double cardWidth = useableCardSpace / numCols;
 
             // fix any rounding errors and make pixel perfect
-            cardHeightInt = (int) Math.round(getCardHeightBy(cardWidth, mImageType));
-            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType);
+            cardHeightInt = (int) Math.round(getCardHeightBy(cardWidth, mImageType, mFolder));
+            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
             double cardPaddingLeftRightAdj = cardWidthInt * cardScaling;
             spacingHorizontalInt = Math.max((int) (Math.round((cardPaddingLeftRightAdj / 2.0) * CARD_SPACING_PCT)), 0); // round spacing
             if (mImageType == ImageType.BANNER) {
@@ -446,7 +463,9 @@ public class StdGridFragment extends GridFragment implements MessageListener {
 
     protected void buildAdapter() {
         mCardPresenter = new CardPresenter(false, mImageType, getCardHeight());
-        Timber.d("XXX buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int) getCardWidthBy(mCardHeight, mImageType), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
+        mCardPresenter.setUniformAspect(true); // make all card grids uniform, so spacing is not messed-up
+
+        Timber.d("buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int) getCardWidthBy(mCardHeight, mImageType, mFolder), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
 
         // adapt chunk size if needed
         int chunkSize = mRowDef.getChunkSize();

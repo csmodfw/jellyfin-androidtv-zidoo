@@ -45,6 +45,8 @@ public class CardPresenter extends Presenter {
 
     private boolean isUserView = false;
 
+    private boolean isUniformAspect = false;
+
     public CardPresenter() {
         super();
     }
@@ -109,7 +111,9 @@ public class CardPresenter extends Presenter {
                         case Audio:
                         case MusicAlbum:
                             mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_audio);
-                            if (aspect < 0.8) {
+                            if (isUniformAspect) {
+                                aspect = 1.0;
+                            } else if (aspect < .8) {
                                 aspect = 1.0;
                             }
                             showWatched = false;
@@ -119,7 +123,9 @@ public class CardPresenter extends Presenter {
                             break;
                         case MusicArtist:
                             mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_person);
-                            if (aspect < .8) {
+                            if (isUniformAspect) {
+                                aspect = 1.0;
+                            } else if (aspect < .8) {
                                 aspect = 1.0;
                             }
                             showWatched = false;
@@ -432,5 +438,9 @@ public class CardPresenter extends Presenter {
 
     @Override
     public void onViewAttachedToWindow(Presenter.ViewHolder viewHolder) {
+    }
+
+    public void setUniformAspect(boolean uniformAspect) {
+        isUniformAspect = uniformAspect;
     }
 }
