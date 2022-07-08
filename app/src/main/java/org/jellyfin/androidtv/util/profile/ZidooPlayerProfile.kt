@@ -43,7 +43,7 @@ class ZidooPlayerProfile (
 		name = "AndroidTV-Zidoo-External"
 		maxStaticBitrate = 200_000_000 // 200 mbps
 		maxStreamingBitrate = 200_000_000 // 200 mbps
-		musicStreamingTranscodingBitrate = 320_000 // 320 mbps max. mp3
+		musicStreamingTranscodingBitrate = 640_000 // 320 mbps is max. mp3
 
 		directPlayProfiles = arrayOf(
 			DirectPlayProfile().apply {
@@ -120,8 +120,8 @@ class ZidooPlayerProfile (
 				context = EncodingContext.Streaming
 				container = Codec.Container.MKV
 				videoCodec = buildList {
-					if (ProfileHelper.deviceHevcCodecProfile.ContainsCodec(Codec.Video.HEVC, Codec.Container.MKV)) add(Codec.Video.HEVC)
 					add(Codec.Video.H264)
+					if (ProfileHelper.deviceHevcCodecProfile?.ContainsCodec(Codec.Video.HEVC, Codec.Container.MKV) == true) add(Codec.Video.HEVC)
 				}.joinToString(",")
 				audioCodec = buildList {
 					addAll(codecsDolby)
@@ -129,6 +129,7 @@ class ZidooPlayerProfile (
 					if (isExtraSurroundEnabled) addAll(codecsCommon)
 				}.joinToString(",")
 				copyTimestamps = false
+				maxAudioChannels = "8"
 			},
 			// MP3 audio profile
 			TranscodingProfile().apply {
@@ -139,7 +140,7 @@ class ZidooPlayerProfile (
 			}
 		)
 
-		codecProfiles = arrayOf(
+		codecProfiles = listOfNotNull(
 			// HEVC profile
 			ProfileHelper.deviceHevcCodecProfile,
 			// H264 profile
@@ -151,12 +152,17 @@ class ZidooPlayerProfile (
 					ProfileHelper.h264VideoLevelProfileCondition,
 				)
 			},
-			// Audio stereo channel profile
+			// Audio-channels: Dolby is 6,8 with atmos at 7.1.4
+			if (isDTSEnabled)
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby.plus(Codec.Audio.DTS), 8)
+			else
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby, 8)
+			,
 			if (isExtraSurroundEnabled)
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, 10)
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, 8)
 			else
 				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, 2)
-		)
+		).toTypedArray()
 
 		subtitleProfiles = arrayOf(
 			subtitleProfile(Codec.Subtitle.ASS, SubtitleDeliveryMethod.Embed),
@@ -169,7 +175,8 @@ class ZidooPlayerProfile (
 			subtitleProfile(Codec.Subtitle.VTT, SubtitleDeliveryMethod.Embed),
 			subtitleProfile(Codec.Subtitle.SUB, SubtitleDeliveryMethod.Embed),
 			subtitleProfile(Codec.Subtitle.IDX, SubtitleDeliveryMethod.Embed),
-			subtitleProfile(Codec.Subtitle.SMI, SubtitleDeliveryMethod.Embed)
+			subtitleProfile(Codec.Subtitle.SMI, SubtitleDeliveryMethod.Embed),
+			subtitleProfile(Codec.Subtitle.SRT, SubtitleDeliveryMethod.External),
 		)
 	}
 }

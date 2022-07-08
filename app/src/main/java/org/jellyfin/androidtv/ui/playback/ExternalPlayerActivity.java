@@ -190,7 +190,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     static final int API_ZIDOO_HTTP_API_MAX_ERROR_COUNT = 5; // maximum http errors, before we fail
     // https://developers.themoviedb.org/3/getting-started/introduction
     static final String API_TMDB_HTTP_API_KEY = "4219e299c89411838049ab0dab19ebd5"; // from Jellyfin server
-    static final String API_TMDB_HTTP_API_V3_BASE_URL = "api.themoviedb.org/3"; // from Jellyfin server
+    static final String API_TMDB_HTTP_API_V3_BASE_URL = "api.themoviedb.org/3";
     static final String API_TMDB_HTTP_API_JSON_ID = "id";
 
     @Override
@@ -246,7 +246,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         Timber.d("onCreate audio <%s> sub <%s>", mAudioLangSetting, mSubtitleLangSetting);
 
         mZidooProfile = new ZidooPlayerProfile(mHasDtsDecoder, mEnableSurroundCodecs);
-        launchExternalPlayer(mItemsToPlay);
+        prepareExternalPlayer(mItemsToPlay);
     }
 
     @Override
@@ -313,8 +313,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         // handle Zidoo player failures
         if (mZidooTask instanceof ZidooStartupTask && !((ZidooStartupTask) mZidooTask).mZidooStartupOK) {
             Timber.e("Zidoo startup failed, ignoring result!");
-            boolean isDirectPath = userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath());
-            if (mCurrentStreamInfo.getPlayMethod() == PlayMethod.DirectPlay && isDirectPath) {
+            if (mUseSendPath && mCurrentStreamInfo.getPlayMethod() == PlayMethod.DirectPlay) {
                 handleZidooPlayerError();
             } else {
                 finish();
@@ -534,8 +533,8 @@ public class ExternalPlayerActivity extends FragmentActivity {
             mHttpConnTmdbApi = (HttpURLConnection) url.openConnection();
             // Request setup
             mHttpConnTmdbApi.setRequestMethod("GET");
-            mHttpConnTmdbApi.setConnectTimeout(4000);
-            mHttpConnTmdbApi.setReadTimeout(4000);
+            mHttpConnTmdbApi.setConnectTimeout(3000);
+            mHttpConnTmdbApi.setReadTimeout(3000);
 
             // Test if the response from the server is successful
             int http_status = mHttpConnTmdbApi.getResponseCode();
@@ -720,16 +719,32 @@ public class ExternalPlayerActivity extends FragmentActivity {
         final public long mActivityStartTime;
         public BaseItemDto mParentItem;
         final public BaseItemDto mItem;
-        private boolean mFinished;
         private String mOriginalLanguageTmdb;
+        private boolean mIsFinished;
 
         public TmdbTask(@NonNull BaseItemDto item) {
             Timber.d("New TmdbTask");
             mActivityStartTime = System.currentTimeMillis();
             mItem = item;
             mParentItem = null;
-            mFinished = false;
             mOriginalLanguageTmdb = null;
+            mIsFinished = false;
+        }
+
+        private void FinishTask() {
+            mHandlerTmdb.removeCallbacks(this);
+            if (!mIsFinished) {
+                mHandler.post(() -> launchExternalPlayer(mItem));
+
+                if (mOriginalLanguageTmdb != null) {
+                    if (mParentItem != null) {
+                        Timber.d("TmdbTask <%s> success: id <%s> org_langauge <%s>", mParentItem.getBaseItemType().toString(), mParentItem.getName(), mOriginalLanguageTmdb);
+                    } else {
+                        Timber.d("TmdbTask <%s> success: id <%s> org_langauge <%s>", mItem.getBaseItemType().toString(), mItem.getName(), mOriginalLanguageTmdb);
+                    }
+                }
+            }
+            mIsFinished = true;
         }
 
         @Override
@@ -737,7 +752,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
             // Safeguard against recursive runs
             long activityRunTime = System.currentTimeMillis() - mActivityStartTime;
             if (activityRunTime > MAX_TMDB_TASK_TIME_MS) {
-                mFinished = true;
+                FinishTask();
                 return;
             }
             BaseItemDto checkItem = mItem;
@@ -756,13 +771,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
                             }
                         }
                     }
+                    @Override
+                    public void onError(Exception exception) {
+                        FinishTask();
+                    }
                 });
             } else if (checkItem.getBaseItemType() == BaseItemType.Movie && checkItem.getProviderIds() != null && checkItem.getProviderIds().containsKey("Tmdb")) {
                 JSONObject tmdb_obj = getFromTmdbHttp_API("movie", checkItem.getProviderIds().get("Tmdb"), null, null);
                 if (tmdb_obj != null && tmdb_obj.has("original_language")) {
                     mOriginalLanguageTmdb = tmdb_obj.optString("original_language");
                 }
-                mFinished = true;
+                FinishTask();
             } else if (checkItem.getBaseItemType() == BaseItemType.Series && checkItem.getProviderIds() != null) {
                 if (checkItem.getProviderIds().containsKey("Tmdb")) {
                     JSONObject tmdb_obj = getFromTmdbHttp_API("tv", checkItem.getProviderIds().get("Tmdb"), null, null);
@@ -784,29 +803,21 @@ public class ExternalPlayerActivity extends FragmentActivity {
                         }
                     }
                 }
-
-                mFinished = true;
+                FinishTask();
+            } else {
+                FinishTask();
             }
-            if (mOriginalLanguageTmdb != null) {
-                Timber.d("TmdbTask <%s> success: id <%s> org_langauge <%s>", checkItem.getBaseItemType().toString(), checkItem.getName(), mOriginalLanguageTmdb);
-            }
-        }
-
-        public boolean isFinished() {
-            return mFinished;
         }
 
         @Nullable
         public String getOriginalLanguage(@Nullable String id, @Nullable String parentId) {
-            if (mFinished) {
-                if (isNonEmptyTrim(id) && mItem != null && mItem.getId().equals(id)) {
-                    return mOriginalLanguageTmdb;
-                }
-                if (isNonEmptyTrim(parentId) && mParentItem != null && mParentItem.getId().equals(parentId)) {
-                    return mOriginalLanguageTmdb;
-                }
-                Timber.w("getOriginalLanguage id's don't match!");
+            if (isNonEmptyTrim(id) && mItem != null && mItem.getId().equals(id)) {
+                return mOriginalLanguageTmdb;
             }
+            if (isNonEmptyTrim(parentId) && mParentItem != null && mParentItem.getId().equals(parentId)) {
+                return mOriginalLanguageTmdb;
+            }
+            Timber.w("getOriginalLanguage id's don't match!");
             return null;
         }
     }
@@ -1169,7 +1180,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 finishAfterTransition();
             } else {
                 resetPlayStatus();
-                launchExternalPlayer(mItemsToPlay);
+                prepareExternalPlayer(mItemsToPlay);
             }
         } else {
             finish();
@@ -1525,7 +1536,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         try {
             if (mAudioLangSetting == LanguagesAudio.ORIGINAL && isNonEmptyTrim(originalLangCode)) {
                 audioCode = getISO3LanguageCode(originalLangCode);
-                Timber.d("Using Tmdb code <%s>", audioCode);
+                Timber.d("getBestAudioSubtitleIdx() using Tmdb code <%s>", audioCode);
             } else if (mAudioLangSetting == LanguagesAudio.AUTO || mAudioLangSetting == LanguagesAudio.DEFAULT || mAudioLangSetting == LanguagesAudio.ORIGINAL) {
                 audioCode = Locale.getDefault().getISO3Language();
             } else {
@@ -1701,7 +1712,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         return internalOptions;
     }
 
-    protected void launchExternalPlayer(@NonNull BaseItemDto item) {
+    protected void prepareLaunchExternalPlayer(@NonNull BaseItemDto item) {
         String orgLang = null;
         // try get org_language
         Pair<Integer, Integer> numAudioSubTracks = getNumAudioSubTracks(item.getMediaStreams());
@@ -1712,11 +1723,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 }
                 if (mTmdbTask == null || orgLang == null) {
                     mTmdbTask = new TmdbTask(item);
-                    mHandlerTmdb.post(mTmdbTask);
+                    if (mHandlerTmdb.post(mTmdbTask)) {
+                        return; // TmdbTask will call launchExternalPlayer
+                    }
                 }
             }
         }
 
+        launchExternalPlayer(item);
+    }
+
+    protected void launchExternalPlayer(@NonNull BaseItemDto item) {
         if (!isLiveTv && mUseSendPath && !mAllowTranscoding) {
             // Just pass the path directly
             mCurrentStreamInfo = new StreamInfo();
@@ -1726,7 +1743,10 @@ public class ExternalPlayerActivity extends FragmentActivity {
             Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle(item) + "\n\n" + PlayMethod.DirectPlay);
             startExternalZidooZDMCActivity(preparePath(item.getPath()), item.getContainer() != null ? item.getContainer() : "*", item);
         } else {
-            // try get best tracks, Tmdb wont be ready yet?
+            String orgLang = null;
+            if (mTmdbTask != null) {
+                orgLang = mTmdbTask.getOriginalLanguage(item.getId(), item.getSeriesId());
+            }
             Pair<Integer, Integer> audioSubIdx = getAbsoluteAudioSubIdxSafe(getBestAudioSubtitleIdx(item.getMediaStreams(), orgLang));
             // Get playback info and then decide on which activity to start
             KoinJavaComponent.<PlaybackManager>get(PlaybackManager.class).getVideoStreamInfo(api.getValue().getDeviceInfo(), buildZidooPlayerOptions(item, audioSubIdx.first, audioSubIdx.second), (long) mSeekPosition * RUNTIME_TICKS_TO_MS, apiClient.getValue(), new Response<StreamInfo>() {
@@ -1777,8 +1797,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
     }
 
     // NOTE: We can get a item that's not fully filled with data!
-    protected void launchExternalPlayer(@NonNull List<BaseItemDto> itemList) {
+    protected void prepareExternalPlayer(@NonNull List<BaseItemDto> itemList) {
         mCurrentItem = null;
+        isLiveTv = false;
         BaseItemDto item = itemList.get(0);
         if (item == null || isEmptyTrim(item.getId())) {
             Timber.e("Invalid null item or no Id.");
@@ -1793,7 +1814,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         if (!needsUpdate && isNonEmpty(item.getMediaStreams())) {
             mCurrentItem = item;
             isLiveTv = item.getBaseItemType() == BaseItemType.TvChannel;
-            launchExternalPlayer(item);
+            prepareLaunchExternalPlayer(item);
         } else {
             // try fix item, we need at least streams/path filled
             Timber.d("Incomplete data detected: item <%s> trying to refresh data.", item.getName());
@@ -1803,7 +1824,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                     if (response != null && isNonEmptyTrim(response.getId()) && isNonEmpty(response.getMediaStreams())) {
                         mCurrentItem = response;
                         isLiveTv = response.getBaseItemType() == BaseItemType.TvChannel;
-                        launchExternalPlayer(response);
+                        prepareLaunchExternalPlayer(response);
                     } else {
                         Timber.e("launchExternalPlayer can't get playable item data!");
                         mCurrentItem = null;

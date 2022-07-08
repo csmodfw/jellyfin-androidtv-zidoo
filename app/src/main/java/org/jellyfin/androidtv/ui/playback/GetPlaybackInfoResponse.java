@@ -173,7 +173,21 @@ public class GetPlaybackInfoResponse extends Response<PlaybackInfoResponse> {
         } else if (mediaSourceInfo.getSupportsTranscoding()){
             streamInfo.setPlayMethod(PlayMethod.Transcode);
             streamInfo.setContainer(mediaSourceInfo.getTranscodingContainer());
-            streamInfo.setMediaUrl(apiClient.GetApiUrl(mediaSourceInfo.getTranscodingUrl()));
+            // FIX: https://github.com/jellyfin/jellyfin/pull/8078
+            String url = apiClient.GetApiUrl(mediaSourceInfo.getTranscodingUrl());
+            if (url != null && !url.contains("-rangetype")) {
+                // add broken, missing rangetypes
+                if (url.contains("h264-videobitdepth")) {
+                    url += "&h264-rangetype=SDR";
+                } else if (url.contains("hevc-videobitdepth=8")) {
+                    url += "&hevc-rangetype=SDR";
+                } else if (url.contains("hevc-videobitdepth=12")) {
+                    url += "&hevc-rangetype=DOVI";
+                } else if (url.contains("hevc-videobitdepth=10")) {
+                    url += "&hevc-rangetype=SDR|HDR10|DOVI|HLG";
+                }
+            }
+            streamInfo.setMediaUrl(url);
         }
 
         // A null url will crash the app, make sure to call onError instead

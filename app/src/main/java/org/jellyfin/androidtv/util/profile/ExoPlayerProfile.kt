@@ -62,7 +62,7 @@ class ExoPlayerProfile(
 				this.context = EncodingContext.Streaming
 				container = Codec.Container.TS
 				videoCodec = buildList {
-					if (deviceHevcCodecProfile.ContainsCodec(Codec.Video.HEVC, Codec.Container.TS)) add(Codec.Video.HEVC)
+					if (deviceHevcCodecProfile?.ContainsCodec(Codec.Video.HEVC, Codec.Container.TS) == true) add(Codec.Video.HEVC)
 					add(Codec.Video.H264)
 				}.joinToString(",")
 				audioCodec = buildList {

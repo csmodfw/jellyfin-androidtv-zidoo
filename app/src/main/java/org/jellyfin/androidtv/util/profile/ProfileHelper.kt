@@ -2,16 +2,7 @@ package org.jellyfin.androidtv.util.profile
 
 import org.jellyfin.androidtv.constant.Codec
 import org.jellyfin.androidtv.util.DeviceUtils
-import org.jellyfin.apiclient.model.dlna.CodecProfile
-import org.jellyfin.apiclient.model.dlna.CodecType
-import org.jellyfin.apiclient.model.dlna.DirectPlayProfile
-import org.jellyfin.apiclient.model.dlna.DlnaProfileType
-import org.jellyfin.apiclient.model.dlna.ProfileCondition
-import org.jellyfin.apiclient.model.dlna.ProfileConditionType
-import org.jellyfin.apiclient.model.dlna.ProfileConditionValue
-import org.jellyfin.apiclient.model.dlna.SubtitleDeliveryMethod
-import org.jellyfin.apiclient.model.dlna.SubtitleProfile
-import timber.log.Timber
+import org.jellyfin.apiclient.model.dlna.*
 
 object ProfileHelper {
 	// H264 codec levels https://en.wikipedia.org/wiki/Advanced_Video_Coding#Levels
@@ -22,45 +13,26 @@ object ProfileHelper {
 	private val MediaTest by lazy { MediaCodecCapabilitiesTest() }
 
 	val deviceHevcCodecProfile by lazy {
-		CodecProfile().apply {
-			type = CodecType.Video
-			codec = Codec.Video.HEVC
-
-			conditions = when {
-				!MediaTest.supportsHevc() -> {
-					// The following condition is a method to exclude all HEVC
-					Timber.i("*** Does NOT support HEVC")
-					arrayOf(
-						ProfileCondition(
-							ProfileConditionType.Equals,
-							ProfileConditionValue.VideoProfile,
-							"none"
-						)
-					)
-				}
-				!MediaTest.supportsHevcMain10() -> {
-					Timber.i("*** Does NOT support HEVC 10 bit")
-					arrayOf(
-						ProfileCondition(
-							ProfileConditionType.NotEquals,
-							ProfileConditionValue.VideoProfile,
-							"Main 10"
-						)
-					)
-				}
-				else -> {
-					// supports all HEVC
-					Timber.i("*** Supports HEVC 10 bit")
-					arrayOf(
-						ProfileCondition(
-							ProfileConditionType.NotEquals,
-							ProfileConditionValue.VideoProfile,
-							"none"
-						)
-					)
-				}
+		if (MediaTest.supportsHevc()) {
+			CodecProfile().apply {
+				type = CodecType.Video
+				codec = Codec.Video.HEVC
+				conditions = arrayOf(hevcVideoProfileCondition)
 			}
+		} else {
+			null
 		}
+	}
+
+	val hevcVideoProfileCondition by lazy {
+		ProfileCondition(
+			ProfileConditionType.EqualsAny,
+			ProfileConditionValue.VideoProfile,
+			listOfNotNull(
+				"main",
+				if (MediaTest.supportsHevcMain10()) "main 10" else null
+			).joinToString("|")
+		)
 	}
 
 	val h264VideoLevelProfileCondition by lazy {
@@ -83,8 +55,8 @@ object ProfileHelper {
 			ProfileConditionType.EqualsAny,
 			ProfileConditionValue.VideoProfile,
 			listOfNotNull(
-				"high",
 				"main",
+				"high",
 				"baseline",
 				"constrained baseline",
 				if (MediaTest.supportsAVCHigh10()) "high 10" else null
