@@ -389,14 +389,7 @@ public class StdGridFragment extends GridFragment implements MessageListener {
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
-        Timber.d("onStart");
-    }
-
-    @Override
     protected void onGridSizeMeasurements(int gridHeight, int gridWidth) {
-        Timber.d("onGridSizeMeasurements");
         BaseGridView gridView = getGridView();
         if (gridView == null) {
             return;
@@ -404,7 +397,7 @@ public class StdGridFragment extends GridFragment implements MessageListener {
         // prevent adaption on minor size delta's
         if (Math.abs(getGridHeight() - gridHeight) > MIN_GRIDSIZE_CHANGE_DELTA || Math.abs(getGridWidth() - gridWidth) > MIN_GRIDSIZE_CHANGE_DELTA) {
             setGridSize(gridHeight, gridWidth); // set to new "real" measured size
-            Timber.d("XXX: Auto-Adapting grid size to height <%s> width <%s>", gridHeight, gridWidth);
+            Timber.d("Auto-Adapting grid size to height <%s> width <%s>", gridHeight, gridWidth);
             mDirty = true;
             determiningPosterSize = true;
             setAutoCardGridValues();
@@ -417,7 +410,6 @@ public class StdGridFragment extends GridFragment implements MessageListener {
     @Override
     public void onResume() {
         super.onResume();
-        Timber.d("XXX: onResume");
 
         PosterSize posterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         ImageType imageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
@@ -463,7 +455,7 @@ public class StdGridFragment extends GridFragment implements MessageListener {
 
     protected void buildAdapter() {
         mCardPresenter = new CardPresenter(false, mImageType, getCardHeight());
-        mCardPresenter.setUniformAspect(true); // make all card grids uniform, so spacing is not messed-up
+        mCardPresenter.setUniformAspect(true); // make grid layouts always uniform
 
         Timber.d("buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int) getCardWidthBy(mCardHeight, mImageType, mFolder), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
 
@@ -471,7 +463,7 @@ public class StdGridFragment extends GridFragment implements MessageListener {
         int chunkSize = mRowDef.getChunkSize();
         if (mCardsScreenEst > 0 && mCardsScreenEst >= chunkSize) {
             chunkSize = Math.min(mCardsScreenEst + mCardsScreenStride, 150); // cap at 150
-            Timber.d("XXX buildAdapter adjusting chunkSize to <%s> screenEst <%s>", chunkSize, mCardsScreenEst);
+            Timber.d("buildAdapter adjusting chunkSize to <%s> screenEst <%s>", chunkSize, mCardsScreenEst);
         }
 
         switch (mRowDef.getQueryType()) {
@@ -515,9 +507,6 @@ public class StdGridFragment extends GridFragment implements MessageListener {
                 mGridAdapter = new ItemRowAdapter(requireContext(), mRowDef.getQuery(), chunkSize, mRowDef.getPreferParentThumb(), mRowDef.isStaticHeight(), mCardPresenter, null);
                 break;
         }
-        if (isDirty()) {
-            Timber.d("XXX buildAdapter was Dirty!");
-        }
         mDirty = false;
 
         FilterOptions filters = new FilterOptions();
@@ -530,16 +519,12 @@ public class StdGridFragment extends GridFragment implements MessageListener {
     }
 
     public void loadGrid() {
-        Timber.d("XXX loadGrid");
         if (mCardPresenter == null || mGridAdapter == null || isDirty()) {
             buildAdapter();
         }
 
         mGridAdapter.setSortBy(getSortOption(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())));
         mGridAdapter.Retrieve();
-
-//        printViewStats(getGridView());
-//        printViewStats(mGridDock);
     }
 
     protected ImageButton mSortButton;

@@ -31,7 +31,9 @@ public class MediaCodecCapabilitiesTest  {
     private final MediaCodecInfo[] mAllInfos =
             mAllCodecs.getCodecInfos();
 
-    public boolean supportsHevc() { return MediaUtils.checkDecoder(MIMETYPE_VIDEO_HEVC); }
+    public boolean supportsHevc() {
+        return MediaUtils.checkDecoder(MIMETYPE_VIDEO_HEVC);
+    }
 
     public boolean supportsHevcMain10() {
         return hasDecoder(MIMETYPE_VIDEO_HEVC, HEVCProfileMain10, HEVCMainTierLevel5);

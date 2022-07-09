@@ -320,12 +320,10 @@ public class GridFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        Timber.d("XXX: onViewCreated");
         createGrid();
     }
 
     protected void createGrid() {
-        Timber.d("XXX createGrid");
         mGridViewHolder = mGridPresenter.onCreateViewHolder(mGridDock);
         if (mGridViewHolder instanceof HorizontalGridPresenter.ViewHolder) {
             mGridView = ((HorizontalGridPresenter.ViewHolder) mGridViewHolder).getGridView();

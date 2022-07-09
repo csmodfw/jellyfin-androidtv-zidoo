@@ -69,7 +69,7 @@ public class MediaManager {
     private ItemRowAdapter mCurrentAudioQueue;
     private ItemRowAdapter mManagedAudioQueue;
 
-    private List<Integer> mUnShuffledAudioQueueIndexes;
+    private List<Integer>  mUnShuffledAudioQueueIndexes;
 
     private int mCurrentAudioQueuePosition = -1;
     private BaseItemDto mCurrentAudioItem;
@@ -124,7 +124,7 @@ public class MediaManager {
 
         // protect against items secretly being an Arrays.asList(), which are fixed-size
         List<BaseItemDto> newMutableItems = new ArrayList<>();
-        for (int i = 0; i < items.size(); i++) {
+        for (int i = 0; i < items.size(); i++){
             newMutableItems.add(items.get(i));
         }
         mCurrentVideoQueue = newMutableItems;
@@ -192,7 +192,6 @@ public class MediaManager {
         mAudioEventListeners.add(listener);
         Timber.d("Added event listener.  Total listeners: %d", mAudioEventListeners.size());
     }
-
     public void removeAudioEventListener(AudioEventListener listener) {
         mAudioEventListeners.remove(listener);
         Timber.d("Removed event listener.  Total listeners: %d", mAudioEventListeners.size());
@@ -246,7 +245,7 @@ public class MediaManager {
 
         //Report progress to server every 5 secs if playing, 15 if paused
         if (System.currentTimeMillis() > lastProgressReport + (isPaused() ? 15000 : 5000)) {
-            ReportingHelper.reportProgress(null, mCurrentAudioItem, mCurrentAudioStreamInfo, mCurrentAudioPosition * 10000, isPaused());
+            ReportingHelper.reportProgress(null, mCurrentAudioItem, mCurrentAudioStreamInfo, mCurrentAudioPosition*10000, isPaused());
             lastProgressReport = System.currentTimeMillis();
         }
 
@@ -298,7 +297,6 @@ public class MediaManager {
                             stopProgressLoop();
                         }
                     }
-
                     @Override
                     public void onPlayerError(PlaybackException error) {
                         Timber.d("player error!");
@@ -315,7 +313,7 @@ public class MediaManager {
                 mLibVLC = new LibVLC(context, options);
 
                 mVlcPlayer = new org.videolan.libvlc.MediaPlayer(mLibVLC);
-                if (!Utils.downMixAudio(context)) {
+                if(!Utils.downMixAudio(context)) {
                     mVlcPlayer.setAudioDigitalOutputEnabled(true);
                 } else {
                     mVlcPlayer.setAudioOutput("opensles_android");
@@ -360,7 +358,6 @@ public class MediaManager {
 
     private Runnable progressLoop;
     private Handler mHandler = new Handler(Looper.getMainLooper());
-
     private void startProgressLoop() {
         stopProgressLoop();
         Timber.i("starting progress loop");
@@ -406,7 +403,7 @@ public class MediaManager {
         }
     };
 
-    private void fireQueueReplaced() {
+    private void fireQueueReplaced(){
         for (AudioEventListener listener : mAudioEventListeners) {
             Timber.i("Firing queue replaced listener. ");
             listener.onQueueReplaced();
@@ -443,30 +440,35 @@ public class MediaManager {
         //Get a name and save as playlist
         final EditText name = new EditText(context);
         name.setInputType(InputType.TYPE_TEXT_FLAG_CAP_WORDS);
-        new AlertDialog.Builder(context).setTitle(R.string.lbl_save_as_playlist).setMessage(R.string.lbl_new_playlist_name).setView(name).setPositiveButton(R.string.btn_done, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                final String text = name.getText().toString();
-                PlaylistCreationRequest request = new PlaylistCreationRequest();
-                request.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
-                request.setMediaType(type == TYPE_AUDIO ? "Audio" : "Video");
-                request.setName(text);
-                request.setItemIdList(type == TYPE_AUDIO ? getCurrentAudioQueueItemIds() : getCurrentVideoQueueItemIds());
-                KoinJavaComponent.<ApiClient>get(ApiClient.class).CreatePlaylist(request, new Response<PlaylistCreationResult>() {
+        new AlertDialog.Builder(context)
+                .setTitle(R.string.lbl_save_as_playlist)
+                .setMessage(R.string.lbl_new_playlist_name)
+                .setView(name)
+                .setPositiveButton(R.string.btn_done, new DialogInterface.OnClickListener() {
                     @Override
-                    public void onResponse(PlaylistCreationResult response) {
-                        Toast.makeText(context, context.getString(R.string.msg_queue_saved, text), Toast.LENGTH_LONG).show();
-                        DataRefreshService dataRefreshService = KoinJavaComponent.<DataRefreshService>get(DataRefreshService.class);
-                        dataRefreshService.setLastLibraryChange(System.currentTimeMillis());
-                    }
+                    public void onClick(DialogInterface dialog, int which) {
+                        final String text = name.getText().toString();
+                        PlaylistCreationRequest request = new PlaylistCreationRequest();
+                        request.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
+                        request.setMediaType(type == TYPE_AUDIO ? "Audio" : "Video");
+                        request.setName(text);
+                        request.setItemIdList(type == TYPE_AUDIO ? getCurrentAudioQueueItemIds() : getCurrentVideoQueueItemIds());
+                        KoinJavaComponent.<ApiClient>get(ApiClient.class).CreatePlaylist(request, new Response<PlaylistCreationResult>() {
+                            @Override
+                            public void onResponse(PlaylistCreationResult response) {
+                                Toast.makeText(context, context.getString(R.string.msg_queue_saved, text), Toast.LENGTH_LONG).show();
+                                DataRefreshService dataRefreshService = KoinJavaComponent.<DataRefreshService>get(DataRefreshService.class);
+                                dataRefreshService.setLastLibraryChange(System.currentTimeMillis());
+                            }
 
-                    @Override
-                    public void onError(Exception exception) {
-                        Timber.e(exception, "Exception creating playlist");
+                            @Override
+                            public void onError(Exception exception) {
+                                Timber.e(exception, "Exception creating playlist");
+                            }
+                        });
                     }
-                });
-            }
-        }).show();
+                })
+                .show();
 
     }
 
@@ -503,7 +505,7 @@ public class MediaManager {
         pushToUnShuffledQueue(item);
         mCurrentAudioQueue.add(new AudioQueueItem(mCurrentAudioQueue.size(), item));
         fireQueueStatusChange();
-        return mCurrentAudioQueue.size() - 1;
+        return mCurrentAudioQueue.size()-1;
     }
 
     public int addToVideoQueue(BaseItemDto item) {
@@ -514,12 +516,13 @@ public class MediaManager {
         dataRefreshService.setLastVideoQueueChange(System.currentTimeMillis());
 
         long total = System.currentTimeMillis();
-        for (BaseItemDto video : mCurrentVideoQueue) {
+        for (BaseItemDto video :
+                mCurrentVideoQueue) {
             total += video.getRunTimeTicks() / 10000;
         }
 
         Utils.showToast(context, context.getString(R.string.msg_added_to_video, item.getName(), android.text.format.DateFormat.getTimeFormat(context).format(new Date(total))));
-        return mCurrentVideoQueue.size() - 1;
+        return mCurrentVideoQueue.size()-1;
     }
 
     public void clearAudioQueue() {
@@ -532,7 +535,8 @@ public class MediaManager {
         clearUnShuffledQueue();
         if (mCurrentAudioQueue == null) {
             createAudioQueue(new ArrayList<BaseItemDto>());
-        } else {
+        }
+        else {
             mCurrentAudioQueue.clear();
             fireQueueStatusChange();
         }
@@ -587,8 +591,8 @@ public class MediaManager {
 
         // now need to update indexes for subsequent items
         if (hasAudioQueueItems()) {
-            for (int i = ndx; i < mCurrentAudioQueue.size(); i++) {
-                ((BaseRowItem) mCurrentAudioQueue.get(i)).setIndex(i);
+            for (int i = ndx; i < mCurrentAudioQueue.size(); i++){
+                ((BaseRowItem)mCurrentAudioQueue.get(i)).setIndex(i);
             }
         } else {
             clearUnShuffledQueue();
@@ -596,9 +600,7 @@ public class MediaManager {
         fireQueueStatusChange();
     }
 
-    public boolean isPlayingAudio() {
-        return getIsAudioPlayerInitialized() && (nativeMode ? mExoPlayer.isPlaying() : mVlcPlayer.isPlaying());
-    }
+    public boolean isPlayingAudio() { return getIsAudioPlayerInitialized() && (nativeMode ? mExoPlayer.isPlaying() : mVlcPlayer.isPlaying()); }
 
     private boolean ensureInitialized() {
         if (!audioInitialized || !getIsAudioPlayerInitialized()) {
@@ -618,18 +620,20 @@ public class MediaManager {
         boolean fireQueueReplaceEvent = hasAudioQueueItems();
 
         List<BaseItemDto> list = new ArrayList<BaseItemDto>();
-        for (int i = 0; i < items.size(); i++) {
+        for (int i = 0; i < items.size(); i++){
             if (items.get(i).getBaseItemType() == BaseItemType.Audio) {
                 list.add(items.get(i));
             } else if (i < position) {
                 position--;
             }
         }
-        if (position < 0) position = 0;
+        if (position < 0)
+            position = 0;
 
         playNowInternal(context, list, position, shuffle);
 
-        if (fireQueueReplaceEvent) fireQueueReplaced();
+        if (fireQueueReplaceEvent)
+            fireQueueReplaced();
     }
 
     public void playNow(Context context, final List<BaseItemDto> items, boolean shuffle) {
@@ -664,7 +668,7 @@ public class MediaManager {
             Intent nowPlaying = new Intent(context, AudioNowPlayingActivity.class);
             context.startActivity(nowPlaying);
         } else {
-            Toast.makeText(context, items.size() + (items.size() > 1 ? context.getString(R.string.msg_items_added) : context.getString(R.string.msg_item_added)), Toast.LENGTH_LONG).show();
+            Toast.makeText(context,items.size() + (items.size() > 1 ? context.getString(R.string.msg_items_added) : context.getString(R.string.msg_item_added)), Toast.LENGTH_LONG).show();
         }
     }
 
@@ -766,7 +770,7 @@ public class MediaManager {
     private void removeFromUnShuffledQueue(int ndx) {
         if (hasAudioQueueItems() && isShuffleMode() && ndx < mUnShuffledAudioQueueIndexes.size()) {
             int OriginalNdx = mUnShuffledAudioQueueIndexes.get(ndx);
-            for (int i = 0; i < mUnShuffledAudioQueueIndexes.size(); i++) {
+            for(int i = 0; i < mUnShuffledAudioQueueIndexes.size(); i++) {
                 int oldNdx = mUnShuffledAudioQueueIndexes.get(i);
                 if (oldNdx > OriginalNdx) mUnShuffledAudioQueueIndexes.set(i, --oldNdx);
             }
@@ -810,7 +814,7 @@ public class MediaManager {
         if (isShuffleMode()) {
             Timber.d("queue is already shuffled, restoring original order");
 
-            for (int i = 0; i < mUnShuffledAudioQueueIndexes.size(); i++) {
+            for(int i = 0; i < mUnShuffledAudioQueueIndexes.size(); i++) {
                 items[mUnShuffledAudioQueueIndexes.get(i)] = ((BaseRowItem) mCurrentAudioQueue.get(i)).getBaseItem();
             }
             mUnShuffledAudioQueueIndexes = null;
@@ -818,20 +822,20 @@ public class MediaManager {
             Timber.d("Queue is not shuffled, shuffling");
             mUnShuffledAudioQueueIndexes = new ArrayList<>();
 
-            for (int i = 0; i < mCurrentAudioQueue.size(); i++) {
+            for(int i = 0; i < mCurrentAudioQueue.size(); i++) {
                 if (i != getCurrentAudioQueuePosition()) {
                     mUnShuffledAudioQueueIndexes.add(i);
                 }
             }
             Collections.shuffle(mUnShuffledAudioQueueIndexes);
             mUnShuffledAudioQueueIndexes.add(0, getCurrentAudioQueuePosition());
-            for (int i = 0; i < mUnShuffledAudioQueueIndexes.size(); i++) {
+            for(int i = 0; i < mUnShuffledAudioQueueIndexes.size(); i++) {
                 items[i] = ((BaseRowItem) mCurrentAudioQueue.get(mUnShuffledAudioQueueIndexes.get(i))).getBaseItem();
             }
         }
 
         List<BaseItemDto> itemsList = new ArrayList<>();
-        for (int i = 0; i < items.length; i++) {
+        for(int i = 0; i < items.length; i++) {
             if (items[i] == getCurrentAudioItem()) {
                 mCurrentAudioQueuePosition = i;
             }
@@ -845,17 +849,17 @@ public class MediaManager {
     public BaseItemDto getNextAudioItem() {
         if (mCurrentAudioQueue == null || mCurrentAudioQueue.size() == 0 || (!mRepeat && mCurrentAudioQueuePosition == mCurrentAudioQueue.size() - 1)) return null;
 
-        int ndx = mCurrentAudioQueuePosition + 1;
+        int ndx = mCurrentAudioQueuePosition+1;
         if (ndx >= mCurrentAudioQueue.size()) ndx = 0;
-        return ((BaseRowItem) mCurrentAudioQueue.get(ndx)).getBaseItem();
+        return ((BaseRowItem)mCurrentAudioQueue.get(ndx)).getBaseItem();
     }
 
     public BaseItemDto getPrevAudioItem() {
         if (mCurrentAudioQueue == null || mCurrentAudioQueue.size() == 0 || (!mRepeat && mCurrentAudioQueuePosition == 0)) return null;
 
-        int ndx = mCurrentAudioQueuePosition - 1;
+        int ndx = mCurrentAudioQueuePosition-1;
         if (ndx < 0) ndx = mCurrentAudioQueue.size() - 1;
-        return ((BaseRowItem) mCurrentAudioQueue.get(ndx)).getBaseItem();
+        return ((BaseRowItem)mCurrentAudioQueue.get(ndx)).getBaseItem();
     }
 
     public boolean hasNextAudioItem() { return mCurrentAudioQueue != null && mCurrentAudioQueue.size() > 0 && (mRepeat || mCurrentAudioQueuePosition < mCurrentAudioQueue.size()-1); }
@@ -887,7 +891,7 @@ public class MediaManager {
             //don't remove last item as it causes framework crashes
             mManagedAudioQueue.removeItems(0, 1);
         }
-        int ndx = mCurrentAudioQueuePosition + 1;
+        int ndx = mCurrentAudioQueuePosition +1;
         if (ndx >= mCurrentAudioQueue.size()) ndx = 0;
         playInternal(getNextAudioItem(), ndx);
         return ndx;
@@ -917,7 +921,7 @@ public class MediaManager {
     }
 
     private void stop() {
-        if (!getIsAudioPlayerInitialized()) return;
+        if (!getIsAudioPlayerInitialized()) return ;
         if (nativeMode) mExoPlayer.stop();
         else mVlcPlayer.stop();
     }
@@ -980,7 +984,7 @@ public class MediaManager {
             }
         } else if (hasAudioQueueItems()) {
             //play from start
-            playInternal(mCurrentAudioItem != null ? mCurrentAudioItem : ((BaseRowItem) mCurrentAudioQueue.get(0)).getBaseItem(), mCurrentAudioItem != null ? getCurrentAudioQueuePosition() : 0);
+            playInternal(mCurrentAudioItem != null ? mCurrentAudioItem : ((BaseRowItem)mCurrentAudioQueue.get(0)).getBaseItem(), mCurrentAudioItem != null ? getCurrentAudioQueuePosition() : 0);
         }
     }
 
@@ -1012,11 +1016,11 @@ public class MediaManager {
     }
 
     public BaseRowItem peekNextMediaItem() {
-        return hasNextMediaItem() ? getMediaItem(mCurrentMediaPosition + 1) : null;
+        return hasNextMediaItem() ? getMediaItem(mCurrentMediaPosition +1) : null;
     }
 
     public BaseRowItem peekPrevMediaItem() {
-        return hasPrevMediaItem() ? getMediaItem(mCurrentMediaPosition - 1) : null;
+        return hasPrevMediaItem() ? getMediaItem(mCurrentMediaPosition -1) : null;
     }
 
     public boolean hasNextMediaItem() { return mCurrentMediaAdapter.size() > mCurrentMediaPosition +1; }
