@@ -350,10 +350,8 @@
     <string name="image_size_large">Irı</string>
     <string name="image_size_medium">Ortaşa</string>
     <string name="image_size_small">Ūsaq</string>
-    <string name="image_size_auto">Ädepkı</string>
     <string name="image_type_banner">Baner</string>
     <string name="image_type_thumbnail">Nobai</string>
-    <string name="image_type_default">Ädepkı</string>
     <string name="lbl_sign_out">Şyğu</string>
     <string name="lbl_remove">Alastau</string>
     <string name="lbl_server">Server</string>
@@ -501,4 +499,5 @@
     <string name="lbl_adjust">Naqtylatu</string>
     <string name="pref_libvlc_subtitle_delay_title">libVLC üşın subtitrlerdıñ ädepkı kıdırısı</string>
     <string name="live_tv_preferences">Efirlık TD opsialary</string>
+    <string name="app_notification_uimode_invalid">Būl qoldanba teledidarlar üşın oñtailandyrylğan. Basqa qūrylğylarda mobildy qoldanbamyzdy paidalanuyn ūsynamyz.</string>
 </resources>

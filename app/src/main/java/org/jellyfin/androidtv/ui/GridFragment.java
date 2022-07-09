@@ -290,9 +290,8 @@ public class GridFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        Timber.d("XXX: onCreateView");
-        HorizontalGridBrowseBinding binding = HorizontalGridBrowseBinding.inflate(inflater, container, false);
 
+        HorizontalGridBrowseBinding binding = HorizontalGridBrowseBinding.inflate(inflater, container, false);
         mTitleView = binding.title;
         mStatusText = binding.statusText;
         mInfoRow = binding.infoRow;
@@ -349,12 +348,6 @@ public class GridFragment extends Fragment {
         mGridDock.addView(mGridViewHolder.view);
 
         updateAdapter();
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        Timber.d("XXX: onStart");
     }
 
     public void focusGrid() {

@@ -19,6 +19,7 @@ import org.jellyfin.androidtv.constant.QueryType;
 import org.jellyfin.androidtv.data.model.ChapterItemInfo;
 import org.jellyfin.androidtv.data.model.DataRefreshService;
 import org.jellyfin.androidtv.data.model.FilterOptions;
+import org.jellyfin.androidtv.data.querying.AdditionalPartsQuery;
 import org.jellyfin.androidtv.data.querying.SpecialsQuery;
 import org.jellyfin.androidtv.data.querying.StdItemQuery;
 import org.jellyfin.androidtv.data.querying.TrailersQuery;
@@ -80,6 +81,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
     private PersonsQuery mPersonsQuery;
     private SearchQuery mSearchQuery;
     private SpecialsQuery mSpecialsQuery;
+    private AdditionalPartsQuery mAdditionalPartsQuery;
     private TrailersQuery mTrailersQuery;
     private LiveTvChannelQuery mTvChannelQuery;
     private RecommendedProgramQuery mTvProgramQuery;
@@ -278,6 +280,14 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         mParent = parent;
         mSpecialsQuery = query;
         queryType = QueryType.Specials;
+    }
+
+    public ItemRowAdapter(Context context, AdditionalPartsQuery query, Presenter presenter, ArrayObjectAdapter parent) {
+        super(presenter);
+        this.context = context;
+        mParent = parent;
+        mAdditionalPartsQuery = query;
+        queryType = QueryType.AdditionalParts;
     }
 
     public ItemRowAdapter(Context context, TrailersQuery query, Presenter presenter, ArrayObjectAdapter parent) {
@@ -496,18 +506,18 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
             return;
         }
         if (isCurrentlyRetrieving()) {
-            Timber.d("XXX Not loading more because currently retrieving");
+            Timber.d("Not loading more because currently retrieving");
             return;
         }
         // This needs tobe based on the actual estimated cards on screen via type of presenter and WindowAlignmentOffsetPercent
         if (chunkSize > 0 && context instanceof GenericGridActivity) {
             // we can use chunkSize as indicator on when to load
             if (pos >= (itemsLoaded - (chunkSize / 1.7))) {
-                Timber.d("XXX Loading more items trigger pos <%s> itemsLoaded <%s> from total <%s> with chunkSize <%s>", pos, itemsLoaded, totalItems, chunkSize);
+                Timber.d("Loading more items trigger pos <%s> itemsLoaded <%s> from total <%s> with chunkSize <%s>", pos, itemsLoaded, totalItems, chunkSize);
                 retrieveNext();
             }
         } else if (pos >= itemsLoaded - 20) {
-            Timber.d("XXX Loading more items trigger pos <%s> itemsLoaded <%s> from total <%s>", pos, itemsLoaded, totalItems);
+            Timber.d("Loading more items trigger pos <%s> itemsLoaded <%s> from total <%s>", pos, itemsLoaded, totalItems);
             retrieveNext();
         }
     }
@@ -525,11 +535,11 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                 }
                 notifyRetrieveStarted();
 
-                //set the query to go get the next chunk
                 savedIdx = mPersonsQuery.getStartIndex();
+                //set the query to go get the next chunk
                 mPersonsQuery.setStartIndex(itemsLoaded);
                 retrieve(mPersonsQuery);
-                mPersonsQuery.setStartIndex(savedIdx); //reset-back
+                mPersonsQuery.setStartIndex(savedIdx); // is reused so reset
                 break;
 
             case LiveTvChannel:
@@ -538,11 +548,11 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                 }
                 notifyRetrieveStarted();
 
-                //set the query to go get the next chunk
                 savedIdx = mTvChannelQuery.getStartIndex();
+                //set the query to go get the next chunk
                 mTvChannelQuery.setStartIndex(itemsLoaded);
                 retrieve(mTvChannelQuery);
-                mTvChannelQuery.setStartIndex(savedIdx); //reset-back
+                mTvChannelQuery.setStartIndex(savedIdx); // is reused so reset
                 break;
 
             case AlbumArtists:
@@ -551,11 +561,11 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                 }
                 notifyRetrieveStarted();
 
-                //set the query to go get the next chunk
                 savedIdx = mArtistsQuery.getStartIndex();
+                //set the query to go get the next chunk
                 mArtistsQuery.setStartIndex(itemsLoaded);
                 retrieve(mArtistsQuery);
-                mArtistsQuery.setStartIndex(savedIdx); //reset-back
+                mArtistsQuery.setStartIndex(savedIdx); // is reused so reset
                 break;
 
             default:
@@ -564,11 +574,11 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                 }
                 notifyRetrieveStarted();
 
-                //set the query to go get the next chunk
                 savedIdx = mQuery.getStartIndex();
+                //set the query to go get the next chunk
                 mQuery.setStartIndex(itemsLoaded);
                 retrieve(mQuery);
-                mQuery.setStartIndex(savedIdx); //reset-back
+                mQuery.setStartIndex(savedIdx); // is reused so reset
                 break;
         }
     }
@@ -679,6 +689,9 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                 break;
             case Specials:
                 retrieve(mSpecialsQuery);
+                break;
+            case AdditionalParts:
+                retrieve(mAdditionalPartsQuery);
                 break;
             case Trailers:
                 retrieve(mTrailersQuery);
@@ -866,7 +879,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
 
             @Override
             public void onError(Exception exception) {
-                Timber.e(exception, "XXX Error retrieving items");
+                Timber.e(exception, "Error retrieving items");
                 removeRow();
                 notifyRetrieveFinished(exception);
             }
@@ -1331,6 +1344,41 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
             }
         });
 
+    }
+
+    private void retrieve(final AdditionalPartsQuery query) {
+        final ItemRowAdapter adapter = this;
+        apiClient.getValue().GetAdditionalParts(query.getItemId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<ItemsResult>() {
+            @Override
+            public void onResponse(ItemsResult response) {
+                if (response.getItems() != null && response.getItems().length > 0) {
+                    int i = 0;
+                    if (adapter.size() > 0) {
+                        adapter.clear();
+                    }
+                    for (BaseItemDto item : response.getItems()) {
+                        adapter.add(new BaseRowItem(i++, item));
+                    }
+                    totalItems = response.getTotalRecordCount();
+                    setItemsLoaded(itemsLoaded + i);
+                    if (i == 0) {
+                        removeRow();
+                    }
+                } else {
+                    // no results - don't show us
+                    removeRow();
+                }
+
+                notifyRetrieveFinished();
+            }
+
+            @Override
+            public void onError(Exception exception) {
+                Timber.e(exception, "Error retrieving additional parts for item");
+                removeRow();
+                notifyRetrieveFinished(exception);
+            }
+        });
     }
 
     private void retrieve(final TrailersQuery query) {
