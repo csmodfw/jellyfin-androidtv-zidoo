@@ -10,9 +10,7 @@ import org.jellyfin.androidtv.auth.store.AccountManagerStore
 import org.jellyfin.androidtv.auth.store.AuthenticationPreferences
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.preference.PreferencesRepository
-import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.DISABLED
-import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.LAST_USER
-import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.SPECIFIC_USER
+import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.*
 import org.jellyfin.androidtv.util.sdk.forUser
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
@@ -20,7 +18,7 @@ import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.DeviceInfo
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import timber.log.Timber
-import java.util.UUID
+import java.util.*
 
 data class Session(
 	val userId: UUID,
@@ -107,17 +105,10 @@ class SessionRepositoryImpl(
 	}
 
 	private suspend fun setCurrentSession(session: Session?): Boolean {
-		if (session != null) {
-			// No change in session - don't switch
-			if (currentSession.value?.userId == session.userId) return true
-
-			// Update last active user
-			authenticationPreferences[AuthenticationPreferences.lastUserId] = session.userId.toString()
-
-			// Check if server version is supported
-			val server = serverRepository.getServer(session.serverId)
-			if (server == null || !server.versionSupported) return false
-		}
+		// No change in session - don't switch
+		if (session != null && currentSession.value?.userId == session.userId) return true
+		// Update last active user
+		if (session != null) authenticationPreferences[AuthenticationPreferences.lastUserId] = session.userId.toString()
 
 		// Update session after binding the apiclient settings
 		val deviceInfo = session?.let { defaultDeviceInfo.forUser(it.userId) } ?: defaultDeviceInfo
