@@ -1,18 +1,7 @@
 package org.jellyfin.androidtv.auth.repository
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
-import org.jellyfin.androidtv.auth.model.AuthenticationStoreServer
-import org.jellyfin.androidtv.auth.model.ConnectedState
-import org.jellyfin.androidtv.auth.model.ConnectingState
-import org.jellyfin.androidtv.auth.model.Server
-import org.jellyfin.androidtv.auth.model.ServerAdditionState
-import org.jellyfin.androidtv.auth.model.UnableToConnectState
+import kotlinx.coroutines.flow.*
+import org.jellyfin.androidtv.auth.model.*
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.util.sdk.toServer
 import org.jellyfin.sdk.Jellyfin
@@ -27,8 +16,7 @@ import org.jellyfin.sdk.model.api.BrandingOptions
 import org.jellyfin.sdk.model.api.ServerDiscoveryInfo
 import org.jellyfin.sdk.model.serializer.toUUID
 import timber.log.Timber
-import java.util.Date
-import java.util.UUID
+import java.util.*
 
 /**
  * Repository to maintain servers.
@@ -41,6 +29,7 @@ interface ServerRepository {
 	suspend fun loadDiscoveryServers()
 
 	fun addServer(address: String): Flow<ServerAdditionState>
+	suspend fun getServer(id: UUID): Server?
 	suspend fun updateServer(server: Server): Boolean
 	suspend fun deleteServer(server: UUID): Boolean
 
@@ -132,12 +121,14 @@ class ServerRepositoryImpl(
 				address = chosenRecommendation.address,
 				version = systemInfo.version,
 				loginDisclaimer = branding.loginDisclaimer,
+				splashscreenEnabled = branding.splashscreenEnabled,
 				lastUsed = Date().time
 			) ?: AuthenticationStoreServer(
 				name = systemInfo.serverName ?: "Jellyfin Server",
 				address = chosenRecommendation.address,
 				version = systemInfo.version,
-				loginDisclaimer = branding.loginDisclaimer
+				loginDisclaimer = branding.loginDisclaimer,
+				splashscreenEnabled = branding.splashscreenEnabled,
 			)
 
 			authenticationStore.putServer(id, server)
@@ -153,31 +144,53 @@ class ServerRepositoryImpl(
 		}
 	}
 
+	override suspend fun getServer(id: UUID): Server? {
+		val server = authenticationStore.getServer(id) ?: return null
+
+		val updatedServer = try {
+			updateServerInternal(id, server)
+		} catch (err: ApiClientException) {
+			Timber.e(err, "Unable to update server")
+			null
+		}
+
+		return updatedServer?.asServer(id)
+	}
+
 	override suspend fun updateServer(server: Server): Boolean {
 		// Only update existing servers
 		val serverInfo = authenticationStore.getServer(server.id) ?: return false
-		val now = Date().time
-
-		// Only update every 10 minutes
-		if (now - serverInfo.lastRefreshed < 600000 && serverInfo.version != null) return false
 
 		return try {
-			val api = jellyfin.createApi(server.address)
-			// Get login disclaimer
-			val branding = api.getBrandingOptionsOrDefault()
-			val systemInfo by api.systemApi.getPublicSystemInfo()
-
-			authenticationStore.putServer(server.id, serverInfo.copy(
-				name = systemInfo.serverName ?: serverInfo.name,
-				version = systemInfo.version ?: serverInfo.version,
-				loginDisclaimer = branding.loginDisclaimer ?: serverInfo.loginDisclaimer,
-				lastRefreshed = now
-			))
+			updateServerInternal(server.id, serverInfo) != null
 		} catch (err: ApiClientException) {
 			Timber.e(err, "Unable to update server")
 
 			false
 		}
+	}
+
+	private suspend fun updateServerInternal(id: UUID, server: AuthenticationStoreServer): AuthenticationStoreServer? {
+		val now = Date().time
+
+		// Only update every 10 minutes
+		if (now - server.lastRefreshed < 600000 && server.version != null) return null
+
+		val api = jellyfin.createApi(server.address)
+		// Get login disclaimer
+		val branding = api.getBrandingOptionsOrDefault()
+		val systemInfo by api.systemApi.getPublicSystemInfo()
+
+		val newServer = server.copy(
+			name = systemInfo.serverName ?: server.name,
+			version = systemInfo.version ?: server.version,
+			loginDisclaimer = branding.loginDisclaimer ?: server.loginDisclaimer,
+			splashscreenEnabled = branding.splashscreenEnabled,
+			lastRefreshed = now
+		)
+		authenticationStore.putServer(id, newServer)
+
+		return newServer
 	}
 
 	override suspend fun deleteServer(server: UUID): Boolean {
@@ -193,6 +206,7 @@ class ServerRepositoryImpl(
 		address = address,
 		version = version,
 		loginDisclaimer = loginDisclaimer,
+		splashscreenEnabled = splashscreenEnabled,
 		dateLastAccessed = Date(lastUsed),
 	)
 

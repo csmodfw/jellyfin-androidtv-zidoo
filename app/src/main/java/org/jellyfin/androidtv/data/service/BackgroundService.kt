@@ -19,14 +19,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.add
 import androidx.window.layout.WindowMetricsCalculator
 import com.bumptech.glide.Glide
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.model.Server
 import org.jellyfin.androidtv.preference.UserPreferences
@@ -39,7 +32,7 @@ import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.serializer.toUUID
 import timber.log.Timber
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ExecutionException
 import org.jellyfin.apiclient.model.dto.BaseItemDto as LegacyBaseItemDto
 
@@ -196,6 +189,10 @@ class BackgroundService(
 	fun setBackground(server: Server) {
 		// Check if item is set and backgrounds are enabled
 		if (!userPreferences[UserPreferences.backdropEnabled])
+			return clearBackgrounds()
+
+		// Check if splashscreen is enabled in (cached) branding options
+		if (!server.splashscreenEnabled)
 			return clearBackgrounds()
 
 		// Manually grab the backdrop URL

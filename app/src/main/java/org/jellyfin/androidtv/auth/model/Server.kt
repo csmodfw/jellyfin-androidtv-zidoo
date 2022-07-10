@@ -2,8 +2,7 @@ package org.jellyfin.androidtv.auth.model
 
 import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.sdk.model.ServerVersion
-import java.util.Date
-import java.util.UUID
+import java.util.*
 
 /**
  * Server model to use locally in place of ServerInfo model in ApiClient.
@@ -14,6 +13,7 @@ data class Server(
 	var address: String,
 	val version: String? = null,
 	val loginDisclaimer: String? = null,
+	val splashscreenEnabled: Boolean = false,
 	var dateLastAccessed: Date = Date(0),
 ) {
 	private val serverVersion = version?.let(ServerVersion::fromString)
