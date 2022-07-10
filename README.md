@@ -29,16 +29,20 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
 ### App ONLY works with latest 10.8 server!
 - feature roadmap
     - ~add smart "original language" audio selection logic based on tmdb id's~ _done_
-    - add better transcoding support and fallback's for unsupported codecs
-    - add more audio-only transcoding options (DD only, PCM 5.1 -> DD5.1)
+    - ~add better transcoding support and fallback's for unsupported codecs~ _done_
+    - ~add more audio-only transcoding options (DD only, PCM 5.1 -> DD5.1)~ _done_
     - add atmos, dv logos
-    - improve layouts
+    - ~improve layouts~ _done_
+    - small useability improvements _(smart screen views)_
+    - working support for trailer/intro plugin's
+    - use new Android API from latest beta FW
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
    - working resume, seek, watched states and server playback reporting 
    - http streaming support
    - smb, nfs support via `Direct Path` option
    - "smart" audio/subtitle selection logic
+   - working tarnscoding for unsupported formats/codec's
  - UI layout fixes
 	 - cutoff grids, ui scaling fixed
 ### How to use with "Direct Path" option (smb/nfs):
