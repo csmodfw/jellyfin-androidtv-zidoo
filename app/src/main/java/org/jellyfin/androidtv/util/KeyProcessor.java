@@ -21,7 +21,6 @@ import org.jellyfin.androidtv.ui.playback.AudioNowPlayingActivity;
 import org.jellyfin.androidtv.ui.playback.MediaManager;
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher;
 import org.jellyfin.androidtv.ui.shared.BaseActivity;
-import org.jellyfin.androidtv.ui.shared.MessageListener;
 import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
 import org.jellyfin.androidtv.util.apiclient.PlaybackHelper;
 import org.jellyfin.apiclient.interaction.ApiClient;
@@ -445,8 +444,6 @@ public class KeyProcessor {
             public void onResponse(UserItemDataDto response) {
                 if (mCurrentActivity instanceof BaseActivity)
                     ((BaseActivity)mCurrentActivity).sendMessage(CustomMessage.RefreshCurrentItem);
-                if (mCurrentActivity instanceof MessageListener)
-                    ((MessageListener)mCurrentActivity).onMessageReceived(CustomMessage.RefreshCurrentItem);
             }
 
             @Override
@@ -464,8 +461,6 @@ public class KeyProcessor {
             public void onResponse(UserItemDataDto response) {
                 if (mCurrentActivity instanceof BaseActivity)
                     ((BaseActivity)mCurrentActivity).sendMessage(CustomMessage.RefreshCurrentItem);
-                if (mCurrentActivity instanceof MessageListener)
-                    ((MessageListener)mCurrentActivity).onMessageReceived(CustomMessage.RefreshCurrentItem);
             }
 
             @Override
@@ -483,8 +478,6 @@ public class KeyProcessor {
             public void onResponse(UserItemDataDto response) {
                 if (mCurrentActivity instanceof BaseActivity)
                     ((BaseActivity)mCurrentActivity).sendMessage(CustomMessage.RefreshCurrentItem);
-                if (mCurrentActivity instanceof MessageListener)
-                    ((MessageListener)mCurrentActivity).onMessageReceived(CustomMessage.RefreshCurrentItem);
                 DataRefreshService dataRefreshService = KoinJavaComponent.<DataRefreshService>get(DataRefreshService.class);
                 dataRefreshService.setLastFavoriteUpdate(System.currentTimeMillis());
             }
