@@ -213,9 +213,10 @@
     <string name="lbl_dts_enabled_device">DTS capable device</string>
     <string name="desc_dts_enabled_device">Is tv, receiver capable of decoding DTS audio?</string>
     <string name="lbl_enable_extra_surround_codecs">Enable none bitstream surround codecs</string>
-    <string name="desc_enable_extra_surround_codecs">Allow 5.1 audio output for more codecs (aac, ogg, opus, flac, mp3).</string>
-    <string name="lbl_prefer_6ch">Prefer 6 channel audio</string>
-    <string name="desc_prefer_6ch">In case tv, receiver has issues with 8,10+ channels.</string>
+    <string name="desc_enable_extra_surround_codecs">Allow 5.1 audio output for more codecs (aac, ogg, opus, flac).</string>
+    <string name="lbl_force_stereo_audio">Force Stereo audio</string>
+    <string name="desc_force_stereo_audio">Downmix all audio to Stereo.</string>
+    <string name="lbl_forced_audio_codec">Force audio codec</string>
     <string name="lbl_no_forced_subs">No forced subtitle</string>
     <string name="desc_no_forced_subs">Do not display forced subtitles.</string>
     <string name="lbl_allow_same_lang_subs">Allow same language subtitles</string>

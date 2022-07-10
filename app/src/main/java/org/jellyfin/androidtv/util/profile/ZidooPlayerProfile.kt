@@ -5,9 +5,11 @@ import org.jellyfin.androidtv.util.profile.ProfileHelper.subtitleProfile
 import org.jellyfin.apiclient.model.dlna.*
 
 @Suppress("MagicNumber")
-class ZidooPlayerProfile (
+class ZidooPlayerProfile(
 	isDTSEnabled: Boolean = false,
-	isExtraSurroundEnabled: Boolean = false
+	isExtraSurroundEnabled: Boolean = false,
+	forcedAudioCodec: String? = null,
+	forceNumChannels: Int? = null
 ) : DeviceProfile() {
 
 	private val codecsDolby = arrayOf(
@@ -23,6 +25,7 @@ class ZidooPlayerProfile (
 		Codec.Audio.MP3,
 		Codec.Audio.OGG,
 		Codec.Audio.OPUS,
+		Codec.Audio.VORBIS,
 	)
 	private val codecsPcm = arrayOf(
 		Codec.Audio.PCM,
@@ -43,7 +46,7 @@ class ZidooPlayerProfile (
 		name = "AndroidTV-Zidoo-External"
 		maxStaticBitrate = 200_000_000 // 200 mbps
 		maxStreamingBitrate = 200_000_000 // 200 mbps
-		musicStreamingTranscodingBitrate = 640_000 // 320 mbps is max. mp3
+		musicStreamingTranscodingBitrate = 3_584_000 // max server flac bitrate
 
 		directPlayProfiles = arrayOf(
 			DirectPlayProfile().apply {
@@ -80,7 +83,7 @@ class ZidooPlayerProfile (
 					Codec.Video.MPEG2VIDEO
 				).joinToString(",")
 
-				audioCodec = buildList {
+				audioCodec = forcedAudioCodec ?: buildList {
 					addAll(codecsDolby)
 					if (isDTSEnabled) add(Codec.Audio.DTS)
 					addAll(codecsCommon)
@@ -96,40 +99,42 @@ class ZidooPlayerProfile (
 //				protocol = "hls"
 //				container = Codec.Container.TS
 //				videoCodec = buildList {
-////					if (ProfileHelper.deviceHevcCodecProfile.ContainsCodec(Codec.Video.HEVC, Codec.Container.TS)) add(Codec.Video.HEVC)
+//					if (ProfileHelper.deviceHevcCodecProfile?.ContainsCodec(Codec.Video.HEVC, Codec.Container.TS) == true) add(Codec.Video.HEVC)
 //					add(Codec.Video.H264)
 //				}.joinToString(",")
-//				audioCodec = buildList {
+//				audioCodec = forcedAudioCodec ?: buildList {
 //					addAll(codecsDolby)
-////					if (isDTSEnabled) add(Codec.Audio.DTS)
-////					if (isExtraSurroundEnabled) arrayOf(Codec.Audio.AAC, Codec.Audio.AAC_LATM)
+//					if (isDTSEnabled) add(Codec.Audio.DTS)
+//					if (isExtraSurroundEnabled) addAll(codecsCommon)
 //				}.joinToString(",")
+//				maxAudioChannels = forceNumChannels?.toString() ?: "8"
 ////				enableMpegtsM2TsMode = true
-//				enableSubtitlesInManifest = true
-//				copyTimestamps = true
-//				segmentLength = 10
-//				minSegments = 0
+////				enableSubtitlesInManifest = true
+////				copyTimestamps = true
+//				segmentLength = 5
+//				minSegments = 2
 ////				estimateContentLength = true
 ////				setBreakOnNonKeyFrames(true)
 ////				requiresPlainVideoItems = true
 ////				requiresPlainFolders = true
-////			},
+//			},
+
 			// NOTE: seeking will not work in mkv mode!
 			TranscodingProfile().apply {
 				type = DlnaProfileType.Video
 				context = EncodingContext.Streaming
 				container = Codec.Container.MKV
 				videoCodec = buildList {
-					add(Codec.Video.H264)
 					if (ProfileHelper.deviceHevcCodecProfile?.ContainsCodec(Codec.Video.HEVC, Codec.Container.MKV) == true) add(Codec.Video.HEVC)
+					add(Codec.Video.H264)
 				}.joinToString(",")
-				audioCodec = buildList {
+				audioCodec = forcedAudioCodec ?: buildList {
 					addAll(codecsDolby)
 					if (isDTSEnabled) add(Codec.Audio.DTS)
 					if (isExtraSurroundEnabled) addAll(codecsCommon)
 				}.joinToString(",")
 				copyTimestamps = false
-				maxAudioChannels = "8"
+				maxAudioChannels = forceNumChannels?.toString() ?: "8"
 			},
 			// MP3 audio profile
 			TranscodingProfile().apply {
@@ -154,12 +159,12 @@ class ZidooPlayerProfile (
 			},
 			// Audio-channels: Dolby is 6,8 with atmos at 7.1.4
 			if (isDTSEnabled)
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby.plus(Codec.Audio.DTS), 8)
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby.plus(Codec.Audio.DTS), forceNumChannels ?: 8)
 			else
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby, 8)
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby, forceNumChannels ?: 8)
 			,
 			if (isExtraSurroundEnabled)
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, 8)
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, forceNumChannels ?: 8)
 			else
 				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, 2)
 		).toTypedArray()

@@ -39,6 +39,7 @@ import org.jellyfin.androidtv.data.service.BackgroundService;
 import org.jellyfin.androidtv.preference.LibraryPreferences;
 import org.jellyfin.androidtv.preference.PreferencesRepository;
 import org.jellyfin.androidtv.preference.UserPreferences;
+import org.jellyfin.androidtv.preference.constant.AudioCodecOut;
 import org.jellyfin.androidtv.preference.constant.LanguagesAudio;
 import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle;
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior;
@@ -103,7 +104,6 @@ public class ExternalPlayerActivity extends FragmentActivity {
     boolean noPlayerError;
     boolean mUseSendPath = false;
     LanguagesAudio mAudioLangSetting;
-    boolean mPrefer6ChAudio = false;
     boolean mHasDtsDecoder = false;
     boolean mEnableSurroundCodecs = false;
     boolean mAllowTranscoding = false;
@@ -230,8 +230,6 @@ public class ExternalPlayerActivity extends FragmentActivity {
         mAllowSameLanguageSubs = userPreferences.getValue().get(UserPreferences.Companion.getAllowSameLanguageSubs());
         mPreferSdhSubs = userPreferences.getValue().get(UserPreferences.Companion.getUseSdhSubtitles());
 
-        mPrefer6ChAudio = userPreferences.getValue().get(UserPreferences.Companion.getPrefer6chAudio());
-
         // handle folder lib settings
         String folderDispId = mediaManager.getValue().getFolderViewDisplayPreferencesId();
         if (isNonEmptyTrim(folderDispId)) {
@@ -243,9 +241,20 @@ public class ExternalPlayerActivity extends FragmentActivity {
             }
         }
 
-        Timber.d("onCreate audio <%s> sub <%s>", mAudioLangSetting, mSubtitleLangSetting);
+        String audioCodec = null;
+        if (userPreferences.getValue().get(UserPreferences.Companion.getForcedAudioCodec()) != AudioCodecOut.NONE) {
+            audioCodec = userPreferences.getValue().get(UserPreferences.Companion.getForcedAudioCodec()).getCodecName();
+        }
+        boolean forceStereo = false;
+        if (!mEnableSurroundCodecs) {
+            forceStereo = userPreferences.getValue().get(UserPreferences.Companion.getForceStereo());
+        }
+        if (Codec.Audio.MP3.equals(audioCodec)) {
+            forceStereo = true;
+        }
+        mZidooProfile = new ZidooPlayerProfile(mHasDtsDecoder, mEnableSurroundCodecs, audioCodec, forceStereo ? 2 : null);
 
-        mZidooProfile = new ZidooPlayerProfile(mHasDtsDecoder, mEnableSurroundCodecs);
+        Timber.d("onCreate audio <%s> sub <%s>", mAudioLangSetting, mSubtitleLangSetting);
         prepareExternalPlayer(mItemsToPlay);
     }
 
@@ -1292,25 +1301,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
         int numChannels = getSafeValue(audioStream.getChannels(), 0);
 
         int merit = 0;
-        if (numChannels > 2) {
-            if (numChannels <= 5) {
-                merit += 2;
-            } else {
-                if (mPrefer6ChAudio && numChannels == 6) {
-                    merit += 8;
-                } else if (numChannels > 6) {
-                    merit += 4;
-                } else {
-                    merit += 3;
-                }
-            }
-        }
-        if (sampleRate > 48000) {
+        if (numChannels > 2)
+            merit += 2;
+        if (numChannels >= 5)
             merit += 1;
-        }
-        if (bitDepth > 16) {
+        if (numChannels >= 7)
             merit += 1;
-        }
+
+        if (sampleRate > 48000)
+            merit += 1;
+        if (bitDepth > 16)
+            merit += 1;
 
         return merit;
     }

@@ -1,27 +1,12 @@
 package org.jellyfin.androidtv.ui.preference.screen
 
 import android.app.AlertDialog
-import android.os.Build
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
-import org.jellyfin.androidtv.preference.constant.AudioBehavior
-import org.jellyfin.androidtv.preference.constant.LanguagesAudio
-import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle
-import org.jellyfin.androidtv.preference.constant.NEXTUP_TIMER_DISABLED
-import org.jellyfin.androidtv.preference.constant.NextUpBehavior
-import org.jellyfin.androidtv.preference.constant.PreferredVideoPlayer
-import org.jellyfin.androidtv.preference.constant.RefreshRateSwitchingBehavior
+import org.jellyfin.androidtv.preference.constant.*
 import org.jellyfin.androidtv.ui.preference.custom.DurationSeekBarPreference
-import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
-import org.jellyfin.androidtv.ui.preference.dsl.checkbox
-import org.jellyfin.androidtv.ui.preference.dsl.enum
-import org.jellyfin.androidtv.ui.preference.dsl.link
-import org.jellyfin.androidtv.ui.preference.dsl.list
-import org.jellyfin.androidtv.ui.preference.dsl.optionsScreen
-import org.jellyfin.androidtv.ui.preference.dsl.seekbar
-import org.jellyfin.androidtv.util.DeviceUtils
+import org.jellyfin.androidtv.ui.preference.dsl.*
 import org.jellyfin.androidtv.util.TimeUtils
-import org.jellyfin.preference.booleanPreference
 import org.koin.android.ext.android.inject
 
 class PlaybackPreferencesScreen : OptionsFragment() {
@@ -174,11 +159,16 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 				bind(userPreferences, UserPreferences.enableExtraSurroundCodecs)
 			}
 
+			enum<AudioCodecOut> {
+				setTitle(R.string.lbl_forced_audio_codec)
+				bind(userPreferences, UserPreferences.forcedAudioCodec)
+			}
+
 			checkbox {
-				setTitle(R.string.lbl_prefer_6ch)
-				setContent(R.string.desc_prefer_6ch)
-				bind(userPreferences, UserPreferences.prefer6chAudio)
-				depends { userPreferences[UserPreferences.audioLanguage] != LanguagesAudio.DEVICE }
+				setTitle(R.string.lbl_force_stereo_audio)
+				setContent(R.string.desc_force_stereo_audio)
+				bind(userPreferences, UserPreferences.forceStereo)
+				depends { !userPreferences[UserPreferences.enableExtraSurroundCodecs] }
 			}
 
 //			enum<AudioBehavior> {

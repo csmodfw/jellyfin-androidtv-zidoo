@@ -4,17 +4,7 @@ import android.content.Context
 import android.view.KeyEvent
 import androidx.preference.PreferenceManager
 import org.acra.ACRA
-import org.jellyfin.androidtv.preference.constant.AppTheme
-import org.jellyfin.androidtv.preference.constant.AudioBehavior
-import org.jellyfin.androidtv.preference.constant.ClockBehavior
-import org.jellyfin.androidtv.preference.constant.LanguagesAudio
-import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle
-import org.jellyfin.androidtv.preference.constant.NextUpBehavior
-import org.jellyfin.androidtv.preference.constant.PreferredVideoPlayer
-import org.jellyfin.androidtv.preference.constant.RatingType
-import org.jellyfin.androidtv.preference.constant.WatchedIndicatorBehavior
-import org.jellyfin.androidtv.preference.constant.RefreshRateSwitchingBehavior
-import org.jellyfin.androidtv.preference.constant.defaultAudioBehavior
+import org.jellyfin.androidtv.preference.constant.*
 import org.jellyfin.androidtv.util.DeviceUtils
 import org.jellyfin.preference.booleanPreference
 import org.jellyfin.preference.enumPreference
@@ -238,9 +228,14 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var enableExtraSurroundCodecs = booleanPreference("pref_enable_extra_surround_codecs", false)
 
 		/**
-		 * Prefer 6 channel audio
+		 * Forced audio codec
 		 */
-		var prefer6chAudio = booleanPreference("pref_prefer_6ch_audio", false)
+		var forcedAudioCodec = enumPreference("pref_forced_audio_codec", AudioCodecOut.NONE)
+
+		/**
+		 * Force Stereo audio
+		 */
+		var forceStereo = booleanPreference("pref_force_stereo_audio", false)
 
 		/**
 		 * No forced subtitles
