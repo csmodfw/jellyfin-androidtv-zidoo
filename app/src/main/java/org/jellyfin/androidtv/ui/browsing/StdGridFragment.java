@@ -109,8 +109,6 @@ public class StdGridFragment extends GridFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Timber.d("XXX onCreate");
-
         if (getActivity() instanceof BaseActivity) mActivity = (BaseActivity) getActivity();
         backgroundService.getValue().attach(requireActivity());
 
@@ -133,7 +131,6 @@ public class StdGridFragment extends GridFragment {
         setDefaultGridRowCols(mPosterSizeSetting, mImageType);
         setAutoCardGridValues();
         mJumplistPopup = new JumplistPopup();
-
         setupQueries();
         setupEventListeners();
     }
@@ -146,10 +143,6 @@ public class StdGridFragment extends GridFragment {
 
     protected boolean isDirty() {
         return mDirty;
-    }
-
-    protected BrowseRowDef getRowDef() {
-        return mRowDef;
     }
 
     protected void setRowDef(final BrowseRowDef rowDef) {
