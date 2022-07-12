@@ -87,6 +87,7 @@ class ZidooPlayerProfile(
 					addAll(codecsDolby)
 					if (isDTSEnabled) add(Codec.Audio.DTS)
 					addAll(codecsCommon)
+					add(Codec.Audio.DSD)
 				}.joinToString(",")
 			}
 		)

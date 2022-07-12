@@ -34,6 +34,7 @@ object Codec {
 		const val APE = "ape"
 		const val DCA = "dca"
 		const val DTS = "dts"
+		const val DSD = "dsd"
 		const val EAC3 = "eac3"
 		const val FLAC = "flac"
 		const val MLP = "mlp"
