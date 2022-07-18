@@ -263,8 +263,6 @@
     <string name="lbl_next_episode">Next Episode</string>
     <string name="lbl_album_name">Album name</string>
     <string name="lbl_song_title">Song Title</string>
-    <string name="pref_use_direct_path_title">Enable Direct Path</string>
-    <string name="pref_use_direct_path_summary">Use the server network paths (smb, nfs) instead of a http stream.</string>
     <string name="lbl_allow_transcode_fallback">Allow transcode fallback</string>
     <string name="desc_allow_transcode_fallback">Allow http transcode, if the video would not play natively.</string>
     <string name="pref_acra_category">Crash reporting</string>
@@ -279,8 +277,8 @@
     <string name="pref_acra_syslog_disabled">System logs will not be included in crash reports</string>
     <string name="acra_dialog_title">Oh no! Something went wrong.</string>
     <string name="acra_dialog_text">Would you like to send a crash report to the developers?\n\nThis information will be submitted to a third party (tracepot.com).\n\nThis prompt can be disabled in the Crash Reporting section in the Jellyfin app\'s preferences.</string>
-    <string name="pref_use_direct_path_title">Pass Direct Path for external player</string>
-    <string name="pref_use_direct_path_summary">Pass the file system path instead of streaming URL</string>
+    <string name="pref_use_direct_path_title">Enable Direct Path</string>
+    <string name="pref_use_direct_path_summary">Use the server network paths (smb, nfs) instead of a http stream.</string>
     <string name="lbl_tv_channel_status">%1$d of %2$d channels</string>
     <string name="lbl_tv_filter_status"> for next %1$d hours</string>
     <string name="lbl_news">News</string>
