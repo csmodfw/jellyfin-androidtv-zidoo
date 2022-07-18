@@ -11,7 +11,7 @@ plugins {
 android {
 	namespace = "org.jellyfin.androidtv"
 	compileSdk = 32
-	ndkVersion = "24.0.8215888"
+	ndkVersion = "25.0.8775105"
 
 	defaultConfig {
 		minSdk = 28

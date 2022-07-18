@@ -4,15 +4,6 @@ import android.content.Context
 import android.view.KeyEvent
 import androidx.preference.PreferenceManager
 import org.jellyfin.androidtv.preference.constant.*
-import org.jellyfin.androidtv.preference.constant.AppTheme
-import org.jellyfin.androidtv.preference.constant.AudioBehavior
-import org.jellyfin.androidtv.preference.constant.ClockBehavior
-import org.jellyfin.androidtv.preference.constant.NextUpBehavior
-import org.jellyfin.androidtv.preference.constant.PreferredVideoPlayer
-import org.jellyfin.androidtv.preference.constant.RatingType
-import org.jellyfin.androidtv.preference.constant.RefreshRateSwitchingBehavior
-import org.jellyfin.androidtv.preference.constant.WatchedIndicatorBehavior
-import org.jellyfin.androidtv.preference.constant.defaultAudioBehavior
 import org.jellyfin.androidtv.util.DeviceUtils
 import org.jellyfin.preference.booleanPreference
 import org.jellyfin.preference.enumPreference

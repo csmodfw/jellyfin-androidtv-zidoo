@@ -38,6 +38,12 @@ public class DeviceUtils {
         return Build.MODEL != null ? Build.MODEL : UNKNOWN;
     }
 
+    @NonNull
+    static String getBrand() {
+        // Stub to allow for mock injection
+        return Build.BRAND != null ? Build.BRAND : UNKNOWN;
+    }
+
     public static boolean isChromecastWithGoogleTV() {
         return getBuildModel().equals(CHROMECAST_GOOGLE_TV);
     }
@@ -54,9 +60,13 @@ public class DeviceUtils {
         return getBuildModel().equals(FIRE_STICK_4K_MODEL);
     }
 
-    public static boolean isShieldTv() { return getBuildModel().equals(SHIELD_TV_MODEL); }
+    public static boolean isShieldTv() {
+        return getBuildModel().equals(SHIELD_TV_MODEL);
+    }
 
-    public static boolean isZidooRTK() { return Build.MANUFACTURER.equals(ZIDOO_MANUFACTURER) && Build.BRAND.equals("rtk"); }
+    public static boolean isZidooRTK() {
+        return getBuildModel().equals(ZIDOO_MANUFACTURER) && getBrand().equals("rtk");
+    }
 
     public static boolean has4kVideoSupport() {
         String buildModel = getBuildModel();

@@ -218,7 +218,9 @@ class BackgroundService(
 				.map { future ->
 					async {
 						try {
-							future.get()
+							withContext(Dispatchers.IO) {
+								future.get()
+							}
 						} catch (ex: ExecutionException) {
 							Timber.e(ex, "There was an error fetching the background image.")
 							null
