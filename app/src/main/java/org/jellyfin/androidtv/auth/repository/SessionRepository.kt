@@ -10,7 +10,10 @@ import org.jellyfin.androidtv.auth.store.AccountManagerStore
 import org.jellyfin.androidtv.auth.store.AuthenticationPreferences
 import org.jellyfin.androidtv.auth.store.AuthenticationStore
 import org.jellyfin.androidtv.preference.PreferencesRepository
-import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.*
+import org.jellyfin.androidtv.preference.TelemetryPreferences
+import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.DISABLED
+import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.LAST_USER
+import org.jellyfin.androidtv.preference.constant.UserSelectBehavior.SPECIFIC_USER
 import org.jellyfin.androidtv.util.sdk.forUser
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.exception.ApiClientException
@@ -18,7 +21,7 @@ import org.jellyfin.sdk.api.client.extensions.userApi
 import org.jellyfin.sdk.model.DeviceInfo
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import timber.log.Timber
-import java.util.*
+import java.util.UUID
 
 data class Session(
 	val userId: UUID,
@@ -51,6 +54,7 @@ class SessionRepositoryImpl(
 	private val defaultDeviceInfo: DeviceInfo,
 	private val userRepository: UserRepository,
 	private val serverRepository: ServerRepository,
+	private val telemetryPreferences: TelemetryPreferences,
 ) : SessionRepository {
 	private val currentSessionMutex = Mutex()
 	private val _currentSession = MutableStateFlow<Session?>(null)
@@ -124,7 +128,14 @@ class SessionRepositoryImpl(
 
 		if (success) {
 			userApiClient.applySession(session, deviceInfo)
+
 			if (session != null) {
+				// Update crash reporting URL
+				// TODO: Use userApiClient.clientLogApi.logFileUrl(includeCredentials = false) in next SDK release
+				val crashReportUrl = userApiClient.createUrl("/ClientLog/Document")
+				telemetryPreferences[TelemetryPreferences.crashReportUrl] = crashReportUrl
+				telemetryPreferences[TelemetryPreferences.crashReportToken] = session.accessToken
+
 				try {
 					val user by userApiClient.userApi.getCurrentUser()
 					userRepository.updateCurrentUser(user)
