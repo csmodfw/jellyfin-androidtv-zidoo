@@ -2,11 +2,7 @@ package org.jellyfin.androidtv.util
 
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.imageApi
-import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.BaseItemKind
-import org.jellyfin.sdk.model.api.BaseItemPerson
-import org.jellyfin.sdk.model.api.ImageType
-import org.jellyfin.sdk.model.api.UserDto
+import org.jellyfin.sdk.model.api.*
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 
 class ImageHelper(
@@ -54,6 +50,21 @@ class ImageHelper(
 			imageType = imageType,
 			tag = imageTag,
 			maxHeight = ImageUtils.MAX_PRIMARY_IMAGE_HEIGHT,
+		)
+	}
+
+	fun getImageUrl(item: BaseItemDto, imageType: ImageType, imageFormat: ImageFormat? = ImageFormat.WEBP, blur: Int? = 24, height: Int? = null): String {
+		var itemId = item.id
+		if (item.type == BaseItemKind.EPISODE || item.type == BaseItemKind.SEASON) {
+			itemId = item.seriesId ?: item.id
+		}
+
+		return api.imageApi.getItemImageUrl(
+			itemId = itemId,
+			imageType = imageType,
+			maxHeight = height,
+			format = imageFormat,
+			blur = blur,
 		)
 	}
 

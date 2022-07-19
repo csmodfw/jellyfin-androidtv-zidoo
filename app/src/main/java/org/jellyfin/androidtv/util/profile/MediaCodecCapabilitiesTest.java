@@ -53,8 +53,7 @@ public class MediaCodecCapabilitiesTest  {
     private boolean hasDecoder(String mime, int profile, int level) {
         return supports(mime, false /* isEncoder */, profile, level);
     }
-    private boolean supports(
-            String mime, boolean isEncoder, int profile, int level) {
+    private boolean supports(String mime, boolean isEncoder, int profile, int level) {
         MediaCodecList mcl = new MediaCodecList(MediaCodecList.REGULAR_CODECS);
         for (MediaCodecInfo info : mcl.getCodecInfos()) {
             if (isEncoder != info.isEncoder()) {
@@ -78,7 +77,7 @@ public class MediaCodecCapabilitiesTest  {
                     }
                 }
             } catch (IllegalArgumentException e) {
-                Timber.w(e);
+//                Timber.w(e);
             }
         }
         return false;
