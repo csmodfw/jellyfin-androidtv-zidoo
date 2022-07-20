@@ -26,7 +26,7 @@
 "Zidoo-Edition" is a unofficial community fork of the Jellyfin Android TV client, adapted to better run on [Zidoo media players](https://www.zidoo.tv) running Android 9+.
 ### Release [downloads here](https://github.com/Andy2244/jellyfin-androidtv-zidoo/releases)
 TIP: you can directly install from your browser via `http://zidoo_ip:18888` web interface
-### App ONLY works with latest 10.8 server!
+### App ONLY works with latest 10.8.1 server!
 - feature roadmap
     - ~add smart "original language" audio selection logic based on tmdb id's~ _done_
     - ~add better transcoding support and fallback's for unsupported codecs~ _done_
@@ -35,7 +35,7 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
     - ~improve layouts~ _done_
     - small useability improvements _(smart screen views)_
     - working support for trailer/intro plugin's
-    - use new Android API from latest beta FW
+    - ~use new Android API from latest beta FW~ _done_
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
    - working resume, seek, watched states and server playback reporting 
