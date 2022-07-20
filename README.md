@@ -31,11 +31,16 @@ TIP: you can directly install from your browser via `http://zidoo_ip:18888` web 
     - ~add smart "original language" audio selection logic based on tmdb id's~ _done_
     - ~add better transcoding support and fallback's for unsupported codecs~ _done_
     - ~add more audio-only transcoding options (DD only, PCM 5.1 -> DD5.1)~ _done_
+    - seekable transcode playback
     - add atmos, dv logos
     - ~improve layouts~ _done_
     - small useability improvements _(smart screen views)_
+      - focus selection border
+      - add missing vertical-grid features _(genre)_
     - working support for trailer/intro plugin's
     - ~use new Android API from latest beta FW~ _done_
+    - script hotkey action's _(xml kodi compatible)_
+    - fix all NFS mount cases
 ### Added Features/Fixes:
  - Playback integration with the internal Zidoo player
    - working resume, seek, watched states and server playback reporting 
