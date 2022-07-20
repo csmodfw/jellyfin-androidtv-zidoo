@@ -126,6 +126,13 @@ class PlaybackPreferencesScreen : OptionsFragment() {
 			}
 
 			checkbox {
+				setTitle(R.string.lbl_use_legacy_direct_path)
+				setContent(R.string.desc_use_legacy_direct_path)
+				bind(userPreferences, UserPreferences.useLegacySendPath)
+				depends { userPreferences[UserPreferences.externalVideoPlayerSendPath] }
+			}
+
+			checkbox {
 				setTitle(R.string.lbl_allow_transcode_fallback)
 				setContent(R.string.desc_allow_transcode_fallback)
 				bind(userPreferences, UserPreferences.enableTranscodingFallback)

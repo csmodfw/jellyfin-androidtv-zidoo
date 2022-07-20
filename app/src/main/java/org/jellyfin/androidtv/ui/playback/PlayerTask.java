@@ -6,6 +6,8 @@ import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.API_ZIDOO_HTTP
 import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING;
 import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.SUBTITLE_DISABLED;
 import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.getFromTmdbHttp_API;
+import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.getNfsRoot;
+import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.getSmbUserPass;
 import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.getZidooPlayStatusEx;
 import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.setZidooAudioTrack;
 import static org.jellyfin.androidtv.ui.playback.PlayerApiHelpers.setZidooSeekPosition;
@@ -30,6 +32,7 @@ import androidx.core.util.Pair;
 
 import org.jellyfin.androidtv.auth.repository.UserRepository;
 import org.jellyfin.androidtv.data.compat.StreamInfo;
+import org.jellyfin.androidtv.preference.constant.LanguagesAudio;
 import org.jellyfin.androidtv.ui.AudioSubtitleHelper;
 import org.jellyfin.androidtv.util.apiclient.ReportingHelper;
 import org.jellyfin.apiclient.interaction.ApiClient;
@@ -98,78 +101,54 @@ abstract class PlayerTask implements Runnable {
 }
 
 class MountTask extends PlayerTask {
-    private final Response<String> mCallback;
-    private final String mInputPath;
+    final Response<String> mCallback;
+    final String mInputPath;
     String mShareName;
     String mServerHostName;
     String mUserName;
     String mPassword;
     String mMountPath;
     String mRelativePath;
-    boolean isSmb;
+    boolean isNfs;
 
     public MountTask(@NonNull final Activity activity, @NonNull String path, @NonNull final Response<String> callback) {
         super(activity);
         mCallback = callback;
+        mMountPath = null;
         mShareName = null;
         mServerHostName = null;
         mUserName = null;
         mPassword = null;
-        mMountPath = null;
         mRelativePath = null;
-        isSmb = false;
 
         Uri path_uri = Uri.parse(path).normalizeScheme();
         mInputPath = path_uri.getPath();
         if (isNonEmptyTrim(path_uri.getHost())) {
             mServerHostName = path_uri.getHost();
         }
-
-        Timber.d("uriPath <%s>", mInputPath);
+        Timber.d("MountTask with <%s>", mInputPath);
 
         if (path.contains("smb:") && isNonEmptyTrim(mInputPath)) {
-            isSmb = true;
             if (isNonEmpty(path_uri.getPathSegments())) {
                 mShareName = path_uri.getPathSegments().get(0);
             }
             mRelativePath = mInputPath.replaceFirst("/" + mShareName,"");
 
-            String userInfo = path_uri.getUserInfo();
-            if (isNonEmptyTrim(userInfo)) {
-                String[] splitArray = userInfo.split(":", 2);
-                if (splitArray.length >= 1) {
-                    String smb_username = splitArray[0].trim();
-                    if (isNonEmptyTrim(smb_username)) {
-                        mUserName = smb_username;
-                    }
-                    if (splitArray.length >= 2) {
-                        String smb_password = splitArray[1].trim();
-                        if (isNonEmptyTrim(smb_password)) {
-                            mPassword = smb_password;
-                        }
-                    }
-                }
-            }
-            if (isEmptyTrim(mUserName)) {
-                mUserName = "guest";
-            }
+            Pair<String, String> smbUserPass = getSmbUserPass(path_uri);
+            mUserName = smbUserPass.first;
+            mPassword = smbUserPass.second;
             Timber.d("Using SMB username <%s>", mUserName);
             if (mPassword != null) {
                 Timber.d("Using SMB password <*******>");
             }
         } else if (path.contains("nfs:")) {
-            String nfs_root = path_uri.getHost() + "/" + path_uri.getPathSegments().get(0); // init with simple case first
-            String[] splitArray = path_uri.getPath().split("/:", 2); // we use "/:" as marker for the export path
-            if (splitArray.length > 1) {
-                nfs_root = path_uri.getHost() + splitArray[0];
-                path_uri = Uri.parse(path.replace("/:", "")); // fix Uri
-            }
-            Timber.d("Using NFS root_path <%s>", nfs_root);
+            isNfs = true;
+            Pair<String, String> nfsRootShare = getNfsRoot(path_uri);
+            mShareName = nfsRootShare.second;
+            mRelativePath = mInputPath.replace("/:", ""); // fix Path
+            mRelativePath = mRelativePath.replaceFirst("/" + nfsRootShare.second,"");
         }
         if (mServerHostName == null || mShareName == null) {
-            finishTask();
-        }
-        if (isSmb && mUserName == null) {
             finishTask();
         }
         if (!mIsFinished) {
@@ -179,9 +158,8 @@ class MountTask extends PlayerTask {
 
     private void handleCallback() {
         if (isNonEmptyTrim(mMountPath)) {
-            if (isSmb) {
-                mCallback.onResponse(mMountPath + mRelativePath);
-            }
+            Timber.d("Using mountPath <%s> rPath <%s>", mMountPath, mRelativePath);
+            mCallback.onResponse(mMountPath + mRelativePath);
         } else {
             mCallback.onResponse(null);
         }
@@ -198,12 +176,14 @@ class MountTask extends PlayerTask {
     @Override
     public void run() {
         ZEMountManage mZEMountManage = new ZEMountManage(mActivity);
-        String mountPath = mZEMountManage.mountSmb(mShareName, mServerHostName, mUserName, mPassword);
-        if (!isEmptyTrim(mountPath)) {
-            mMountPath = mountPath;
-            //callback mount  AbsolutePath
-            //  as: /data/system/smb/192.168.11.106#zidoo
+        Timber.d("Using Host <%s> Share <%s>", mServerHostName, mShareName);
+        if (isNfs) {
+            mMountPath = mZEMountManage.mountNfs(mShareName, mServerHostName);
+        } else {
+            mMountPath = mZEMountManage.mountSmb(mShareName, mServerHostName, mUserName, mPassword);
         }
+        //callback mount  AbsolutePath
+        //  as: /data/system/smb/192.168.11.106#zidoo
         finishTask();
     }
 }
@@ -418,7 +398,7 @@ abstract class ZidooTask extends PlayerTask {
 
     // idx in zidoo offsets
     protected void setBestTracks() {
-        if (bestAudioSubIdxZidoo == null) {
+        if (bestAudioSubIdxZidoo == null && mPrefs.mAudioLangSetting != LanguagesAudio.DEVICE) {
             evaluateAudioSubTracks(); // delay until needed
         }
         if (bestAudioSubIdxZidoo != null) {
@@ -627,9 +607,9 @@ class ZidooReportTask extends ZidooTask {
     }
 
     private void updateFromResult(@NonNull Intent data) {
-        String end_by = data.getStringExtra("end_by");
-        String url = data.getStringExtra("url");
-        int duration = data.getIntExtra("duration", -1);
+//        String end_by = data.getStringExtra("end_by");
+//        String url = data.getStringExtra("url");
+//        int duration = data.getIntExtra("duration", -1);
         int position = data.getIntExtra("position", -1);
         int audio_idx = data.getIntExtra("audio_idx", -1);
         int subtitle_idx = data.getIntExtra("subtitle_idx", -1);

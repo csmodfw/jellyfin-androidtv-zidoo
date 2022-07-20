@@ -100,6 +100,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Allow transcoding fallback in DirectPath Mode
 		 */
+		var useLegacySendPath = booleanPreference("pref_use_legacy_sendpath", false)
+
+		/**
+		 * Allow transcoding fallback in DirectPath Mode
+		 */
 		var enableTranscodingFallback = booleanPreference("pref_enable_transcoding_fallback", true)
 
 		/* Playback - Audio related */

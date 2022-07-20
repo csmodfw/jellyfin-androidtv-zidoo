@@ -265,6 +265,8 @@
     <string name="lbl_song_title">Song Title</string>
     <string name="lbl_allow_transcode_fallback">Allow transcode fallback</string>
     <string name="desc_allow_transcode_fallback">Allow http transcode, if the video would not play natively.</string>
+    <string name="lbl_use_legacy_direct_path">Use legacy Direct Path</string>
+    <string name="desc_use_legacy_direct_path">Use old mount logic, for older firmware versions.</string>
     <string name="pref_acra_category">Crash reporting</string>
     <string name="pref_enable_acra">Send crash reports to developers</string>
     <string name="pref_acra_enabled">You will be prompted to submit crash reports</string>

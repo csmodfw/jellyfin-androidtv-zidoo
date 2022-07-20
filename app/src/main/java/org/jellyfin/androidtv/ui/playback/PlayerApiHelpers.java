@@ -1,7 +1,11 @@
 package org.jellyfin.androidtv.ui.playback;
 
 import static org.jellyfin.androidtv.util.Utils.isEmptyTrim;
+import static org.jellyfin.androidtv.util.Utils.isNonEmpty;
 import static org.jellyfin.androidtv.util.Utils.isNonEmptyTrim;
+
+import android.content.Intent;
+import android.net.Uri;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -226,5 +230,66 @@ public class PlayerApiHelpers {
             }
         }
         return outMap;
+    }
+
+    @NonNull
+    public static Pair<String,String> getSmbUserPass(@NonNull Uri pathUri) {
+        String user = null;
+        String pass = null;
+        String userInfo = pathUri.getUserInfo();
+        if (isNonEmptyTrim(userInfo)) {
+            String[] splitArray = userInfo.split(":", 2);
+            if (splitArray.length >= 1) {
+                String smb_username = splitArray[0].trim();
+                if (isNonEmptyTrim(smb_username)) {
+                    user = smb_username;
+                }
+                if (splitArray.length >= 2) {
+                    String smb_password = splitArray[1].trim();
+                    if (isNonEmptyTrim(smb_password)) {
+                        pass = smb_password;
+                    }
+                }
+            }
+        }
+        if (isEmptyTrim(user)) {
+            user = "guest";
+        }
+        return new Pair<>(user, pass);
+    }
+
+    // root_path, share_path
+    @NonNull
+    public static Pair<String,String> getNfsRoot(@NonNull Uri pathUri) {
+        String nfs_root = null;
+        String nfs_share = null;
+        if (isNonEmpty(pathUri.getPathSegments())) {
+            nfs_share = pathUri.getPathSegments().get(0); // init with simple case first
+            nfs_root = pathUri.getHost() + "/" + nfs_share;
+        }
+        String[] splitArray = pathUri.getPath().split("/:", 2); // we use "/:" as marker for the export path
+        if (splitArray.length > 1) {
+//            nfs_share = splitArray[0];
+//            if (!nfs_share.isEmpty() && nfs_share.charAt(0) == '/') {
+//                nfs_share = nfs_share.replaceFirst("/",""); // we need just the sharename
+//            }
+            nfs_root = pathUri.getHost() + splitArray[0];
+        }
+        return new Pair<>(nfs_root, nfs_share);
+    }
+
+    public static void testNFS(@NonNull Intent initIntent) {
+        Uri uri = initIntent.getData();
+        String mPath = uri.toString();
+        mPath = mPath.replace("nfs://", "");
+
+        String ip = uri.getHost();
+        String nfs_root = initIntent.getStringExtra("nfs_root");
+        mPath = mPath.replace(nfs_root, "");
+        String ip2 = nfs_root.substring(0, nfs_root.indexOf("/"));
+        String id = nfs_root.substring(nfs_root.lastIndexOf("/"));
+
+        String outPath = ip2 + id + mPath;
+        Timber.d("ZDMCActivity = out mPath = %s", outPath);
     }
 }

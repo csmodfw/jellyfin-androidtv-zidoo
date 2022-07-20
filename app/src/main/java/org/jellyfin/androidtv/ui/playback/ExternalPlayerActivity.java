@@ -87,6 +87,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
     boolean isLiveTv;
     boolean noPlayerError;
     boolean mUseSendPath = false;
+    boolean mUseLegacySendPath = false;
     boolean mEnableSurroundCodecs = false;
     boolean mAllowTranscoding = false;
     boolean mIsLibraryAudioPref = false;
@@ -179,6 +180,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         mSeekPosition = Math.max(getIntent().getIntExtra("Position", 0), 0);
 
         mUseSendPath = userPreferences.getValue().get(UserPreferences.Companion.getExternalVideoPlayerSendPath());
+        mUseLegacySendPath = userPreferences.getValue().get(UserPreferences.Companion.getUseLegacySendPath()); // for old FW ZDMC logic
         mAllowTranscoding = userPreferences.getValue().get(UserPreferences.Companion.getEnableTranscodingFallback());
         mEnableSurroundCodecs = userPreferences.getValue().get(UserPreferences.Companion.getEnableExtraSurroundCodecs());
 
@@ -239,6 +241,8 @@ public class ExternalPlayerActivity extends FragmentActivity {
             if (mZidooTask instanceof ZidooReportTask) {
                 ((ZidooReportTask)mZidooTask).stop(data);
             } else {
+                // something went wrong so just report the old seekPos
+                ReportingHelper.reportStopped(mZidooTask.mItem, mZidooTask.mStreamInfo, mSeekPosition * RUNTIME_TICKS_TO_MS);
                 mZidooTask.finishTask();
             }
         } else {
@@ -591,7 +595,13 @@ public class ExternalPlayerActivity extends FragmentActivity {
             mCurrentStreamInfo.setItemId(mCurrentItem.getId());
 
             Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle(mCurrentItem) + "\n\n" + PlayMethod.DirectPlay);
-            startExternalZidooMovieActivityDirectPath(preparePath(mCurrentItem.getPath()), mCurrentItem.getContainer() != null ? mCurrentItem.getContainer() : "*");
+            String path = preparePath(mCurrentItem.getPath());
+            String container = mCurrentItem.getContainer() != null ? mCurrentItem.getContainer() : "*";
+            if (mUseLegacySendPath) {
+                startExternalZidooZDMCActivity(path, container);
+            } else {
+                startExternalZidooMovieActivityDirectPath(path, container);
+            }
         } else {
             String orgLang = mTmdbTask != null ? mTmdbTask.getOriginalLanguage(mCurrentItem.getId(), mCurrentItem.getSeriesId()) : null;
             Pair<Integer, Integer> audioSubIdx = getAbsoluteAudioSubIdxSafe(getBestAudioSubtitleIdx(mCurrentItem.getMediaStreams(), mPrefs, orgLang));
@@ -612,10 +622,15 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
                         Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle(mCurrentItem) + "\n\n" + mCurrentStreamInfo.getPlayMethod().toString());
                         if (mUseSendPath && mCurrentStreamInfo.getPlayMethod() == PlayMethod.DirectPlay) {
-//                            startExternalZidooZDMCActivity(preparePath(mCurrentItem.getPath()), mCurrentItem.getContainer() != null ? mCurrentItem.getContainer() : "*");
-                            startExternalZidooMovieActivityDirectPath(preparePath(mCurrentItem.getPath()), mCurrentItem.getContainer() != null ? mCurrentItem.getContainer() : "*");
+                            String path = preparePath(mCurrentItem.getPath());
+                            String container = mCurrentItem.getContainer() != null ? mCurrentItem.getContainer() : "*";
+                            if (mUseLegacySendPath) {
+                                startExternalZidooZDMCActivity(path, container);
+                            } else {
+                                startExternalZidooMovieActivityDirectPath(path, container);
+                            }
                         } else {
-                            startExternalZidooMovieActivity(Uri.parse(mCurrentStreamInfo.getMediaUrl()), mCurrentStreamInfo.getMediaSource().getContainer() != null ? mCurrentStreamInfo.getMediaSource().getContainer() : "*");
+                            startExternalZidooMovieActivity(Uri.parse(mCurrentStreamInfo.getMediaUrl()).normalizeScheme(), mCurrentStreamInfo.getMediaSource().getContainer() != null ? mCurrentStreamInfo.getMediaSource().getContainer() : "*");
                         }
                     }
                 }
@@ -719,60 +734,43 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
     }
 
-    private void startExternalZidooZDMCActivity(String path, String container) {
-        if (isEmptyTrim(path)) {
-            Timber.e("Error null/empty input path given!");
-            finish();
-            return;
-        }
-
-        Uri path_uri = Uri.parse(path);
+    private void startExternalZidooZDMCActivity(@NonNull String path, @NonNull String container) {
         Intent zidooIntent = new Intent(Intent.ACTION_VIEW);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
         zidooIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
         //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
         //        zidooIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
         zidooIntent.setPackage(API_ZIDOO_PACKAGE);
         zidooIntent.setClassName(API_ZIDOO_PACKAGE, API_ZIDOO_ACTIVITY_NAME_ZDMC);
-
         zidooIntent.putExtra(API_ZIDOO_PLAY_MODE, API_ZIDOO_PLAY_MODE_ZDMC);
         //        String netMode = API_ZIDOO_NET_MODE_LOCAL;
+
+        Uri path_uri = Uri.parse(path).normalizeScheme();
         if (path.contains("smb:")) {
             zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_SMB);
             Timber.d("Using SMB NET_MODE for ZDMCActivity!");
-            String userInfo = path_uri.getUserInfo();
-            if (isNonEmptyTrim(userInfo)) {
-                String[] splitArray = userInfo.split(":", 2);
-                if (splitArray.length >= 1) {
-                    String smb_username = splitArray[0].trim();
-                    if (isNonEmptyTrim(smb_username)) {
-                        zidooIntent.putExtra(API_ZIDOO_NET_SMB_USERNAME, smb_username);
-                        Timber.d("Using SMB username <%s> for ZDMCActivity!", smb_username);
-                    }
-                    if (splitArray.length >= 2) {
-                        String smb_password = splitArray[1].trim();
-                        if (isNonEmptyTrim(smb_password)) {
-                            zidooIntent.putExtra(API_ZIDOO_NET_SMB_PASSWORD, smb_password);
-                            Timber.d("Using SMB password ******* for ZDMCActivity!");
-                        }
-                    }
-                }
-            } else {
-                Timber.d("Using SMB username <Guest> for ZDMCActivity!");
+            Pair<String, String> smbUserPass = PlayerApiHelpers.getSmbUserPass(path_uri);
+            if (isNonEmptyTrim(smbUserPass.first)) {
+                zidooIntent.putExtra(API_ZIDOO_NET_SMB_USERNAME, smbUserPass.first);
+                Timber.d("Using SMB username <%s> for ZDMCActivity!", smbUserPass.first);
+            }
+            if (isNonEmptyTrim(smbUserPass.second)) {
+                zidooIntent.putExtra(API_ZIDOO_NET_SMB_PASSWORD, smbUserPass.second);
+                Timber.d("Using SMB password ******* for ZDMCActivity!");
             }
         } else if (path.contains("nfs:")) {
             zidooIntent.putExtra(API_ZIDOO_NET_MODE, API_ZIDOO_NET_MODE_NFS);
             Timber.d("Using NFS NET_MODE for ZDMCActivity!");
-            String nfs_root = path_uri.getHost() + "/" + path_uri.getPathSegments().get(0); // init with simple case first
-            String[] splitArray = path_uri.getPath().split("/:", 2); // we use "/:" as marker for the export path
-            if (splitArray.length > 1) {
-                nfs_root = path_uri.getHost() + splitArray[0];
-                path_uri = Uri.parse(path.replace("/:", "")); // fix Uri
-            }
-            zidooIntent.putExtra(API_ZIDOO_NET_NFS_ROOT, nfs_root);
-            Timber.d("Using NFS root_path <%s> for ZDMCActivity!", nfs_root);
+            Pair<String, String> nfsRootShare = PlayerApiHelpers.getNfsRoot(path_uri);
+            path_uri = Uri.parse(path.replace("/:", "")).normalizeScheme(); // fix Uri
+            zidooIntent.putExtra(API_ZIDOO_NET_NFS_ROOT, nfsRootShare.first);
+            Timber.d("Using NFS root_path <%s> for ZDMCActivity!", nfsRootShare.first);
+        } else {
+            Utils.showToast(ExternalPlayerActivity.this, "Error: Invalid mount path!");
+            Timber.e("Error Path does is not a smb/nfs Path <%s>!", path);
+            finish();
+            return;
         }
 
         Timber.i("Starting external Zidoo ZDMCActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ", path_uri.getHost(), container, mSeekPosition, getMillisecondsFormated(mSeekPosition), path_uri.getPath());
@@ -791,23 +789,9 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
     }
 
-    private void testNFS(@NonNull Intent initIntent) {
-        Uri uri = initIntent.getData();
-        String mPath = uri.toString();
-        mPath = mPath.replace("nfs://", "");
-
-        String ip = uri.getHost();
-        String nfs_root = initIntent.getStringExtra("nfs_root");
-        mPath = mPath.replace(nfs_root, "");
-        String ip2 = nfs_root.substring(0, nfs_root.indexOf("/"));
-        String id = nfs_root.substring(nfs_root.lastIndexOf("/"));
-
-        String outPath = ip2 + id + mPath;
-        Timber.d("ZDMCActivity = out mPath = %s", outPath);
-    }
-
     private void startExternalZidooMovieActivityDirectPath(@NonNull String path, @NonNull String container) {
-        if (!path.contains("smb://") && !path.contains("nfs://")) {
+        if (!path.contains("smb:") && !path.contains("nfs:")) {
+            Utils.showToast(ExternalPlayerActivity.this, "Error: Invalid mount path!");
             Timber.e("Error Path does is not a smb/nfs Path <%s>!", path);
             finish();
             return;

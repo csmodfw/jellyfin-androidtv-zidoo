@@ -68,7 +68,7 @@ public class AudioSubtitleHelper {
         return null;
     }
 
-    final static int DEFAULT_AUDIO_FLAG_MERIT = 3; // should this override even best picks?
+    final static int DEFAULT_AUDIO_FLAG_MERIT = 1; // should this override even best picks?
     // setup our filter merits
     final static Map<String, Integer> SUBTITLE_FILTERS = Map.of(
             "dialog", 10,

@@ -493,13 +493,16 @@ public class BaseRowItem {
     public void refresh(final EmptyResponse outerResponse) {
         switch (type) {
             case BaseItem:
-                apiClient.getValue().GetItemAsync(getItemId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
-                    @Override
-                    public void onResponse(BaseItemDto response) {
-                        baseItem = response;
-                        outerResponse.onResponse();
-                    }
-                });
+                UserDto user = KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue();
+                if (user != null) {
+                    apiClient.getValue().GetItemAsync(getItemId(), user.getId().toString(), new Response<BaseItemDto>() {
+                        @Override
+                        public void onResponse(BaseItemDto response) {
+                            baseItem = response;
+                            outerResponse.onResponse();
+                        }
+                    });
+                }
                 break;
             case Person:
             case Chapter:
