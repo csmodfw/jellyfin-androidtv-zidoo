@@ -15,6 +15,7 @@ import com.google.android.exoplayer2.util.Util;
 
 import org.jellyfin.androidtv.constant.Codec;
 import org.jellyfin.androidtv.preference.UserPreferences;
+import org.jellyfin.androidtv.preference.constant.AudioCodecOut;
 import org.jellyfin.androidtv.preference.constant.LanguagesAudio;
 import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle;
 import org.jellyfin.apiclient.model.entities.MediaStream;
@@ -39,6 +40,7 @@ public class AudioSubtitleHelper {
         final public boolean mNoForcedSubs;
         final public boolean mAllowSameLanguageSubs;
         final public boolean mPreferSdhSubs;
+        final public String mForcedAudioCodec;
 
         public AudioSubPref(@NonNull final Lazy<UserPreferences> userPreferences) {
             mHasDtsDecoder = userPreferences.getValue().get(UserPreferences.Companion.getDtsCapableDevice());
@@ -47,6 +49,7 @@ public class AudioSubtitleHelper {
             mNoForcedSubs = userPreferences.getValue().get(UserPreferences.Companion.getNoForcedSubtitles());
             mAllowSameLanguageSubs = userPreferences.getValue().get(UserPreferences.Companion.getAllowSameLanguageSubs());
             mPreferSdhSubs = userPreferences.getValue().get(UserPreferences.Companion.getUseSdhSubtitles());
+            mForcedAudioCodec = userPreferences.getValue().get(UserPreferences.Companion.getForcedAudioCodec()).getCodecName();
         }
     }
 
@@ -69,6 +72,9 @@ public class AudioSubtitleHelper {
     }
 
     final static int DEFAULT_AUDIO_FLAG_MERIT = 1; // should this override even best picks?
+    final static int DEFAULT_SUBTITLE_FLAG_MERIT = 1;
+    final static int AUDIO_SURROUND_MERIT = 5; // we favor >2ch, surround sound
+    final static int AUDIO_SURROUND_6CH_MERIT = 15;
     // setup our filter merits
     final static Map<String, Integer> SUBTITLE_FILTERS = Map.of(
             "dialog", 10,
@@ -156,9 +162,9 @@ public class AudioSubtitleHelper {
 
         int merit = 0;
         if (numChannels > 2)
-            merit += 2;
+            merit += AUDIO_SURROUND_MERIT;
         if (numChannels >= 5)
-            merit += 1;
+            merit += AUDIO_SURROUND_6CH_MERIT;
         if (numChannels >= 7)
             merit += 1;
 
@@ -193,6 +199,9 @@ public class AudioSubtitleHelper {
                 merit_codec.put(Codec.Audio.DTS, AUDIO_CODECS.get(Codec.Audio.AC3) - 1); // match eac3 with MA
             } else {
                 merit_profile = new HashMap<>();
+            }
+            if (!prefs.mForcedAudioCodec.equals("none")) {
+                merit_codec.put(prefs.mForcedAudioCodec, 15); // favor forced codec's, surround should still win
             }
             if (prefs.mAudioLangSetting == LanguagesAudio.ORIGINAL) {
                 merit_filter.put("original", 20);
@@ -251,7 +260,7 @@ public class AudioSubtitleHelper {
                     merit += DEFAULT_AUDIO_FLAG_MERIT; // boost audio more?
                 }
             } else if (isDefaultTrack(stream)) {
-                merit += 1; // slightly boost default subs, if all is equal we favor defaults
+                merit += DEFAULT_SUBTITLE_FLAG_MERIT; // slightly boost default subs, if all is equal we favor defaults
             }
             // only use positive merits!
             if (merit >= 0) {
