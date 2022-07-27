@@ -49,6 +49,8 @@ import org.koin.java.KoinJavaComponent;
 
 import java.util.Map;
 
+import jcifs.Address;
+import jcifs.CIFSException;
 import kotlin.Lazy;
 import timber.log.Timber;
 
@@ -133,7 +135,7 @@ class MountTask extends PlayerTask {
         if (isNonEmptyTrim(path_uri.getHost())) {
             mServerHostName = path_uri.getHost();
         }
-        Timber.d("MountTask with <%s>", mInputPath);
+        Timber.d("MountTask with host <%s> path <%s>", mServerHostName, mInputPath);
 
         if (path.contains("smb:") && isNonEmptyTrim(mInputPath)) {
             if (isNonEmpty(path_uri.getPathSegments())) {
@@ -182,12 +184,25 @@ class MountTask extends PlayerTask {
 
     @Override
     public void run() {
+        String ip = mServerHostName;
+        try {
+            // NOTE: new API has no hostname support
+            Address addr = jcifs.context.SingletonContext.getInstance().getNameServiceClient().getByName(mServerHostName);
+            ip = addr.getHostAddress();
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                jcifs.context.SingletonContext.getInstance().close();
+            } catch (CIFSException ignored) {
+            }
+        }
+
         ZEMountManage mZEMountManage = new ZEMountManage(mActivity);
-        Timber.d("Using Host <%s> Share <%s>", mServerHostName, mShareName);
+        Timber.d("Using Host-IP <%s> Share <%s>", ip, mShareName);
         if (isNfs) {
-            mMountPath = mZEMountManage.mountNfs(mShareName, mServerHostName);
+            mMountPath = mZEMountManage.mountNfs(mShareName, ip);
         } else {
-            mMountPath = mZEMountManage.mountSmb(mShareName, mServerHostName, mUserName, mPassword);
+            mMountPath = mZEMountManage.mountSmb(mShareName, ip, mUserName, mPassword);
         }
         //callback mount  AbsolutePath
         //  as: /data/system/smb/192.168.11.106#zidoo

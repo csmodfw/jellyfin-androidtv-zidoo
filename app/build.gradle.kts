@@ -161,6 +161,9 @@ dependencies {
 	implementation(libs.jellyfin.exoplayer.ffmpegextension)
 	implementation(libs.libvlc)
 
+	// Jcifs
+	implementation(libs.jcifs)
+
 	// Markdown
 	implementation(libs.bundles.markwon)
 

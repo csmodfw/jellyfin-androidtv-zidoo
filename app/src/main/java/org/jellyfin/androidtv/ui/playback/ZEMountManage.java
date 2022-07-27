@@ -44,7 +44,7 @@ public class ZEMountManage {
 				intent.putExtra("user", user);
 				intent.putExtra("pwd", pwd);// ""
 				mContext.sendBroadcast(intent);
-				wait(2200);
+				wait(4000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -66,7 +66,7 @@ public class ZEMountManage {
 				intent.putExtra("share", shareName);
 				intent.putExtra("ip", ip);
 				mContext.sendBroadcast(intent);
-				wait(2200);
+				wait(4000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

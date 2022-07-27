@@ -15,7 +15,6 @@ import com.google.android.exoplayer2.util.Util;
 
 import org.jellyfin.androidtv.constant.Codec;
 import org.jellyfin.androidtv.preference.UserPreferences;
-import org.jellyfin.androidtv.preference.constant.AudioCodecOut;
 import org.jellyfin.androidtv.preference.constant.LanguagesAudio;
 import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle;
 import org.jellyfin.apiclient.model.entities.MediaStream;
@@ -23,9 +22,11 @@ import org.jellyfin.apiclient.model.entities.MediaStreamType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
+import java.util.Set;
 import java.util.TreeMap;
 
 import kotlin.Lazy;
@@ -89,6 +90,7 @@ public class AudioSubtitleHelper {
             "song", -200
     );
     final static Map<String, Integer> AUDIO_FILTERS = Map.of(
+            "atmos", 2,
             "commentar", -99,
             "description", -99
     );
@@ -197,6 +199,7 @@ public class AudioSubtitleHelper {
             if (prefs.mHasDtsDecoder) {
                 merit_profile = new HashMap<>(AUDIO_PROFILES);
                 merit_codec.put(Codec.Audio.DTS, AUDIO_CODECS.get(Codec.Audio.AC3) - 1); // match eac3 with MA
+                merit_filter.put("dts:x", 2); // match atmos
             } else {
                 merit_profile = new HashMap<>();
             }
@@ -601,5 +604,18 @@ public class AudioSubtitleHelper {
             }
         }
         return new Pair<>(numAudioTracks, numSubTracks);
+    }
+
+    public static int getNumAudioLang(@Nullable ArrayList<MediaStream> mediaStreams) {
+        if (isEmpty(mediaStreams)) {
+            return 0;
+        }
+        Set<String> audioLangs = new HashSet<>();
+        for (MediaStream stream : mediaStreams) {
+            if (stream.getType() == MediaStreamType.Audio && isNonEmptyTrim(stream.getLanguage())) {
+                audioLangs.add(stream.getLanguage());
+            }
+        }
+        return audioLangs.size();
     }
 }
