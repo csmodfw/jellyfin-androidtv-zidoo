@@ -55,7 +55,7 @@ import timber.log.Timber;
 abstract class PlayerTask implements Runnable {
     final protected Lazy<ApiClient> apiClient = inject(ApiClient.class);
     private HandlerThread mHandlerThread = null;
-    protected Handler mTaskHandler = null;
+    private Handler mTaskHandler = null;
     protected boolean mIsFinished = false;
     final public long mActivityStartTime;
     protected Long mActivityStopTime = null;
@@ -97,6 +97,13 @@ abstract class PlayerTask implements Runnable {
         } else {
             return (int) (System.currentTimeMillis() - mActivityStartTime);
         }
+    }
+
+    protected boolean post(Runnable runnable, int delay) {
+        if (!mIsFinished && mTaskHandler != null && runnable != null) {
+            return mTaskHandler.postDelayed(runnable, delay);
+        }
+        return false;
     }
 }
 
@@ -152,7 +159,7 @@ class MountTask extends PlayerTask {
             finishTask();
         }
         if (!mIsFinished) {
-            mTaskHandler.post(this);
+            post(this, 0);
         }
     }
 
@@ -203,7 +210,7 @@ class TmdbTask extends PlayerTask {
         mParentItem = null;
         mOriginalLanguageTmdb = null;
         mCallback = callback;
-        mTaskHandler.post(this); // start
+        post(this, 0); // start
     }
 
     @Override
@@ -241,7 +248,7 @@ class TmdbTask extends PlayerTask {
                     if (response.getBaseItemType() == BaseItemType.Series && response.getProviderIds() != null) {
                         if (response.getProviderIds().containsKey("Tmdb") || response.getProviderIds().containsKey("Tvdb")) {
                             mParentItem = response;
-                            mTaskHandler.post(TmdbTask.this);
+                            post(TmdbTask.this, 0);
                         }
                     }
                 }
@@ -337,7 +344,7 @@ abstract class ZidooTask extends PlayerTask {
             mStreamInfo.setItemId(item.getId());
             mPlayMethod = PlayMethod.DirectPlay;
         }
-        mTaskHandler.postDelayed(this, taskDelay); // startup
+        post(this, taskDelay); // startup
     }
 
     public void SetTmdbLang(@Nullable TmdbTask tmdbTask) {
@@ -518,7 +525,7 @@ class ZidooStartupTask extends ZidooTask {
             this.finishTask();
         } else if (activityPlayTime < API_ZIDOO_STARTUP_TIMEOUT) {
             Timber.d("zidooStartupTask testing failed, try again in %s ms", API_ZIDOO_STARTUP_RETRY_INTERVAL);
-            mTaskHandler.postDelayed(this, API_ZIDOO_STARTUP_RETRY_INTERVAL); // try again
+            post(this, API_ZIDOO_STARTUP_RETRY_INTERVAL); // try again
         } else {
             Timber.e("zidooStartupTask timeout reached, giving-up!");
             this.finishTask();
@@ -586,7 +593,7 @@ class ZidooReportTask extends ZidooTask {
                     ReportingHelper.reportProgress(null, mItem, mStreamInfo, (long) mSeekPos * RUNTIME_TICKS_TO_MS, false);
                 }
                 // NOTE: quick first report, so streams get set correctly and we get initial Audio/Sub index
-                mTaskHandler.postDelayed(this, 4000);
+                post(this, 4000);
                 return;
             }
         }
@@ -597,11 +604,11 @@ class ZidooReportTask extends ZidooTask {
                 this.finishTask();
                 mActivity.finish();
             } else {
-                mTaskHandler.postDelayed(this, 1000); // try again in a second
+                post(this, 1000); // try again in a second
                 Timber.d("ZidooReportTask detected Zidoo player http-api status error, trying again in 1000 ms.");
             }
         } else {
-            mTaskHandler.postDelayed(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
+            post(this, API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL);
             mZidooReportTaskErrorCount = 0; // reset
         }
     }
