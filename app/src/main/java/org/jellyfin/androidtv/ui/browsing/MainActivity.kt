@@ -1,6 +1,9 @@
 package org.jellyfin.androidtv.ui.browsing
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import androidx.fragment.app.add
 import androidx.fragment.app.replace
 import org.jellyfin.androidtv.R
@@ -23,5 +26,18 @@ class MainActivity : BaseActivity(R.layout.fragment_content_view) {
 			.commit()
 
 		backgroundService.attach(this)
+	}
+
+	private var doubleBackToExitPressedOnce = false
+	override fun onBackPressed() {
+		if (doubleBackToExitPressedOnce) {
+			super.onBackPressed()
+			return
+		}
+
+		this.doubleBackToExitPressedOnce = true
+		Toast.makeText(this, getString(R.string.exit_app_back_info), Toast.LENGTH_SHORT).show()
+
+		Handler(Looper.getMainLooper()).postDelayed(Runnable { doubleBackToExitPressedOnce = false }, 2000)
 	}
 }

@@ -482,6 +482,9 @@
     <string name="home_section_livetv">Live TV</string>
     <string name="home_section_none">None</string>
     <string name="home_section_i">Home section %1$d</string>
+    <string name="home_section_scaleing">Home section Ui scaling</string>
+    <string name="pref_home_section_scaleing_1">Home Scaling</string>
+    <string name="pref_home_section_scaleing_2">My Media extra Scaling</string>
     <string name="searchable_hint">Search Jellyfin</string>
     <string name="searchable_settings_description">Media</string>
     <string name="pref_subtitles_background_title">Enable background</string>
@@ -540,4 +543,5 @@
     <string name="pref_crash_report_logs_disabled">Logs will not be included in crash reports</string>
     <string name="crash_report_toast">Oops! Something went wrong, a crash report was send to your Jellyfin server.</string>
     <string name="server_setup_incomplete">The setup of this server has not been completed. Open Jellyfin in a web browser to finish setup before signing in.</string>
+    <string name="exit_app_back_info">Please press BACK again to exit</string>
 </resources>

@@ -1,20 +1,21 @@
 package org.jellyfin.androidtv.ui.home
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.core.view.ViewCompat
 import androidx.leanback.widget.ArrayObjectAdapter
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactor
+import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactorUserView
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
+import org.jellyfin.androidtv.ui.browsing.MainActivity
 import org.jellyfin.androidtv.ui.browsing.RowLoader
 import org.jellyfin.androidtv.ui.browsing.StdRowsFragment
 import org.jellyfin.androidtv.ui.playback.AudioEventListener
@@ -23,6 +24,7 @@ import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.PositionableListRowPresenter
 import org.jellyfin.androidtv.util.apiclient.callApi
 import org.jellyfin.apiclient.interaction.ApiClient
+import org.jellyfin.apiclient.model.dto.BaseItemType
 import org.jellyfin.apiclient.model.livetv.RecommendedProgramQuery
 import org.jellyfin.apiclient.model.querying.ItemsResult
 import org.koin.android.ext.android.inject
@@ -46,11 +48,29 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	private val nowPlaying by lazy { HomeFragmentNowPlayingRow(mediaManager) }
 	private val liveTVRow by lazy { HomeFragmentLiveTVRow(requireActivity(), userRepository) }
 
+	private var homeScalePct = homeScalingFactor.defaultValue
+	private var homeScaleUserViewPct = homeScalingFactorUserView.defaultValue
+	private var homeHash: Int? = null
+
 	override fun onCreate(savedInstanceState: Bundle?) {
+		// get settings
+		homeScalePct = userSettingPreferences[homeScalingFactor]
+		homeScaleUserViewPct = userSettingPreferences[homeScalingFactorUserView]
+		homeHash = userSettingPreferences.homesections.hashCode()
+
 		// Create adapter/presenter and set it to parent
 		mRowsAdapter = ArrayObjectAdapter(PositionableListRowPresenter())
-		mCardPresenter = CardPresenter()
 		adapter = mRowsAdapter
+		// set home scaling
+		var staticHeight = CardPresenter.DEFAULT_STATIC_HEIGHT
+		if (homeScalePct != 100 && homeScalePct > 0) {
+			staticHeight = (staticHeight * (homeScalePct / 100.0)).toInt()
+		}
+		mCardPresenter = CardPresenter(true, staticHeight)
+		if (homeScaleUserViewPct != 100 && homeScaleUserViewPct > 0) {
+			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.UserView, (homeScaleUserViewPct / 100.0))
+			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.CollectionFolder, (homeScaleUserViewPct / 100.0))
+		}
 
 		super.onCreate(savedInstanceState)
 
@@ -68,6 +88,13 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	override fun onResume() {
 		super.onResume()
 
+		if (homeScalePct != userSettingPreferences[homeScalingFactor] || homeScaleUserViewPct != userSettingPreferences[homeScalingFactorUserView] || homeHash != userSettingPreferences.homesections.hashCode()) {
+			val intent = Intent(context, MainActivity::class.java)
+			// Clear navigation history
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_TASK_ON_HOME)
+			activity?.startActivity(intent)
+			activity?.finish()
+		}
 		// Update audio queue
 		Timber.i("Updating audio queue in HomeFragment (onResume)")
 		nowPlaying.update(requireContext(), mRowsAdapter)
@@ -152,7 +179,7 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 		when (type) {
 			HomeSectionType.LATEST_MEDIA -> rows.add(helper.loadRecentlyAdded(views!!))
 			HomeSectionType.LIBRARY_TILES_SMALL -> rows.add(helper.loadLibraryTiles())
-			HomeSectionType.LIBRARY_BUTTONS -> rows.add(helper.loadLibraryTiles())
+//			HomeSectionType.LIBRARY_BUTTONS -> rows.add(helper.loadLibraryTiles())
 			HomeSectionType.RESUME -> rows.add(helper.loadResumeVideo())
 			HomeSectionType.RESUME_AUDIO -> rows.add(helper.loadResumeAudio())
 			HomeSectionType.RESUME_BOOK -> Unit // Books are not (yet) supported

@@ -433,7 +433,6 @@ public class AudioSubtitleHelper {
         try {
             if (prefs.mAudioLangSetting == LanguagesAudio.ORIGINAL && isNonEmptyTrim(originalLangCode)) {
                 audioCode = getISO3LanguageCode(originalLangCode);
-                Timber.d("getBestAudioSubtitleIdx() using Tmdb code <%s>", audioCode);
             } else if (prefs.mAudioLangSetting != LanguagesAudio.AUTO && prefs.mAudioLangSetting != LanguagesAudio.DEFAULT && prefs.mAudioLangSetting != LanguagesAudio.ORIGINAL) {
                 audioCode = Locale.forLanguageTag(prefs.mAudioLangSetting.getLang()).getISO3Language();
             }
@@ -585,7 +584,7 @@ public class AudioSubtitleHelper {
         if (subIdx != null && subIdx.first != null) {
             subName = subIdx.first.getDisplayTitle();
         }
-        Timber.d("getBestAudioSubtitleIdx audio: <%s> subtitle: <%s>", audioName, subName);
+        Timber.d("getBestAudioSubtitleIdx audio: <%s> subtitle: <%s> Tmdb: <%s>", audioName, subName, originalLangCode);
         return new Pair<>(audIdx, subIdx);
     }
 

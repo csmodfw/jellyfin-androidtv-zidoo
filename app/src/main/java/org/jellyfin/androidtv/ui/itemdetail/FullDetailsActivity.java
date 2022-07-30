@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.itemdetail;
 
+import static org.jellyfin.androidtv.util.Utils.isNonEmpty;
 import static org.koin.java.KoinJavaComponent.inject;
 
 import android.app.Activity;
@@ -19,6 +20,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.PopupMenu;
 
+import androidx.annotation.Nullable;
 import androidx.core.view.ViewKt;
 import androidx.leanback.app.RowsSupportFragment;
 import androidx.leanback.widget.ArrayObjectAdapter;
@@ -464,7 +466,7 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                     mDetailsOverviewRow.setInfoItem1(firstRow);
 
                     if ((item.getRunTimeTicks() != null && item.getRunTimeTicks() > 0) || item.getOriginalRunTimeTicks() != null) {
-                        mDetailsOverviewRow.setInfoItem2(new InfoItem(getString(R.string.lbl_runs), getRunTime()));
+                        mDetailsOverviewRow.setInfoItem2(new InfoItem(getString(R.string.lbl_runs), getRunTimeString()));
                         ClockBehavior clockBehavior = userPreferences.getValue().get(UserPreferences.Companion.getClockBehavior());
                         if (clockBehavior == ClockBehavior.ALWAYS || clockBehavior == ClockBehavior.IN_MENUS) {
                             mDetailsOverviewRow.setInfoItem3(new InfoItem(getString(R.string.lbl_ends), getEndTime()));
@@ -817,14 +819,32 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
         });
     }
 
-    private String getRunTime() {
-        Long runtime = Utils.getSafeValue(mBaseItem.getRunTimeTicks(), mBaseItem.getOriginalRunTimeTicks());
+    @Nullable
+    private MediaSourceInfo getSelectedMediaSourceInfo() {
+        if (mBaseItem != null && mBaseItem.getMediaSources() != null && mBaseItem.getMediaSources().size() > selectedVersionPopupIndex) {
+            return mBaseItem.getMediaSources().get(selectedVersionPopupIndex);
+        }
+        return null;
+    }
+
+    @Nullable
+    private Long getRunTime() {
+        final MediaSourceInfo info = getSelectedMediaSourceInfo();
+        if (info != null) {
+            return Utils.getSafeValue(info.getRunTimeTicks(), mBaseItem.getOriginalRunTimeTicks());
+        } else {
+            return Utils.getSafeValue(mBaseItem.getRunTimeTicks(), mBaseItem.getOriginalRunTimeTicks());
+        }
+    }
+
+    private String getRunTimeString() {
+        Long runtime = getRunTime();
         return runtime != null && runtime > 0 ? (int) Math.ceil((double) runtime / 600000000) + getString(R.string.lbl_min) : "";
     }
 
     private String getEndTime() {
         if (mBaseItem != null && mBaseItem.getBaseItemType() != BaseItemType.MusicArtist && mBaseItem.getBaseItemType() != BaseItemType.Person) {
-            Long runtime = Utils.getSafeValue(mBaseItem.getRunTimeTicks(), mBaseItem.getOriginalRunTimeTicks());
+            Long runtime = getRunTime();
             if (runtime != null && runtime > 0) {
                 long endTimeTicks = mBaseItem.getBaseItemType() == BaseItemType.Program && mBaseItem.getEndDate() != null ? TimeUtils.convertToLocalDate(mBaseItem.getEndDate()).getTime() : System.currentTimeMillis() + runtime / 10000;
                 if (mBaseItem.getCanResume()) {
@@ -832,7 +852,6 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                 }
                 return android.text.format.DateFormat.getTimeFormat(this).format(new Date(endTimeTicks));
             }
-
         }
         return "";
     }
@@ -873,15 +892,18 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
     }
 
     private void deleteItem() {
+        final MediaSourceInfo info = getSelectedMediaSourceInfo();
+        final String itemId = (selectedVersionPopupIndex > 0 && info != null) ? info.getId() : mBaseItem.getId();
+        final String name = (selectedVersionPopupIndex > 0 && info != null) ? mBaseItem.getName() + " - " + info.getName() : mBaseItem.getName();
         new AlertDialog.Builder(mActivity)
                 .setTitle(R.string.lbl_delete)
-                .setMessage("This will PERMANENTLY DELETE " + mBaseItem.getName() + " from your library.  Are you VERY sure?")
+                .setMessage("This will PERMANENTLY DELETE <" + name + "> from your library.  Are you VERY sure?")
                 .setPositiveButton("Delete",
-                        (dialog, whichButton) -> apiClient.getValue().DeleteItem(mBaseItem.getId(), new EmptyResponse() {
+                        (dialog, whichButton) -> apiClient.getValue().DeleteItem(itemId, new EmptyResponse() {
                             @Override
                             public void onResponse() {
-                                Utils.showToast(mActivity, mBaseItem.getName() + " Deleted");
-                                dataRefreshService.getValue().setLastDeletedItemId(mBaseItem.getId());
+                                Utils.showToast(mActivity, name + " Deleted");
+                                dataRefreshService.getValue().setLastDeletedItemId(itemId);
                                 finish();
                             }
 
@@ -1020,7 +1042,11 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
         }
         //Video versions button
         if (mBaseItem.getMediaSources() != null && mBaseItem.getMediaSources().size() > 1) {
-            TextUnderButton versionsButton = TextUnderButton.create(this, R.drawable.ic_guide, buttonSize, 0, getString(R.string.select_version), new View.OnClickListener() {
+            String label = getString(R.string.select_version);
+            if (selectedVersionPopupIndex > 0) {
+                label += "\n" + mBaseItem.getMediaSources().get(selectedVersionPopupIndex).getName();
+            }
+            TextUnderButton versionsButton = TextUnderButton.create(this, R.drawable.ic_guide, buttonSize, 0, label, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (versions != null ) {
@@ -1382,17 +1408,14 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
             item.setChecked(i == selectedVersionPopupIndex);
         }
 
-        menu.getMenu().setGroupCheckable(0,true,false);
+        menu.getMenu().setGroupCheckable(0, true, false);
         menu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem menuItem) {
-                selectedVersionPopupIndex = menuItem.getItemId();
-                apiClient.getValue().GetItemAsync(versions.get(selectedVersionPopupIndex).getId(), KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString(), new Response<BaseItemDto>() {
-                    @Override
-                    public void onResponse(BaseItemDto response) {
-                        mBaseItem = response;
-                    }
-                });
+                if (selectedVersionPopupIndex != menuItem.getItemId()) {
+                    selectedVersionPopupIndex = menuItem.getItemId();
+                    new BuildDorTask().execute(mBaseItem); // refresh
+                }
                 return true;
             }
         });
@@ -1645,11 +1668,16 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                     Intent intent = new Intent(FullDetailsActivity.this, activity);
                     mediaManager.getValue().setCurrentVideoQueue(response);
                     intent.putExtra("Position", pos);
+                    if (selectedVersionPopupIndex > 0) {
+                        MediaSourceInfo info = getSelectedMediaSourceInfo();
+                        if (info != null && isNonEmpty(info.getId())) {
+                            intent.putExtra("VersionId", info.getId());
+                        }
+                    }
                     startActivity(intent);
                 }
             }
         });
-
     }
 
     protected void play(final BaseItemDto[] items, final int pos, final boolean shuffle) {
@@ -1659,7 +1687,12 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
         if (shuffle) Collections.shuffle(itemsToPlay);
         mediaManager.getValue().setCurrentVideoQueue(itemsToPlay);
         intent.putExtra("Position", pos);
+        if (selectedVersionPopupIndex > 0) {
+            MediaSourceInfo info = getSelectedMediaSourceInfo();
+            if (info != null && isNonEmpty(info.getId())) {
+                intent.putExtra("VersionId", info.getId());
+            }
+        }
         startActivity(intent);
-
     }
 }

@@ -37,8 +37,11 @@ import java.util.HashMap;
 
 public class CardPresenter extends Presenter {
     public static final double ASPECT_RATIO_BANNER = 1000.0 / 185.0;
+    public static final int DEFAULT_STATIC_HEIGHT = 300;
+    public static final int MIN_STATIC_HEIGHT = 80; // anything smaller crashes the Presenter
 
-    private int mStaticHeight = 300;
+    private int mStaticHeight = DEFAULT_STATIC_HEIGHT;
+    private HashMap<BaseItemType, Double> mStaticHeightScaleMap = new HashMap<>();
     private ImageType mImageType = ImageType.POSTER;
     private double aspect;
 
@@ -89,7 +92,11 @@ public class CardPresenter extends Presenter {
         }
 
         public void setItem(BaseRowItem m) {
-            setItem(m, ImageType.POSTER, 260, 300, 300);
+            int staticHeight = mStaticHeight;
+            if (m.getBaseItemType() != null && mStaticHeightScaleMap.containsKey(m.getBaseItemType())) {
+                staticHeight = (int) (mStaticHeightScaleMap.get(m.getBaseItemType()) * mStaticHeight);
+            }
+            setItem(m, ImageType.POSTER, 260, 300, Math.max(staticHeight, MIN_STATIC_HEIGHT));
         }
 
         public void setItem(BaseRowItem m, ImageType imageType, int lHeight, int pHeight, int sHeight) {
@@ -382,7 +389,11 @@ public class CardPresenter extends Presenter {
         }
 
         ViewHolder holder = (ViewHolder) viewHolder;
-        holder.setItem(rowItem, mImageType, 260, 300, mStaticHeight);
+        int staticHeight = mStaticHeight;
+        if (rowItem.getBaseItemType() != null && mStaticHeightScaleMap.containsKey(rowItem.getBaseItemType())) {
+            staticHeight = (int) (mStaticHeightScaleMap.get(rowItem.getBaseItemType()) * mStaticHeight);
+        }
+        holder.setItem(rowItem, mImageType, 260, 300, Math.max(staticHeight, MIN_STATIC_HEIGHT));
 
         holder.mCardView.setTitleText(rowItem.getCardName(holder.mCardView.getContext()));
         holder.mCardView.setContentText(rowItem.getSubText(holder.mCardView.getContext()));
@@ -449,4 +460,6 @@ public class CardPresenter extends Presenter {
     public void setUniformAspect(boolean uniformAspect) {
         isUniformAspect = uniformAspect;
     }
+
+    public void setStaticHeightScaleFactorForType(BaseItemType type, double scaleFactor) { mStaticHeightScaleMap.put(type, scaleFactor); }
 }

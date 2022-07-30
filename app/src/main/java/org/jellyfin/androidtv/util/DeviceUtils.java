@@ -57,6 +57,10 @@ public class DeviceUtils {
         return getBuildModel().equals(FIRE_STICK_MODEL_GEN_1);
     }
 
+    public static boolean isFireTvGen2() {
+        return getBuildModel().equals(FIRE_TV_MODEL_GEN_2);
+    }
+
     public static boolean isFireTvStick4k() {
         return Arrays.asList(FIRE_STICK_4K_MODEL, FIRE_STICK_4K_MAX_MODEL)
             .contains(getBuildModel());

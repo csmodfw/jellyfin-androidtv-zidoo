@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.playback;
 
+import static org.jellyfin.androidtv.util.Utils.isNonEmpty;
 import static org.koin.java.KoinJavaComponent.inject;
 
 import android.annotation.TargetApi;
@@ -31,7 +32,6 @@ import org.jellyfin.androidtv.util.TimeUtils;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.ReportingHelper;
 import org.jellyfin.androidtv.util.apiclient.StreamHelper;
-import org.jellyfin.androidtv.util.profile.BaseProfile;
 import org.jellyfin.androidtv.util.profile.ExoPlayerProfile;
 import org.jellyfin.androidtv.util.profile.LibVlcProfile;
 import org.jellyfin.androidtv.util.sdk.compat.ModelCompat;
@@ -203,6 +203,15 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 return mediaSources.get(0);
             }
         }
+    }
+
+    public boolean checkCurrentMediaSourceHasId(@NonNull String sourceId) {
+        for (MediaSourceInfo source : getCurrentlyPlayingItem().getMediaSources()) {
+            if (source.getId().equals(sourceId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public StreamInfo getCurrentStreamInfo() {
@@ -426,10 +435,10 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     }
 
     public void play(long position) {
-        play(position, null);
+        play(position, null, null);
     }
 
-    private void play(long position, @Nullable Integer forcedSubtitleIndex) {
+    public void play(long position, @Nullable Integer forcedSubtitleIndex, @Nullable String versionSourceId) {
         Timber.d("Play called from state: %s with pos: %d and sub index: %d", mPlaybackState, position, forcedSubtitleIndex);
 
         if (position < 0) {
@@ -531,8 +540,8 @@ public class PlaybackController implements PlaybackControllerNotifiable {
 
                 int maxBitrate = Utils.getMaxBitrate();
                 Timber.d("Max bitrate is: %d", maxBitrate);
-                VideoOptions vlcOptions = buildVLCOptions(forcedSubtitleIndex, item, maxBitrate);
-                VideoOptions internalOptions = buildExoPlayerOptions(forcedSubtitleIndex, item, maxBitrate);
+                VideoOptions vlcOptions = buildVLCOptions(forcedSubtitleIndex, item, maxBitrate, versionSourceId);
+                VideoOptions internalOptions = buildExoPlayerOptions(forcedSubtitleIndex, item, maxBitrate, versionSourceId);
 
                 playInternal(getCurrentlyPlayingItem(), position, vlcOptions, internalOptions);
                 mPlaybackState = PlaybackState.BUFFERING;
@@ -541,6 +550,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                     mFragment.setCurrentTime(position);
                 }
 
+                // FIXME @Andy needs version/source handling for correct duration (versions may be shorter/longer)
                 long duration = getCurrentlyPlayingItem().getRunTimeTicks() != null ? getCurrentlyPlayingItem().getRunTimeTicks() / 10000 : -1;
                 if (mVideoManager != null)
                     mVideoManager.setMetaDuration(duration);
@@ -550,7 +560,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     }
 
     @NonNull
-    private VideoOptions buildExoPlayerOptions(@Nullable Integer forcedSubtitleIndex, BaseItemDto item, int maxBitrate) {
+    private VideoOptions buildExoPlayerOptions(@Nullable Integer forcedSubtitleIndex, BaseItemDto item, int maxBitrate, @Nullable String sourceId) {
         VideoOptions internalOptions = new VideoOptions();
         internalOptions.setItemId(item.getId());
         internalOptions.setMediaSources(item.getMediaSources());
@@ -558,26 +568,28 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         if (exoErrorEncountered || (isLiveTv && !directStreamLiveTv))
             internalOptions.setEnableDirectStream(false);
         internalOptions.setMaxAudioChannels(Utils.downMixAudio(mFragment.getContext()) ? 2 : null); //have to downmix at server
-        internalOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
-        internalOptions.setMediaSourceId(forcedSubtitleIndex != null ? getCurrentMediaSource().getId() : null);
-        DeviceProfile internalProfile = new BaseProfile();
-        if (DeviceUtils.is60() || userPreferences.getValue().get(UserPreferences.Companion.getAc3Enabled())) {
-            internalProfile = new ExoPlayerProfile(
-                    mFragment.getContext(),
-                    isLiveTv,
-                    userPreferences.getValue().get(UserPreferences.Companion.getLiveTvDirectPlayEnabled()),
-                    userPreferences.getValue().get(UserPreferences.Companion.getAc3Enabled())
-            );
-            Timber.i("*** Using extended Exoplayer profile options");
-        } else {
-            Timber.i("*** Using default android profile");
+        if (isNonEmpty(sourceId) && checkCurrentMediaSourceHasId(sourceId) || (forcedSubtitleIndex != null)) {
+            if (isNonEmpty(sourceId)) {
+                internalOptions.setMediaSourceId(sourceId);
+            } else {
+                internalOptions.setMediaSourceId(getCurrentMediaSource().getId());
+            }
         }
+        if (forcedSubtitleIndex != null) {
+            internalOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
+        }
+        DeviceProfile internalProfile = new ExoPlayerProfile(
+                mFragment.getContext(),
+                isLiveTv,
+                userPreferences.getValue().get(UserPreferences.Companion.getLiveTvDirectPlayEnabled()),
+                userPreferences.getValue().get(UserPreferences.Companion.getAc3Enabled())
+        );
         internalOptions.setProfile(internalProfile);
         return internalOptions;
     }
 
     @NonNull
-    private VideoOptions buildVLCOptions(@Nullable Integer forcedSubtitleIndex, BaseItemDto item, int maxBitrate) {
+    private VideoOptions buildVLCOptions(@Nullable Integer forcedSubtitleIndex, BaseItemDto item, int maxBitrate,@Nullable String sourceId) {
         VideoOptions vlcOptions = new VideoOptions();
         vlcOptions.setItemId(item.getId());
         vlcOptions.setMediaSources(item.getMediaSources());
@@ -587,8 +599,16 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             vlcOptions.setEnableDirectStream(false);
             vlcOptions.setEnableDirectPlay(false);
         }
-        vlcOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
-        vlcOptions.setMediaSourceId(forcedSubtitleIndex != null ? getCurrentMediaSource().getId() : null);
+        if (isNonEmpty(sourceId) && checkCurrentMediaSourceHasId(sourceId) || (forcedSubtitleIndex != null)) {
+            if (isNonEmpty(sourceId)) {
+                vlcOptions.setMediaSourceId(sourceId);
+            } else {
+                vlcOptions.setMediaSourceId(getCurrentMediaSource().getId());
+            }
+        }
+        if (forcedSubtitleIndex != null) {
+            vlcOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
+        }
         DeviceProfile vlcProfile = new LibVlcProfile(mFragment.getContext(), isLiveTv);
         vlcOptions.setProfile(vlcProfile);
         return vlcOptions;
@@ -972,7 +992,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             mCurrentOptions.setSubtitleStreamIndex(-1);
             if (burningSubs) {
                 stop();
-                play(mCurrentPosition, -1);
+                play(mCurrentPosition, -1, null);
             }
             return;
         }
@@ -996,7 +1016,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             stop();
             if (mFragment != null && streamInfo.getDeliveryMethod() == SubtitleDeliveryMethod.Encode)
                 Utils.showToast(mFragment.getContext(), mFragment.getString(R.string.msg_burn_sub_warning));
-            play(mCurrentPosition, index);
+            play(mCurrentPosition, index, null);
             return;
         }
 

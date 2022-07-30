@@ -28,11 +28,11 @@ class CustomizationPreferencesScreen : OptionsFragment() {
 				bind(userPreferences, UserPreferences.appTheme)
 			}
 
-			checkbox {
-				setTitle(R.string.lbl_enable_seasonal_themes)
-				setContent(R.string.desc_seasonal_themes)
-				bind(userPreferences, UserPreferences.seasonalGreetingsEnabled)
-			}
+//			checkbox {
+//				setTitle(R.string.lbl_enable_seasonal_themes)
+//				setContent(R.string.desc_seasonal_themes)
+//				bind(userPreferences, UserPreferences.seasonalGreetingsEnabled)
+//			}
 
 			enum<ClockBehavior> {
 				setTitle(R.string.pref_clock_display)

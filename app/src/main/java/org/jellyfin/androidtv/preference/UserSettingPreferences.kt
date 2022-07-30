@@ -17,6 +17,9 @@ class UserSettingPreferences(
 		val skipBackLength = intPreference("skipBackLength", 10000)
 		val skipForwardLength = intPreference("skipForwardLength", 30000)
 
+		val homeScalingFactor = intPreference("homeScalingFactor", 100)
+		val homeScalingFactorUserView = intPreference("homeScalingFactorUserView", 100)
+
 		val homesection0 = enumPreference("homesection0", HomeSectionType.LIBRARY_TILES_SMALL)
 		val homesection1 = enumPreference("homesection1", HomeSectionType.RESUME)
 		val homesection2 = enumPreference("homesection2", HomeSectionType.RESUME_AUDIO)

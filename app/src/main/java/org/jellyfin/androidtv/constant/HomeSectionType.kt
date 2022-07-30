@@ -18,8 +18,8 @@ enum class HomeSectionType(
 	@EnumDisplayOptions(R.string.home_section_library)
 	LIBRARY_TILES_SMALL("smalllibrarytiles"),
 
-	@EnumDisplayOptions(R.string.home_section_library_small)
-	LIBRARY_BUTTONS("librarybuttons"),
+//	@EnumDisplayOptions(R.string.home_section_library_small)
+//	LIBRARY_BUTTONS("librarybuttons"),
 
 	@EnumDisplayOptions(R.string.home_section_resume)
 	RESUME("resume"),
