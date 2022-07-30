@@ -827,9 +827,10 @@ public class ExternalPlayerActivity extends FragmentActivity {
         zidooIntent.setDataAndType(pathUri, "video/" + container);
         try {
             mLastPlayerStart = System.currentTimeMillis();
-            mZidooTask = new ZidooStartupTask(this, mPrefs, mCurrentItem, mSeekPosition, mCurrentStreamInfo, 2000,()-> {
+            mZidooTask = new ZidooStartupTask(this, mPrefs, mCurrentItem, mSeekPosition, mCurrentStreamInfo, 2000, ()-> {
                 mZidooTask = new ZidooReportTask(mZidooTask, mSeekPosition, 5000); // HACK delay more to make subtitle selection stick at Zidoo "Auto" settings
-            } );
+                mZidooTask.SetTmdbLang(mTmdbTask);
+            });
             startActivityForResult(zidooIntent, API_ZIDOO_REQUEST_CODE); // NOTE: ZDMCActivity is just a wrapper for MovieActivity and will finish() directly, while not sending any results!
         } catch (ActivityNotFoundException e) {
             noPlayerError = true;
@@ -917,7 +918,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
 
         try {
             mLastPlayerStart = System.currentTimeMillis();
-            mZidooTask = new ZidooStartupTask(this, mPrefs, mCurrentItem, mSeekPosition, mCurrentStreamInfo, 2000, () -> {
+            mZidooTask = new ZidooStartupTask(this, mPrefs, mCurrentItem, mSeekPosition, mCurrentStreamInfo, 2000, ()-> {
                 mZidooTask = new ZidooReportTask(mZidooTask, mSeekPosition, 5000); // HACK delay more to make subtitle selection stick at Zidoo "Auto" settings
                 mZidooTask.SetTmdbLang(mTmdbTask);
             });

@@ -565,12 +565,12 @@ class ZidooReportTask extends ZidooTask {
             }
         }
         if (started) {
-            if (mPlayMethod != PlayMethod.Transcode && mPlayStatus == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING) {
+            if (mPlayStatus == API_ZIDOO_HTTP_API_VIDEOPLAY_STATUS_PLAYING) {
                 if (mInitialAudioSubIdx == null) {
                     mInitialAudioSubIdx = new Pair<>(mCurrentAudioIdx, mCurrentSubIdx); // first set after API_ZIDOO_HTTP_API_REPORT_LOOP_INTERVAL ??
                     Timber.d("ZidooReportTask Initial audioIdx: <%s> subTitleIdx: <%s>", mCurrentAudioIdx, mCurrentSubIdx);
                 }
-                if (mPlayPos != null && mPlayPos > 0) {
+                if (mPlayMethod != PlayMethod.Transcode && mPlayPos != null && mPlayPos > 0) {
                     ReportingHelper.reportProgress(null, mItem, mStreamInfo, (long) mPlayPos * RUNTIME_TICKS_TO_MS, false);
                     Timber.d("ZidooReportTask reportProgress Status: <%s> Position: <%s> audioIdx: <%s> subIdx: <%s>", mPlayStatus, getMillisecondsFormated(mPlayPos), mCurrentAudioIdx, mCurrentSubIdx);
                 }
