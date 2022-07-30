@@ -400,7 +400,13 @@ abstract class ZidooTask extends PlayerTask {
     protected void setBestTracks() {
         if (bestAudioSubIdxZidoo == null && mPrefs.mAudioLangSetting != LanguagesAudio.DEVICE) {
             // delay until needed
-            bestAudioSubIdxZidoo = convertToZidooIndex(getBestAudioSubtitleIdx(mStreamInfo.getMediaSource().getMediaStreams(), mPrefs, mTmdbOrgLang));
+            Pair<Integer, Integer> audioSubIdx = convertToZidooIndex(getBestAudioSubtitleIdx(mStreamInfo.getMediaSource().getMediaStreams(), mPrefs, mTmdbOrgLang));
+            if (mStreamInfo.getPlayMethod() == PlayMethod.Transcode) {
+                int subIdx = audioSubIdx.second > 0 ? 1 : 0; // we have only one sub here
+                bestAudioSubIdxZidoo = new Pair<>(0, subIdx);
+            } else {
+                bestAudioSubIdxZidoo = audioSubIdx;
+            }
         }
         if (bestAudioSubIdxZidoo != null) {
             // handle audio/sub tracks

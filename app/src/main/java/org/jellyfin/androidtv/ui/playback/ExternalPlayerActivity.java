@@ -592,20 +592,27 @@ public class ExternalPlayerActivity extends FragmentActivity {
         launchExternalPlayer();
     }
 
+    @NonNull
+    private StreamInfo buildStreamInfoSendPath() {
+        StreamInfo info = new StreamInfo();
+        info.setContext(EncodingContext.Static);
+        info.setDeviceId(api.getValue().getDeviceInfo().getId());
+        info.setMediaType(DlnaProfileType.Video);
+        info.setPlayMethod(PlayMethod.DirectPlay);
+        info.setItemId(mCurrentItem.getId());
+        info.setMediaSource(mCurrentMediaSource);
+        info.setRunTimeTicks(mCurrentMediaSource.getRunTimeTicks());
+        info.setContainer(mCurrentMediaSource.getContainer());
+        info.setStartPositionTicks(mSeekPosition * RUNTIME_TICKS_TO_MS);
+
+        return info;
+    }
+
     protected void launchExternalPlayer() {
         isLiveTv = mCurrentItem.getBaseItemType() == BaseItemType.TvChannel;
         if (!isLiveTv && mUseSendPath && !mAllowTranscoding) {
             // build fake streamInfo so report logic can work
-            mCurrentStreamInfo = new StreamInfo();
-            mCurrentStreamInfo.setContext(EncodingContext.Static);
-            mCurrentStreamInfo.setDeviceId(api.getValue().getDeviceInfo().getId());
-            mCurrentStreamInfo.setMediaType(DlnaProfileType.Video);
-            mCurrentStreamInfo.setPlayMethod(PlayMethod.DirectPlay);
-            mCurrentStreamInfo.setItemId(mCurrentItem.getId());
-            mCurrentStreamInfo.setMediaSource(mCurrentMediaSource);
-            mCurrentStreamInfo.setRunTimeTicks(mCurrentMediaSource.getRunTimeTicks());
-            mCurrentStreamInfo.setContainer(mCurrentMediaSource.getContainer());
-            mCurrentStreamInfo.setStartPositionTicks(mSeekPosition * RUNTIME_TICKS_TO_MS);
+            mCurrentStreamInfo = buildStreamInfoSendPath();
             // Just pass the path directly
             Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle() + "\n\n" + PlayMethod.DirectPlay);
             Uri uri = getSendPathUri(mCurrentItem, mCurrentMediaSource);
@@ -815,7 +822,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
         }
 
         String container = mCurrentStreamInfo.getContainer();
-        Timber.i("Starting external Zidoo ZDMCActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ", pathUri.getHost(), container, mSeekPosition, getMillisecondsFormated(mSeekPosition), pathUri.getPath());
+        Timber.i("Starting external ZDMCActivity playback from <%s> at position <%s> ms, <%s> with path <%s> ", pathUri.getHost(), mSeekPosition, getMillisecondsFormated(mSeekPosition), pathUri.getPath());
 
         zidooIntent.setDataAndType(pathUri, "video/" + container);
         try {
@@ -887,21 +894,26 @@ public class ExternalPlayerActivity extends FragmentActivity {
         if (mPrefs.mAudioLangSetting != LanguagesAudio.DEVICE) {
             String orgLang = mTmdbTask != null ? mTmdbTask.getOriginalLanguage(mCurrentItem.getId(), mCurrentItem.getSeriesId()) : null;
             Pair<Integer, Integer> audioSubIdx = ZidooTask.convertToZidooIndex(getBestAudioSubtitleIdx(mCurrentStreamInfo.getMediaSource().getMediaStreams(), mPrefs, orgLang));
-            Timber.d("Intent audioIdx <%s> subIdx<%s>", audioSubIdx.first, audioSubIdx.second);
-            // always set, so "off" works correctly vs Zidoo Bookmarks logic
-            zidooIntent.putExtra(API_ZIDOO_AUDIO_IDX, audioSubIdx.first);
-            zidooIntent.putExtra(API_ZIDOO_SUBTITLE_IDX, audioSubIdx.second);
+            if (mCurrentStreamInfo.getPlayMethod() == PlayMethod.Transcode) {
+                int subIdx = audioSubIdx.second > 0 ? 1 : 0; // we have only one sub here
+                zidooIntent.putExtra(API_ZIDOO_AUDIO_IDX, 0); // only one track
+                zidooIntent.putExtra(API_ZIDOO_SUBTITLE_IDX, subIdx);
+                Timber.d("Intent audioIdx <%s> subIdx <%s>", 0, subIdx);
+            } else {
+                zidooIntent.putExtra(API_ZIDOO_AUDIO_IDX, audioSubIdx.first);
+                zidooIntent.putExtra(API_ZIDOO_SUBTITLE_IDX, audioSubIdx.second); // always set, so "off" works correctly vs Zidoo Bookmarks logic
+                Timber.d("Intent audioIdx <%s> subIdx <%s>", audioSubIdx.first, audioSubIdx.second);
+            }
         }
         zidooIntent.putExtra(API_ZIDOO_RETURN_RESULT, true);
 //        zidooIntent.putExtra(API_ZIDOO_SOURCEFROM, API_ZIDOO_SOURCEFROM_LOCAL); // still needed for old FW?
-
 //        zidooIntent.putExtra(API_ZIDOO_PLAY_BROADCAST_STATUS, false);
 //        zidooIntent.putExtra(API_ZIDOO_PLAYMODEL, 5); // >= 0 isStream only = no overlay/menus!
 //        zidooIntent.putExtra(API_ZIDOO_PLAY_USE_RT_MEDIA_PLAYER, true);
 
         String container = mCurrentStreamInfo.getContainer();
         zidooIntent.setDataAndType(pathUri, "video/" + container);
-        Timber.i("Starting external Zidoo MovieActivity playback from <%s> and mime: video/%s at position: %d ms, <%s> with path: %s ", pathUri.getHost(), container, mSeekPosition, getMillisecondsFormated(mSeekPosition), pathUri.getPath());
+        Timber.i("Starting external MovieActivity playback <%s> from <%s> at position <%s> ms, <%s> with path <%s>", mCurrentStreamInfo.getPlayMethod().toString(), pathUri.getHost(), mSeekPosition, getMillisecondsFormated(mSeekPosition), pathUri.getPath());
 
         try {
             mLastPlayerStart = System.currentTimeMillis();
