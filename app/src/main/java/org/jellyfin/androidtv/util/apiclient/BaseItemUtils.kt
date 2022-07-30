@@ -6,6 +6,7 @@ import android.content.Context
 import android.text.format.DateFormat
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.model.ChapterItemInfo
+import org.jellyfin.androidtv.ui.browsing.MainActivity
 import org.jellyfin.androidtv.ui.livetv.TvManager
 import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.androidtv.util.sdk.compat.asSdk
@@ -21,7 +22,7 @@ import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.model.api.ImageType
 import org.jellyfin.sdk.model.serializer.toUUID
 import org.koin.java.KoinJavaComponent.inject
-import java.util.Calendar
+import java.util.*
 
 // TODO Feature Envy!!! Wants to live in BaseItemDto.
 fun BaseItemDto.isLiveTv() =
@@ -79,7 +80,10 @@ fun BaseItemDto.getSubName(context: Context): String? = when (baseItemType) {
 		else -> ""
 	}
 	BaseItemType.Audio -> name
-	else -> officialRating
+	else -> when (context) {
+		is MainActivity -> ""
+		else -> officialRating
+	}
 }
 
 fun BaseItemDto.getProgramUnknownChannelName(): String? =
