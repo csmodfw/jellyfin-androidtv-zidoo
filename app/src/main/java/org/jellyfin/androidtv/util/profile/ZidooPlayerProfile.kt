@@ -17,9 +17,14 @@ class ZidooPlayerProfile(
 		Codec.Audio.EAC3,
 		Codec.Audio.TRUEHD,
 	)
+	private val codecsDTS = arrayOf(
+		Codec.Audio.DTS,
+		Codec.Audio.DCA,
+	)
 	private val codecsCommon = arrayOf(
 		Codec.Audio.AAC,
 		Codec.Audio.AAC_LATM,
+		Codec.Audio.ALAC,
 		Codec.Audio.FLAC,
 		Codec.Audio.MP2,
 		Codec.Audio.MP3,
@@ -40,6 +45,8 @@ class ZidooPlayerProfile(
 		Codec.Audio.WAV,
 		Codec.Audio.WMA,
 		Codec.Audio.WMAV2,
+		Codec.Audio.DSD,
+		Codec.Audio.MLP,
 	)
 
 	init {
@@ -84,10 +91,8 @@ class ZidooPlayerProfile(
 				).joinToString(",")
 
 				audioCodec = forcedAudioCodec ?: buildList {
-					addAll(codecsDolby)
-					if (isDTSEnabled) add(Codec.Audio.DTS)
-					addAll(codecsCommon)
-					add(Codec.Audio.DSD)
+					addAll(codecsDolby + codecsCommon + codecsPcm + codecsRare)
+					if (isDTSEnabled) addAll(codecsDTS)
 				}.joinToString(",")
 			}
 		)
@@ -130,9 +135,9 @@ class ZidooPlayerProfile(
 					add(Codec.Video.H264)
 				}.joinToString(",")
 				audioCodec = forcedAudioCodec ?: buildList {
-					addAll(codecsDolby)
-					if (isDTSEnabled) add(Codec.Audio.DTS)
-					if (isExtraSurroundEnabled) addAll(codecsCommon)
+					addAll(codecsDolby + codecsPcm)
+					if (isDTSEnabled) addAll(codecsDTS)
+					if (isExtraSurroundEnabled) addAll(codecsCommon + codecsRare)
 				}.joinToString(",")
 				copyTimestamps = false
 				maxAudioChannels = forceNumChannels?.toString() ?: "8"
@@ -159,15 +164,12 @@ class ZidooPlayerProfile(
 				)
 			},
 			// Audio-channels: Dolby is 6,8 with atmos at 7.1.4
-			if (isDTSEnabled)
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby.plus(Codec.Audio.DTS), forceNumChannels ?: 8)
-			else
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby, forceNumChannels ?: 8)
-			,
+			ProfileHelper.maxAudioChannelsCodecProfile(codecsDolby + codecsPcm, forceNumChannels ?: 8),
+			if (isDTSEnabled) ProfileHelper.maxAudioChannelsCodecProfile(codecsDTS, forceNumChannels ?: 8) else null,
 			if (isExtraSurroundEnabled)
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, forceNumChannels ?: 8)
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon + codecsRare, forceNumChannels ?: 8)
 			else
-				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon, 2)
+				ProfileHelper.maxAudioChannelsCodecProfile(codecsCommon + codecsRare, 2)
 		).toTypedArray()
 
 		subtitleProfiles = arrayOf(

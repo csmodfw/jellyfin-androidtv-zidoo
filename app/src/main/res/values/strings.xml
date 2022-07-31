@@ -215,7 +215,7 @@
     <string name="lbl_enable_extra_surround_codecs">Enable none bitstream surround codecs</string>
     <string name="desc_enable_extra_surround_codecs">Allow 5.1 audio output for more codecs (aac, ogg, opus, flac).</string>
     <string name="lbl_force_stereo_audio">Force Stereo audio</string>
-    <string name="desc_force_stereo_audio">Downmix all audio to Stereo.</string>
+    <string name="desc_force_stereo_audio">Downmix all audio to Stereo via server transcode.</string>
     <string name="lbl_forced_audio_codec">Force audio codec</string>
     <string name="lbl_no_forced_subs">No forced subtitle</string>
     <string name="desc_no_forced_subs">Do not display forced subtitles.</string>
@@ -276,9 +276,9 @@
     <string name="acra_dialog_title">Oh no! Something went wrong.</string>
     <string name="acra_dialog_text">Would you like to send a crash report to the developers?\n\nThis information will be submitted to a third party (tracepot.com).\n\nThis prompt can be disabled in the Crash Reporting section in the Jellyfin app\'s preferences.</string>
     <string name="pref_use_direct_path_title">Enable Direct Path</string>
-    <string name="pref_use_direct_path_summary">Use server network paths (smb, nfs) too mount shares locally, instead of sending a http stream.</string>
+    <string name="pref_use_direct_path_summary">Use server network paths via local mount\'s (smb, nfs), instead of sending a http stream.</string>
     <string name="lbl_use_legacy_direct_path">Use legacy Direct Path</string>
-    <string name="desc_use_legacy_direct_path">Use old mount logic, for older firmware versions and some NFS cases.</string>
+    <string name="desc_use_legacy_direct_path">Use old mount logic, for firmware older than v6.4(7).18 and some NFS cases.</string>
     <string name="lbl_allow_transcode_fallback">Allow transcode fallback</string>
     <string name="desc_allow_transcode_fallback">Allow http transcode, if the video would not play natively.</string>
     <string name="lbl_tv_channel_status">%1$d of %2$d channels</string>

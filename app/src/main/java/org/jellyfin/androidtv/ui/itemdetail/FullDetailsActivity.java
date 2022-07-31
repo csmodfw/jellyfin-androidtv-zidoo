@@ -820,16 +820,16 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
     }
 
     @Nullable
-    private MediaSourceInfo getSelectedMediaSourceInfo() {
-        if (mBaseItem != null && mBaseItem.getMediaSources() != null && mBaseItem.getMediaSources().size() > selectedVersionPopupIndex) {
-            return mBaseItem.getMediaSources().get(selectedVersionPopupIndex);
+    private static MediaSourceInfo getMediaSourceSafe(@Nullable BaseItemDto item, int index) {
+        if (item != null && item.getMediaSources() != null && item.getMediaSources().size() > index) {
+            return item.getMediaSources().get(index);
         }
         return null;
     }
 
     @Nullable
     private Long getRunTime() {
-        final MediaSourceInfo info = getSelectedMediaSourceInfo();
+        final MediaSourceInfo info = getMediaSourceSafe(mBaseItem, selectedVersionPopupIndex);
         if (info != null) {
             return Utils.getSafeValue(info.getRunTimeTicks(), mBaseItem.getOriginalRunTimeTicks());
         } else {
@@ -892,9 +892,10 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
     }
 
     private void deleteItem() {
-        final MediaSourceInfo info = getSelectedMediaSourceInfo();
-        final String itemId = (selectedVersionPopupIndex > 0 && info != null) ? info.getId() : mBaseItem.getId();
-        final String name = (selectedVersionPopupIndex > 0 && info != null) ? mBaseItem.getName() + " - " + info.getName() : mBaseItem.getName();
+        final MediaSourceInfo info = getMediaSourceSafe(mBaseItem, selectedVersionPopupIndex);
+        final String itemId = (info != null && isNonEmpty(info.getId())) ? info.getId() : mBaseItem.getId();
+        final String versionSuffix = (info != null && isNonEmpty(info.getName()) && !info.getName().equals(mBaseItem.getName())) ? info.getName() : null;
+        final String name = versionSuffix != null ? mBaseItem.getName() + " - " + versionSuffix : mBaseItem.getName();
         new AlertDialog.Builder(mActivity)
                 .setTitle(R.string.lbl_delete)
                 .setMessage("This will PERMANENTLY DELETE <" + name + "> from your library.  Are you VERY sure?")
@@ -1043,8 +1044,12 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
         //Video versions button
         if (mBaseItem.getMediaSources() != null && mBaseItem.getMediaSources().size() > 1) {
             String label = getString(R.string.select_version);
-            if (selectedVersionPopupIndex > 0) {
-                label += "\n" + mBaseItem.getMediaSources().get(selectedVersionPopupIndex).getName();
+            MediaSourceInfo source = getMediaSourceSafe(mBaseItem, selectedVersionPopupIndex);
+            if (source != null) {
+                String versionSuffix = source.getName();
+                if (isNonEmpty(versionSuffix) && !versionSuffix.equals(mBaseItem.getName())) {
+                    label = versionSuffix; // set suffix name
+                }
             }
             TextUnderButton versionsButton = TextUnderButton.create(this, R.drawable.ic_guide, buttonSize, 0, label, new View.OnClickListener() {
                 @Override
@@ -1655,6 +1660,7 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
     }
 
     protected void play(final BaseItemDto item, final int pos, final boolean shuffle) {
+        final int sourceIndex = selectedVersionPopupIndex;
         PlaybackHelper.getItemsToPlay(item, pos <= 0 && item.getBaseItemType() == BaseItemType.Movie, shuffle, new Response<List<BaseItemDto>>() {
             @Override
             public void onResponse(List<BaseItemDto> response) {
@@ -1668,8 +1674,8 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                     Intent intent = new Intent(FullDetailsActivity.this, activity);
                     mediaManager.getValue().setCurrentVideoQueue(response);
                     intent.putExtra("Position", pos);
-                    if (selectedVersionPopupIndex > 0) {
-                        MediaSourceInfo info = getSelectedMediaSourceInfo();
+                    if (sourceIndex > 0) {
+                        MediaSourceInfo info = getMediaSourceSafe(item, sourceIndex);
                         if (info != null && isNonEmpty(info.getId())) {
                             intent.putExtra("VersionId", info.getId());
                         }
@@ -1688,7 +1694,7 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
         mediaManager.getValue().setCurrentVideoQueue(itemsToPlay);
         intent.putExtra("Position", pos);
         if (selectedVersionPopupIndex > 0) {
-            MediaSourceInfo info = getSelectedMediaSourceInfo();
+            MediaSourceInfo info = getMediaSourceSafe(mBaseItem, selectedVersionPopupIndex);
             if (info != null && isNonEmpty(info.getId())) {
                 intent.putExtra("VersionId", info.getId());
             }
