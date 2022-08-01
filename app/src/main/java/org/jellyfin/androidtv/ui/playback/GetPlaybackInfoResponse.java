@@ -7,6 +7,7 @@ import org.jellyfin.androidtv.data.compat.VideoOptions;
 import org.jellyfin.apiclient.interaction.ApiClient;
 import org.jellyfin.apiclient.interaction.QueryStringDictionary;
 import org.jellyfin.apiclient.interaction.Response;
+import org.jellyfin.apiclient.model.apiclient.ServerInfo;
 import org.jellyfin.apiclient.model.dlna.DlnaProfileType;
 import org.jellyfin.apiclient.model.dlna.PlaybackErrorCode;
 import org.jellyfin.apiclient.model.dto.MediaSourceInfo;
@@ -173,18 +174,21 @@ public class GetPlaybackInfoResponse extends Response<PlaybackInfoResponse> {
         } else if (mediaSourceInfo.getSupportsTranscoding()){
             streamInfo.setPlayMethod(PlayMethod.Transcode);
             streamInfo.setContainer(mediaSourceInfo.getTranscodingContainer());
-            // FIX: https://github.com/jellyfin/jellyfin/pull/8078
             String url = apiClient.GetApiUrl(mediaSourceInfo.getTranscodingUrl());
-            if (url != null && !url.contains("-rangetype")) {
-                // add broken, missing rangetypes
-                if (url.contains("h264-videobitdepth")) {
-                    url += "&h264-rangetype=SDR";
-                } else if (url.contains("hevc-videobitdepth=8")) {
-                    url += "&hevc-rangetype=SDR";
-                } else if (url.contains("hevc-videobitdepth=12")) {
-                    url += "&hevc-rangetype=DOVI";
-                } else if (url.contains("hevc-videobitdepth=10")) {
-                    url += "&hevc-rangetype=SDR|HDR10|DOVI|HLG";
+            // FIX: https://github.com/jellyfin/jellyfin/pull/8078
+            ServerInfo info = apiClient.getServerInfo();
+            if (info != null && ("10.8.0".equals(info.getVersion()) || "10.8.1".equals(info.getVersion()))) {
+                if (url != null && !url.contains("-rangetype")) {
+                    // add broken, missing rangetypes
+                    if (url.contains("h264-videobitdepth")) {
+                        url += "&h264-rangetype=SDR";
+                    } else if (url.contains("hevc-videobitdepth=8")) {
+                        url += "&hevc-rangetype=SDR";
+                    } else if (url.contains("hevc-videobitdepth=12")) {
+                        url += "&hevc-rangetype=DOVI";
+                    } else if (url.contains("hevc-videobitdepth=10")) {
+                        url += "&hevc-rangetype=SDR|HDR10|DOVI|HLG";
+                    }
                 }
             }
             streamInfo.setMediaUrl(url);
