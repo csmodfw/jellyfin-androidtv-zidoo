@@ -283,7 +283,6 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		return this[appTheme].hashCode() +
 				this[backdropEnabled].hashCode() +
 				this[premieresEnabled].hashCode() +
-				this[seasonalGreetingsEnabled].hashCode() +
 				this[clockBehavior].hashCode() +
 				this[defaultRatingType].hashCode() +
 				this[hideAgeRatings].hashCode() +
