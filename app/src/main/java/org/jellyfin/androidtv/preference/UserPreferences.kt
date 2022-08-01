@@ -176,6 +176,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var defaultRatingType = enumPreference("pref_rating_type", RatingType.RATING_TOMATOES)
 
 		/**
+		 * Disable display of Age-Restriction information (Text, Tags)
+		 */
+		var hideAgeRatings = booleanPreference("pref_hide_age_ratings", false)
+
+		/**
 		 * Set when watched indicators should show on MyImageCardViews
 		 */
 		var watchedIndicatorBehavior = enumPreference("pref_watched_indicator_behavior", WatchedIndicatorBehavior.ALWAYS)
@@ -282,5 +287,18 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 					})
 			}
 		}
+	}
+
+	fun getUiSettingsHash(): Int {
+		return this[appTheme].hashCode() +
+				this[backdropEnabled].hashCode() +
+				this[premieresEnabled].hashCode() +
+				this[seasonalGreetingsEnabled].hashCode() +
+				this[clockBehavior].hashCode() +
+				this[defaultRatingType].hashCode() +
+				this[hideAgeRatings].hashCode() +
+				this[watchedIndicatorBehavior].hashCode() +
+				this[seriesThumbnailsEnabled].hashCode() +
+				this[seriesThumbnailsEnabled].hashCode()
 	}
 }

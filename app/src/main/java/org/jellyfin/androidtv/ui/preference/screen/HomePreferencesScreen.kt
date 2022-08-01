@@ -3,13 +3,11 @@ package org.jellyfin.androidtv.ui.preference.screen
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.preference.UserSettingPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.hideRatings
 import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactor
-import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactorUserView
+import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactorMyMedia
 import org.jellyfin.androidtv.ui.preference.custom.DurationSeekBarPreference
-import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
-import org.jellyfin.androidtv.ui.preference.dsl.enum
-import org.jellyfin.androidtv.ui.preference.dsl.optionsScreen
-import org.jellyfin.androidtv.ui.preference.dsl.seekbar
+import org.jellyfin.androidtv.ui.preference.dsl.*
 import org.jellyfin.preference.store.PreferenceStore
 import org.koin.android.ext.android.inject
 
@@ -23,11 +21,11 @@ class HomePreferencesScreen : OptionsFragment() {
 		setTitle(R.string.home_prefs)
 
 		category {
-			setTitle(R.string.home_section_scaleing)
+			setTitle(R.string.home_section_settings)
 
 			@Suppress("MagicNumber")
 			seekbar {
-				setTitle(R.string.pref_home_section_scaleing_1)
+				setTitle(R.string.pref_home_ui_scaleing)
 				min = 30
 				max = 130
 				increment = 10
@@ -39,14 +37,19 @@ class HomePreferencesScreen : OptionsFragment() {
 
 			@Suppress("MagicNumber")
 			seekbar {
-				setTitle(R.string.pref_home_section_scaleing_2)
+				setTitle(R.string.pref_home_ui_scaleing_media)
 				min = 30
 				max = 130
 				increment = 10
 				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
 					override fun display(value: Int) = "${value}%"
 				}
-				bind(userSettingPreferences, homeScalingFactorUserView)
+				bind(userSettingPreferences, homeScalingFactorMyMedia)
+			}
+
+			checkbox {
+				setTitle(R.string.pref_hide_ratings)
+				bind(userSettingPreferences, hideRatings)
 			}
 		}
 

@@ -16,12 +16,14 @@ import android.widget.TextView;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.preference.LiveTvPreferences;
+import org.jellyfin.androidtv.preference.UserPreferences;
 import org.jellyfin.androidtv.ui.livetv.LiveTvGuide;
 import org.jellyfin.androidtv.util.InfoLayoutHelper;
 import org.jellyfin.androidtv.util.TimeUtils;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
 import org.jellyfin.apiclient.model.dto.BaseItemDto;
+import org.koin.java.KoinJavaComponent;
 
 import java.util.Date;
 
@@ -84,8 +86,10 @@ public class ProgramGridCell extends RelativeLayout implements RecordingIndicato
             InfoLayoutHelper.addBlockText(context, mInfoRow, context.getString(R.string.lbl_repeat), 10, Color.GRAY, R.color.lb_default_brand_color);
         }
 
-        if (program.getOfficialRating() != null && !program.getOfficialRating().equals("0")) {
-            InfoLayoutHelper.addBlockText(context, mInfoRow, program.getOfficialRating(), 10);
+        if (!KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getHideAgeRatings())) {
+            if (program.getOfficialRating() != null && !program.getOfficialRating().equals("0")) {
+                InfoLayoutHelper.addBlockText(context, mInfoRow, program.getOfficialRating(), 10);
+            }
         }
 
         if (liveTvPreferences.get(LiveTvPreferences.Companion.getShowHDIndicator()) && Utils.isTrue(program.getIsHD())) {

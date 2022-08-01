@@ -25,6 +25,7 @@ import org.koin.java.KoinJavaComponent;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 public class InfoLayoutHelper {
 
@@ -245,7 +246,7 @@ public class InfoLayoutHelper {
 
             TextView amt = new TextView(context);
             amt.setTextSize(textSize);
-            amt.setText(item.getCommunityRating().toString()+" ");
+            amt.setText(String.format(Locale.US, "%.1f ", item.getCommunityRating()));
             layout.addView(amt);
 
             hasSomething = true;
@@ -332,9 +333,11 @@ public class InfoLayoutHelper {
     }
 
     private static void addRatingAndRes(Context context, BaseItemDto item, LinearLayout layout) {
-        if (item.getOfficialRating() != null && !item.getOfficialRating().equals("0")) {
-            addBlockText(context, layout, item.getOfficialRating());
-            addSpacer(context, layout, "  ");
+        if (!KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getHideAgeRatings())) {
+            if (item.getOfficialRating() != null && !item.getOfficialRating().equals("0")) {
+                addBlockText(context, layout, item.getOfficialRating());
+                addSpacer(context, layout, "  ");
+            }
         }
         if (item.getMediaStreams() != null && item.getMediaStreams().size() > 0 && item.getMediaStreams().get(0).getWidth() != null && item.getMediaStreams().get(0).getHeight() != null) {
             int width = item.getMediaStreams().get(0).getWidth();

@@ -17,11 +17,11 @@ class LogInitializer : Initializer<Unit> {
 				@Suppress("TooGenericExceptionThrown")
 				throw RuntimeException(e)
 			}
-
-			// Initialize the logging library
-			Timber.plant(Timber.DebugTree())
-			Timber.i("Debug tree planted")
 		}
+
+		// Initialize the logging library
+		Timber.plant(Timber.DebugTree())
+		Timber.i("Debug tree planted")
 	}
 
 	override fun dependencies() = emptyList<Class<out Initializer<*>>>()

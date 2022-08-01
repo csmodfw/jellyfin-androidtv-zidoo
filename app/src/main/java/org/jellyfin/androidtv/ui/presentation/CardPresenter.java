@@ -34,6 +34,7 @@ import org.koin.java.KoinJavaComponent;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 
 public class CardPresenter extends Presenter {
     public static final double ASPECT_RATIO_BANNER = 1000.0 / 185.0;
@@ -46,10 +47,9 @@ public class CardPresenter extends Presenter {
     private double aspect;
 
     private boolean mShowInfo = true;
-
     private boolean isUserView = false;
-
     private boolean isUniformAspect = false;
+    private boolean hideRatings = false;
 
     public CardPresenter() {
         super();
@@ -406,7 +406,7 @@ public class CardPresenter extends Presenter {
         } else {
             holder.mCardView.setPlayingIndicator(false);
 
-            if (rowItem.getBaseItem() != null && rowItem.getBaseItemType() != BaseItemType.UserView) {
+            if (!hideRatings && rowItem.getBaseItem() != null && rowItem.getBaseItemType() != BaseItemType.UserView) {
                 RatingType ratingType = KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getDefaultRatingType());
                 if (ratingType == RatingType.RATING_TOMATOES) {
                     Drawable badge = rowItem.getBadgeImage(holder.view.getContext());
@@ -417,7 +417,7 @@ public class CardPresenter extends Presenter {
                 } else if (ratingType == RatingType.RATING_STARS &&
                         rowItem.getBaseItem().getCommunityRating() != null) {
                     holder.mCardView.setBadgeImage(ContextCompat.getDrawable(viewHolder.view.getContext(), R.drawable.ic_star));
-                    holder.mCardView.setRating(rowItem.getBaseItem().getCommunityRating().toString());
+                    holder.mCardView.setRating(String.format(Locale.US, "%.1f", rowItem.getBaseItem().getCommunityRating()));
                 }
             }
         }
@@ -462,4 +462,8 @@ public class CardPresenter extends Presenter {
     }
 
     public void setStaticHeightScaleFactorForType(BaseItemType type, double scaleFactor) { mStaticHeightScaleMap.put(type, scaleFactor); }
+
+    public void setHideRatings(boolean hide) {
+        hideRatings = hide;
+    }
 }

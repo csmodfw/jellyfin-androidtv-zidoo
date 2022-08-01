@@ -32,12 +32,12 @@ class UserPreferencesScreen : OptionsFragment() {
 				withFragment<PlaybackPreferencesScreen>()
 			}
 
-//			link {
-//				setTitle(R.string.pref_telemetry_category)
-//				setContent(R.string.pref_telemetry_description)
-//				icon = R.drawable.ic_error
-//				withFragment<CrashReportingPreferencesScreen>()
-//			}
+			link {
+				setTitle(R.string.pref_telemetry_category)
+				setContent(R.string.pref_telemetry_description)
+				icon = R.drawable.ic_error
+				withFragment<CrashReportingPreferencesScreen>()
+			}
 
 //			link {
 //				setTitle(R.string.pref_developer_link)

@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.preference
 
 import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.preference.store.DisplayPreferencesStore
+import org.jellyfin.preference.booleanPreference
 import org.jellyfin.preference.enumPreference
 import org.jellyfin.preference.intPreference
 import org.jellyfin.sdk.api.client.ApiClient
@@ -18,7 +19,9 @@ class UserSettingPreferences(
 		val skipForwardLength = intPreference("skipForwardLength", 30000)
 
 		val homeScalingFactor = intPreference("homeScalingFactor", 100)
-		val homeScalingFactorUserView = intPreference("homeScalingFactorUserView", 100)
+		val homeScalingFactorMyMedia = intPreference("homeScalingFactorMyMedia", 100)
+
+		val hideRatings = booleanPreference("hideRatings", false)
 
 		val homesection0 = enumPreference("homesection0", HomeSectionType.LIBRARY_TILES_SMALL)
 		val homesection1 = enumPreference("homesection1", HomeSectionType.RESUME)
@@ -33,4 +36,13 @@ class UserSettingPreferences(
 		get() = listOf(homesection0, homesection1, homesection2, homesection3, homesection4, homesection5, homesection6)
 			.map(::get)
 			.filterNot { it == HomeSectionType.NONE }
+
+	fun getUiSettingsHash(): Int {
+		return homesections.hashCode() +
+				this[skipBackLength].hashCode() +
+				this[skipForwardLength].hashCode() +
+				this[homeScalingFactor].hashCode() +
+				this[homeScalingFactorMyMedia].hashCode() +
+				this[hideRatings].hashCode()
+	}
 }

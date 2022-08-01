@@ -11,9 +11,11 @@ import kotlinx.coroutines.*
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.hideRatings
 import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactor
-import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactorUserView
+import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactorMyMedia
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
 import org.jellyfin.androidtv.ui.browsing.MainActivity
 import org.jellyfin.androidtv.ui.browsing.RowLoader
@@ -28,6 +30,7 @@ import org.jellyfin.apiclient.model.dto.BaseItemType
 import org.jellyfin.apiclient.model.livetv.RecommendedProgramQuery
 import org.jellyfin.apiclient.model.querying.ItemsResult
 import org.koin.android.ext.android.inject
+import org.koin.java.KoinJavaComponent.get
 import timber.log.Timber
 
 class HomeFragment : StdRowsFragment(), AudioEventListener {
@@ -48,29 +51,30 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	private val nowPlaying by lazy { HomeFragmentNowPlayingRow(mediaManager) }
 	private val liveTVRow by lazy { HomeFragmentLiveTVRow(requireActivity(), userRepository) }
 
-	private var homeScalePct = homeScalingFactor.defaultValue
-	private var homeScaleUserViewPct = homeScalingFactorUserView.defaultValue
-	private var homeHash: Int? = null
+	private var homeSettingsHash: Int? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
-		// get settings
-		homeScalePct = userSettingPreferences[homeScalingFactor]
-		homeScaleUserViewPct = userSettingPreferences[homeScalingFactorUserView]
-		homeHash = userSettingPreferences.homesections.hashCode()
+		// get relevant settings hash for resume handling
+		homeSettingsHash = userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash()
 
 		// Create adapter/presenter and set it to parent
 		mRowsAdapter = ArrayObjectAdapter(PositionableListRowPresenter())
 		adapter = mRowsAdapter
+
 		// set home scaling
+		val homeScalePct = userSettingPreferences[homeScalingFactor]
 		var staticHeight = CardPresenter.DEFAULT_STATIC_HEIGHT
 		if (homeScalePct != 100 && homeScalePct > 0) {
 			staticHeight = (staticHeight * (homeScalePct / 100.0)).toInt()
 		}
 		mCardPresenter = CardPresenter(true, staticHeight)
-		if (homeScaleUserViewPct != 100 && homeScaleUserViewPct > 0) {
-			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.UserView, (homeScaleUserViewPct / 100.0))
-			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.CollectionFolder, (homeScaleUserViewPct / 100.0))
+
+		val homeScaleMyMediaPct = userSettingPreferences[homeScalingFactorMyMedia]
+		if (homeScaleMyMediaPct != 100 && homeScaleMyMediaPct > 0) {
+			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.CollectionFolder, (homeScaleMyMediaPct / 100.0))
+			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.UserView, (homeScaleMyMediaPct / 100.0))
 		}
+		mCardPresenter.setHideRatings(userSettingPreferences[hideRatings])
 
 		super.onCreate(savedInstanceState)
 
@@ -88,7 +92,7 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	override fun onResume() {
 		super.onResume()
 
-		if (homeScalePct != userSettingPreferences[homeScalingFactor] || homeScaleUserViewPct != userSettingPreferences[homeScalingFactorUserView] || homeHash != userSettingPreferences.homesections.hashCode()) {
+		if (homeSettingsHash != (userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash())) {
 			val intent = Intent(context, MainActivity::class.java)
 			// Clear navigation history
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_TASK_ON_HOME)

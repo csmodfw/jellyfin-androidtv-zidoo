@@ -62,6 +62,11 @@ class CustomizationPreferencesScreen : OptionsFragment() {
 			}
 
 			checkbox {
+				setTitle(R.string.pref_hide_age_ratings)
+				bind(userPreferences, UserPreferences.hideAgeRatings)
+			}
+
+			checkbox {
 				setTitle(R.string.lbl_show_premieres)
 				setContent(R.string.desc_premieres)
 				bind(userPreferences, UserPreferences.premieresEnabled)

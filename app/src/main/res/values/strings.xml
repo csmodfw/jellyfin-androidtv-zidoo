@@ -371,6 +371,8 @@
     <string name="lbl_stars">Stars</string>
     <string name="lbl_tomatoes">Tomatoes</string>
     <string name="pref_default_rating">Default rating type</string>
+    <string name="pref_hide_age_ratings">Hide age rating\'s</string>
+    <string name="pref_hide_ratings">Hide rating\'s</string>
     <string name="pref_clock_display">Show clock</string>
     <string name="lbl_always">Always</string>
     <string name="pref_clock_display_browsing">While browsing</string>
@@ -482,9 +484,9 @@
     <string name="home_section_livetv">Live TV</string>
     <string name="home_section_none">None</string>
     <string name="home_section_i">Home section %1$d</string>
-    <string name="home_section_scaleing">Home section Ui scaling</string>
-    <string name="pref_home_section_scaleing_1">Home Scaling</string>
-    <string name="pref_home_section_scaleing_2">My Media extra Scaling</string>
+    <string name="home_section_settings">Home settings</string>
+    <string name="pref_home_ui_scaleing">Home scaling</string>
+    <string name="pref_home_ui_scaleing_media">My Media extra scaling</string>
     <string name="searchable_hint">Search Jellyfin</string>
     <string name="searchable_settings_description">Media</string>
     <string name="pref_subtitles_background_title">Enable background</string>
