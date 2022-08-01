@@ -74,6 +74,7 @@ class ImageHelper(
 		var imageType = ImageType.PRIMARY
 
 		if (preferParentThumb && item.type == BaseItemKind.EPISODE) {
+			// FIXME always fail via most queries, parentThumbItemId, parentThumbImageTag is never filled by the server!
 			if (item.parentThumbItemId != null && item.parentThumbImageTag != null) {
 				itemId = item.parentThumbItemId!!
 				imageTag = item.parentThumbImageTag
@@ -82,6 +83,10 @@ class ImageHelper(
 				itemId = item.seriesId!!
 				imageTag = item.seriesThumbImageTag
 				imageType = ImageType.THUMB
+			} else if (item.parentBackdropItemId != null && item.parentBackdropImageTags?.get(0) != null) {
+				itemId = item.parentBackdropItemId!!
+				imageTag = item.parentBackdropImageTags?.get(0)
+				imageType = ImageType.BACKDROP
 			}
 		} else if (item.type == BaseItemKind.SEASON && imageTag == null) {
 			if (item.seriesId != null && item.seriesPrimaryImageTag != null) {
