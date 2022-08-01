@@ -298,7 +298,6 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 				this[defaultRatingType].hashCode() +
 				this[hideAgeRatings].hashCode() +
 				this[watchedIndicatorBehavior].hashCode() +
-				this[seriesThumbnailsEnabled].hashCode() +
 				this[seriesThumbnailsEnabled].hashCode()
 	}
 }

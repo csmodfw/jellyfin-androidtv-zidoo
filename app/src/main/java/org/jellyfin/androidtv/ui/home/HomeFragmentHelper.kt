@@ -79,8 +79,14 @@ class HomeFragmentHelper(
 			fields = arrayOf(
 				ItemFields.PrimaryImageAspectRatio,
 				ItemFields.Overview,
-				ItemFields.ChildCount
+				ItemFields.ChildCount,
+//				ItemFields.ParentId,
+//				ItemFields.SeriesPrimaryImage,
+//				ItemFields.BasicSyncInfo,
+//				ItemFields.DisplayMediaType,
+//				ItemFields.ExternalUrls
 			)
+//			enableImages = true
 		}
 
 		return HomeFragmentBrowseRowDefRow(BrowseRowDef(context.getString(R.string.lbl_next_up), query, arrayOf(ChangeTriggerType.TvPlayback)))

@@ -51,11 +51,11 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	private val nowPlaying by lazy { HomeFragmentNowPlayingRow(mediaManager) }
 	private val liveTVRow by lazy { HomeFragmentLiveTVRow(requireActivity(), userRepository) }
 
-	private var homeSettingsHash: Int? = null
+	private var homeSettingsUiHash: Int? = null
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		// get relevant settings hash for resume handling
-		homeSettingsHash = userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash()
+		homeSettingsUiHash = userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash()
 
 		// Create adapter/presenter and set it to parent
 		mRowsAdapter = ArrayObjectAdapter(PositionableListRowPresenter())
@@ -63,9 +63,9 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 
 		// set home scaling
 		val homeScalePct = userSettingPreferences[homeScalingFactor]
-		var staticHeight = CardPresenter.DEFAULT_STATIC_HEIGHT
-		if (homeScalePct != 100 && homeScalePct > 0) {
-			staticHeight = (staticHeight * (homeScalePct / 100.0)).toInt()
+		val staticHeight = when {
+			homeScalePct != 100 && homeScalePct > 0 -> (CardPresenter.DEFAULT_STATIC_HEIGHT * (homeScalePct / 100.0)).toInt()
+			else -> CardPresenter.DEFAULT_STATIC_HEIGHT
 		}
 		mCardPresenter = CardPresenter(true, staticHeight)
 
@@ -92,7 +92,7 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	override fun onResume() {
 		super.onResume()
 
-		if (homeSettingsHash != (userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash())) {
+		if (homeSettingsUiHash != (userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash())) {
 			val intent = Intent(context, MainActivity::class.java)
 			// Clear navigation history
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_TASK_ON_HOME)

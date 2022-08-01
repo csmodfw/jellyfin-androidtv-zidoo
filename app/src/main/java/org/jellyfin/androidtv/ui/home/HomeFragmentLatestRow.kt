@@ -10,6 +10,7 @@ import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.apiclient.model.querying.ItemFields
 import org.jellyfin.apiclient.model.querying.ItemsResult
 import org.jellyfin.apiclient.model.querying.LatestItemsQuery
+import org.jellyfin.sdk.model.api.BaseItemKind
 
 class HomeFragmentLatestRow(
 	private val context: Context,
@@ -36,6 +37,13 @@ class HomeFragmentLatestRow(
 					parentId = item.id
 					groupItems = true
 					limit = ITEM_LIMIT
+					includeItemTypes = arrayOf(
+						BaseItemKind.MOVIE.serialName,
+						BaseItemKind.SERIES.serialName,
+						BaseItemKind.MUSIC_ALBUM.serialName,
+						BaseItemKind.RECORDING.serialName,
+						BaseItemKind.AUDIO_BOOK.serialName,
+					)
 				}
 
 				val title = String.format("%s %s", context.getString(R.string.lbl_latest), item.name)
