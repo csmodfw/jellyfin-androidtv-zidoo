@@ -68,13 +68,13 @@ class ImageHelper(
 		)
 	}
 
-	fun getPrimaryImageUrl(item: BaseItemDto, preferParentThumb: Boolean, maxHeight: Int): String {
+	fun getThumbImageUrl(item: BaseItemDto, preferParentThumb: Boolean, maxHeight: Int): String {
 		var itemId = item.id
-		var imageTag = item.imageTags?.get(ImageType.PRIMARY)
-		var imageType = ImageType.PRIMARY
+		var imageTag: String? = null
+		var imageType = ImageType.THUMB
 
 		if (preferParentThumb && item.type == BaseItemKind.EPISODE) {
-			// FIXME always fail via most queries, parentThumbItemId, parentThumbImageTag is never filled by the server!
+			// FIXME server has no Thumb images anymore via Tmdb image grabber?
 			if (item.parentThumbItemId != null && item.parentThumbImageTag != null) {
 				itemId = item.parentThumbItemId!!
 				imageTag = item.parentThumbImageTag
@@ -83,7 +83,52 @@ class ImageHelper(
 				itemId = item.seriesId!!
 				imageTag = item.seriesThumbImageTag
 				imageType = ImageType.THUMB
-			} else if (item.parentBackdropItemId != null && item.parentBackdropImageTags?.get(0) != null) {
+			} else if (item.parentBackdropItemId != null && item.parentBackdropImageTags?.isNotEmpty() == true) {
+				itemId = item.parentBackdropItemId!!
+				imageTag = item.parentBackdropImageTags?.get(0)
+				imageType = ImageType.BACKDROP
+			}
+		}
+		if (imageTag == null) {
+			if (item.imageTags?.get(ImageType.THUMB) != null) {
+				imageTag = item.imageTags?.get(ImageType.THUMB)
+				imageType = ImageType.THUMB
+			} else if (item.imageTags?.get(ImageType.BACKDROP) != null) {
+				imageTag = item.imageTags?.get(ImageType.BACKDROP)
+				imageType = ImageType.BACKDROP
+			} else if (item.backdropImageTags?.isNotEmpty() == true && item.backdropImageTags?.get(0) != null) {
+				imageTag = item.backdropImageTags?.get(0)
+				imageType = ImageType.BACKDROP
+			} else {
+				imageTag = item.imageTags?.get(ImageType.PRIMARY)
+				imageType = ImageType.PRIMARY
+			}
+		}
+
+		return api.imageApi.getItemImageUrl(
+			itemId = itemId,
+			imageType = imageType,
+			tag = imageTag,
+			maxHeight = maxHeight,
+		)
+	}
+
+	fun getPrimaryImageUrl(item: BaseItemDto, preferParentThumb: Boolean, maxHeight: Int): String {
+		var itemId = item.id
+		var imageTag = item.imageTags?.get(ImageType.PRIMARY)
+		var imageType = ImageType.PRIMARY
+
+		if (preferParentThumb && item.type == BaseItemKind.EPISODE) {
+			// FIXME server has no Thumb images anymore via Tmdb image grabber?
+			if (item.parentThumbItemId != null && item.parentThumbImageTag != null) {
+				itemId = item.parentThumbItemId!!
+				imageTag = item.parentThumbImageTag
+				imageType = ImageType.THUMB
+			} else if (item.seriesId != null && item.seriesThumbImageTag != null) {
+				itemId = item.seriesId!!
+				imageTag = item.seriesThumbImageTag
+				imageType = ImageType.THUMB
+			} else if (item.parentBackdropItemId != null && item.parentBackdropImageTags?.isNotEmpty() == true) {
 				itemId = item.parentBackdropItemId!!
 				imageTag = item.parentBackdropImageTags?.get(0)
 				imageType = ImageType.BACKDROP

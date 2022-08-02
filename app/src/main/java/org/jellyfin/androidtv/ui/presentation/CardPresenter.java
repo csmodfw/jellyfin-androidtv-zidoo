@@ -424,17 +424,36 @@ public class CardPresenter extends Presenter {
 
         String blurHash = null;
         if (rowItem.getBaseItem() != null && rowItem.getBaseItem().getImageBlurHashes() != null) {
-            HashMap<String, String> blurHashMap;
-            String imageTag;
+            BaseItemDto baseItem = rowItem.getBaseItem();
+            HashMap<String, String> blurHashMap = null;
+            String imageTag = null;
             if (aspect == ASPECT_RATIO_BANNER) {
-                blurHashMap = rowItem.getBaseItem().getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Banner);
-                imageTag = rowItem.getBaseItem().getImageTags().get(org.jellyfin.apiclient.model.entities.ImageType.Banner);
-            } else if (aspect == ImageUtils.ASPECT_RATIO_16_9 && !isUserView && (rowItem.getBaseItemType() != BaseItemType.Episode || !rowItem.getBaseItem().getHasPrimaryImage() || (rowItem.getPreferParentThumb() && rowItem.getBaseItem().getParentThumbImageTag() != null))) {
-                blurHashMap = rowItem.getBaseItem().getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Thumb);
-                imageTag = (rowItem.getPreferParentThumb() || !rowItem.getBaseItem().getHasPrimaryImage()) ? rowItem.getBaseItem().getParentThumbImageTag() : rowItem.getBaseItem().getImageTags().get(org.jellyfin.apiclient.model.entities.ImageType.Thumb);
-            } else {
-                blurHashMap = rowItem.getBaseItem().getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Primary);
-                imageTag = rowItem.getBaseItem().getImageTags().get(org.jellyfin.apiclient.model.entities.ImageType.Primary);
+                imageTag = baseItem.getImageTags().get(org.jellyfin.apiclient.model.entities.ImageType.Banner);
+                blurHashMap = baseItem.getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Banner);
+            } else if (aspect == ImageUtils.ASPECT_RATIO_16_9 && !isUserView) {
+                if (rowItem.getBaseItemType() != BaseItemType.Episode || !baseItem.getHasPrimaryImage() || rowItem.getPreferParentThumb()) {
+                    if (rowItem.getPreferParentThumb()) {
+                        if (baseItem.getParentThumbImageTag() != null) {
+                            imageTag = baseItem.getParentThumbImageTag();
+                            blurHashMap = baseItem.getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Thumb);
+                        } else if (baseItem.getParentBackdropImageTags() != null && baseItem.getParentBackdropImageTags().size() > 0) {
+                            imageTag = baseItem.getParentBackdropImageTags().get(0);
+                            blurHashMap = baseItem.getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Backdrop);
+                        }
+                    } else {
+                        imageTag = baseItem.getImageTags().get(org.jellyfin.apiclient.model.entities.ImageType.Thumb);
+                        blurHashMap = baseItem.getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Thumb);
+                        if (imageTag == null && baseItem.getBackdropImageTags() != null && baseItem.getBackdropImageTags().size() > 0) {
+                            imageTag = baseItem.getBackdropImageTags().get(0);
+                            blurHashMap = baseItem.getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Backdrop);
+                        }
+                    }
+                }
+            }
+
+            if (imageTag == null) {
+                imageTag = baseItem.getImageTags().get(org.jellyfin.apiclient.model.entities.ImageType.Primary);
+                blurHashMap = baseItem.getImageBlurHashes().get(org.jellyfin.apiclient.model.entities.ImageType.Primary);
             }
 
             if (blurHashMap != null && !blurHashMap.isEmpty() && imageTag != null && blurHashMap.get(imageTag) != null) {
@@ -442,10 +461,7 @@ public class CardPresenter extends Presenter {
             }
         }
 
-        holder.updateCardViewImage(
-                rowItem.getImageUrl(holder.mCardView.getContext(), mImageType, holder.getCardHeight()),
-                blurHash
-        );
+        holder.updateCardViewImage(rowItem.getImageUrl(holder.mCardView.getContext(), mImageType, holder.getCardHeight()), blurHash);
     }
 
     @Override

@@ -221,7 +221,7 @@ public class BaseRowItem {
                     case BANNER:
                         return ImageUtils.getBannerImageUrl(context, baseItem, apiClient.getValue(), maxHeight);
                     case THUMB:
-                        return ImageUtils.getThumbImageUrl(context, baseItem, apiClient.getValue(), maxHeight);
+                        return ImageUtils.getThumbImageUrl(baseItem, preferParentThumb, maxHeight);
                     default:
                         return getPrimaryImageUrl(context, maxHeight);
                 }

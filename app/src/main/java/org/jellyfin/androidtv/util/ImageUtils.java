@@ -6,7 +6,6 @@ import android.content.res.Resources;
 
 import androidx.annotation.AnyRes;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.util.sdk.compat.ModelCompat;
@@ -56,7 +55,7 @@ public class ImageUtils {
         return item.getPrimaryImageAspectRatio() != null ? item.getPrimaryImageAspectRatio() : ASPECT_RATIO_7_9;
     }
 
-    public static String getPrimaryImageUrl(@NonNull BaseItemPerson item, @Nullable int maxHeight) {
+    public static String getPrimaryImageUrl(@NonNull BaseItemPerson item, int maxHeight) {
         return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(ModelCompat.asSdk(item), maxHeight);
     }
 
@@ -106,18 +105,11 @@ public class ImageUtils {
         return apiClient.GetImageUrl(item.getId(), options);
     }
 
-    public static String getThumbImageUrl(Context context, BaseItemDto item, ApiClient apiClient, int maxHeight) {
-        if (!item.getHasThumb()) {
-            return getPrimaryImageUrl(context, item, true, maxHeight);
-        }
-
-        ImageOptions options = new ImageOptions();
-        options.setTag(item.getImageTags().get(ImageType.Thumb));
-        options.setImageType(ImageType.Thumb);
-        return apiClient.GetImageUrl(item.getId(), options);
+    public static String getThumbImageUrl(@NonNull BaseItemDto item, boolean preferParentThumb, int maxHeight) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getThumbImageUrl(ModelCompat.asSdk(item), preferParentThumb, maxHeight);
     }
 
-    public static String getPrimaryImageUrl(@NonNull Context context, @NonNull BaseItemDto item, @NonNull boolean preferParentThumb, @NonNull int maxHeight) {
+    public static String getPrimaryImageUrl(@NonNull Context context, @NonNull BaseItemDto item, boolean preferParentThumb, int maxHeight) {
         if (item.getBaseItemType() == BaseItemType.SeriesTimer) {
             return getResourceUrl(context, R.drawable.tile_land_series_timer);
         }
@@ -125,7 +117,7 @@ public class ImageUtils {
         return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(ModelCompat.asSdk(item), preferParentThumb, maxHeight);
     }
 
-    public static String getLogoImageUrl(@Nullable BaseItemDto item, @NonNull int maxWidth, @NonNull boolean useSeriesFallback) {
+    public static String getLogoImageUrl(@NonNull BaseItemDto item, int maxWidth, boolean useSeriesFallback) {
         return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getLogoImageUrl(ModelCompat.asSdk(item), maxWidth, useSeriesFallback);
     }
 
