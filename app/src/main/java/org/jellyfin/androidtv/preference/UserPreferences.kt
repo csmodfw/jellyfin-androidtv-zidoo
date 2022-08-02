@@ -163,7 +163,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Set which ratings provider should show on MyImageCardViews
 		 */
-		var defaultRatingType = enumPreference("pref_rating_type", RatingType.RATING_TOMATOES)
+		var defaultRatingType = enumPreference("pref_rating_type", RatingType.RATING_STARS)
 
 		/**
 		 * Disable display of Age-Restriction information (Text, Tags)
