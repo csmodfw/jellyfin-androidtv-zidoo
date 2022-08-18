@@ -188,7 +188,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Enable subtitles background
 		 */
-		var subtitlesBackgroundEnabled = booleanPreference("subtitles_background_enabled", false)
+		var subtitlesBackgroundEnabled = booleanPreference("subtitles_background_enabled", true)
 
 		/**
 		 * Set default subtitles font size

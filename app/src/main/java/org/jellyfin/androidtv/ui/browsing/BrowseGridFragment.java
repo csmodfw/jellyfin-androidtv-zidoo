@@ -160,6 +160,7 @@ public class BrowseGridFragment extends Fragment {
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), requireActivity().getIntent().getStringExtra(Extras.Folder));
         mParentId = mFolder.getId();
         mainTitle = mFolder.getName();
+        mediaManager.getValue().setFolderViewDisplayPreferencesId(mFolder);
         libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()));
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
@@ -175,6 +176,12 @@ public class BrowseGridFragment extends Fragment {
         setAutoCardGridValues();
         setupQueries();
         setupEventListeners();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        mediaManager.getValue().setFolderViewDisplayPreferencesId(null);
     }
 
     @Override
@@ -917,6 +924,9 @@ public class BrowseGridFragment extends Fragment {
             mActivity.registerKeyListener(new KeyListener() {
                 @Override
                 public boolean onKeyUp(int key, KeyEvent event) {
+                    if (!binding.rowsFragment.hasFocus()) {
+                        return false;
+                    }
                     if (key == KeyEvent.KEYCODE_MEDIA_PLAY || key == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
                         mediaManager.getValue().setCurrentMediaAdapter(mAdapter);
                         mediaManager.getValue().setCurrentMediaPosition(mCurrentItem.getIndex());

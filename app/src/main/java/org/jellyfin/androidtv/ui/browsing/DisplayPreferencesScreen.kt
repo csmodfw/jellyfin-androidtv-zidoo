@@ -6,9 +6,7 @@ import org.jellyfin.androidtv.constant.ImageType
 import org.jellyfin.androidtv.constant.PosterSize
 import org.jellyfin.androidtv.preference.LibraryPreferences
 import org.jellyfin.androidtv.preference.PreferencesRepository
-import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.LanguagesAudio
-import org.jellyfin.androidtv.preference.constant.LanguagesSubtitle
 import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
 import org.jellyfin.androidtv.ui.preference.dsl.checkbox
 import org.jellyfin.androidtv.ui.preference.dsl.enum
