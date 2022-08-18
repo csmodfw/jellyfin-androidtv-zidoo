@@ -9,7 +9,7 @@ import org.jellyfin.androidtv.constant.CustomMessage;
 import kotlin.Deprecated;
 import kotlin.ReplaceWith;
 
-@Deprecated(message = "Use FragmentActivity instead", replaceWith = @ReplaceWith(expression = "FragmentActivity", imports = {}))
+//@Deprecated(message = "Use FragmentActivity instead", replaceWith = @ReplaceWith(expression = "FragmentActivity", imports = {}))
 public abstract class BaseActivity extends FragmentActivity {
     private KeyListener keyListener;
     private MessageListener messageListener;

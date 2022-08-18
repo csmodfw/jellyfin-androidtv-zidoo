@@ -652,11 +652,17 @@ public class ExternalPlayerActivity extends FragmentActivity {
                 @Override
                 public void onError(Exception exception) {
                     Timber.e(exception, "onError getting playback stream info");
-                    if (exception instanceof PlaybackException ex) {
-                        switch (ex.getErrorCode()) {
-                            case NotAllowed -> Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_not_allowed));
-                            case NoCompatibleStream -> Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_incompatible));
-                            case RateLimitExceeded -> Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_restricted));
+                    if (exception instanceof PlaybackException) {
+                        switch (((PlaybackException) exception).getErrorCode()) {
+                            case NotAllowed:
+                                Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_not_allowed));
+                                break;
+                            case NoCompatibleStream:
+                                Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_incompatible));
+                                break;
+                            case RateLimitExceeded:
+                                Utils.showToast(ExternalPlayerActivity.this, getString(R.string.msg_playback_restricted));
+                                break;
                         }
                     }
                     finish();

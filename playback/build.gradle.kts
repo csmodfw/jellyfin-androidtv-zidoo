@@ -1,17 +1,35 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
 	id("com.android.library")
 	kotlin("android")
 }
 
 android {
-	compileSdk = 32
+	compileSdk = gradleLocalProperties(rootDir).getProperty("COMPILE_SDK_NR", "32").toInt()
 	defaultConfig {
-        minSdk = 28
-        targetSdk = 32
+		minSdk = gradleLocalProperties(rootDir).getProperty("MIN_SDK_NR", "23").toInt()
+        targetSdk = gradleLocalProperties(rootDir).getProperty("TARGET_SDK_NR", "32").toInt()
     }
 
     buildFeatures {
 		viewBinding = true
+	}
+
+	compileOptions {
+		isCoreLibraryDesugaringEnabled = true
+		sourceCompatibility = JavaVersion.valueOf(gradleLocalProperties(rootDir).getProperty("JAVA_VERSION", "VERSION_1_8"))
+		targetCompatibility = JavaVersion.valueOf(gradleLocalProperties(rootDir).getProperty("JAVA_VERSION", "VERSION_1_8"))
+	}
+
+	kotlinOptions {
+		jvmTarget = gradleLocalProperties(rootDir).getProperty("KOTLIN_JVM_TARGET", "1.8")
+	}
+
+	kotlin {
+		jvmToolchain {
+			(this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(gradleLocalProperties(rootDir).getProperty("JAVA_VERSION_NR", "8")))
+		}
 	}
 
 	sourceSets["main"].java.srcDirs("src/main/kotlin")

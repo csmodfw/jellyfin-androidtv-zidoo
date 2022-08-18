@@ -1,10 +1,12 @@
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+
 plugins {
 	alias(libs.plugins.detekt)
 	java
 }
 
 java {
-	toolchain.languageVersion.set(JavaLanguageVersion.of(16))
+	toolchain.languageVersion.set(JavaLanguageVersion.of(gradleLocalProperties(rootDir).getProperty("JAVA_VERSION_NR", "8")))
 }
 
 buildscript {

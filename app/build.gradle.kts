@@ -10,12 +10,12 @@ plugins {
 
 android {
 	namespace = "org.jellyfin.androidtv"
-	compileSdk = 32
+	compileSdk = gradleLocalProperties(rootDir).getProperty("COMPILE_SDK_NR", "32").toInt()
 	ndkVersion = "25.0.8775105"
 
 	defaultConfig {
-		minSdk = 28
-		targetSdk = 32
+		minSdk = gradleLocalProperties(rootDir).getProperty("MIN_SDK_NR", "23").toInt()
+		targetSdk = gradleLocalProperties(rootDir).getProperty("TARGET_SDK_NR", "32").toInt()
 
 		// Release version
 		applicationId = namespace
@@ -35,19 +35,25 @@ android {
 
 	compileOptions {
 		isCoreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_16
-        targetCompatibility = JavaVersion.VERSION_16
+        sourceCompatibility = JavaVersion.valueOf(gradleLocalProperties(rootDir).getProperty("JAVA_VERSION", "VERSION_1_8"))
+        targetCompatibility = JavaVersion.valueOf(gradleLocalProperties(rootDir).getProperty("JAVA_VERSION", "VERSION_1_8"))
     }
 
 	kotlinOptions {
-		jvmTarget = "16"
+		jvmTarget = gradleLocalProperties(rootDir).getProperty("KOTLIN_JVM_TARGET", "1.8")
 	}
 
-	bundle {
-		abi {
-			enableSplit = true
+	kotlin {
+		jvmToolchain {
+			(this as JavaToolchainSpec).languageVersion.set(JavaLanguageVersion.of(gradleLocalProperties(rootDir).getProperty("JAVA_VERSION_NR", "8")))
 		}
 	}
+
+//	bundle {
+//		abi {
+//			enableSplit = true
+//		}
+//	}
 
 	signingConfigs {
 		create("release") {
@@ -65,6 +71,9 @@ android {
 		}
 
 		val release by getting {
+			isMinifyEnabled = false
+			isShrinkResources = false
+//			isJniDebuggable = false
 			// Set package names used in various XML files
 			resValue("string", "app_id", namespace!!)
 			resValue("string", "app_search_suggest_authority", "${namespace}.content")
