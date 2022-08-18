@@ -6,18 +6,16 @@ import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.ChangeTriggerType
 import org.jellyfin.androidtv.data.querying.StdItemQuery
 import org.jellyfin.androidtv.data.querying.ViewQuery
-import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
 import org.jellyfin.apiclient.model.entities.LocationType
-import org.jellyfin.apiclient.model.entities.MediaType
 import org.jellyfin.apiclient.model.livetv.RecommendedProgramQuery
 import org.jellyfin.apiclient.model.livetv.RecordingQuery
 import org.jellyfin.apiclient.model.querying.ItemFields
 import org.jellyfin.apiclient.model.querying.ItemFilter
-import org.jellyfin.apiclient.model.querying.ItemSortBy
 import org.jellyfin.apiclient.model.querying.ItemsResult
 import org.jellyfin.apiclient.model.querying.NextUpQuery
-import org.koin.java.KoinJavaComponent
+import org.jellyfin.sdk.model.constant.ItemSortBy
+import org.jellyfin.sdk.model.constant.MediaType
 
 class HomeFragmentHelper(
 	private val context: Context,
@@ -45,8 +43,8 @@ class HomeFragmentHelper(
 			sortBy = arrayOf(ItemSortBy.DatePlayed)
 			sortOrder = org.jellyfin.apiclient.model.entities.SortOrder.Descending
 		}
-		val preferParentThumb = KoinJavaComponent.get<UserPreferences>(UserPreferences::class.java)[UserPreferences.seriesThumbnailsEnabled]
-		return HomeFragmentBrowseRowDefRow(BrowseRowDef(title, query, 0, preferParentThumb, true, arrayOf(ChangeTriggerType.VideoQueueChange, ChangeTriggerType.TvPlayback, ChangeTriggerType.MoviePlayback)))
+
+		return HomeFragmentBrowseRowDefRow(BrowseRowDef(title, query, 0, false, true, arrayOf(ChangeTriggerType.VideoQueueChange, ChangeTriggerType.TvPlayback, ChangeTriggerType.MoviePlayback)))
 	}
 
 	fun loadResumeVideo(): HomeFragmentRow {
@@ -81,7 +79,7 @@ class HomeFragmentHelper(
 			fields = arrayOf(
 				ItemFields.PrimaryImageAspectRatio,
 				ItemFields.Overview,
-				ItemFields.ChildCount,
+				ItemFields.ChildCount
 			)
 		}
 

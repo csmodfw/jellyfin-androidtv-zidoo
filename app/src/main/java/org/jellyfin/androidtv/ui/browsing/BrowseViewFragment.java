@@ -26,7 +26,6 @@ import org.jellyfin.apiclient.model.entities.LocationType;
 import org.jellyfin.apiclient.model.entities.SortOrder;
 import org.jellyfin.apiclient.model.livetv.LiveTvChannelQuery;
 import org.jellyfin.apiclient.model.livetv.RecommendedProgramQuery;
-import org.jellyfin.apiclient.model.livetv.RecordingGroupQuery;
 import org.jellyfin.apiclient.model.livetv.RecordingQuery;
 import org.jellyfin.apiclient.model.livetv.SeriesTimerQuery;
 import org.jellyfin.apiclient.model.livetv.TimerInfoDto;
@@ -34,11 +33,12 @@ import org.jellyfin.apiclient.model.livetv.TimerQuery;
 import org.jellyfin.apiclient.model.querying.ItemFields;
 import org.jellyfin.apiclient.model.querying.ItemFilter;
 import org.jellyfin.apiclient.model.querying.ItemQuery;
-import org.jellyfin.apiclient.model.querying.ItemSortBy;
 import org.jellyfin.apiclient.model.querying.ItemsResult;
 import org.jellyfin.apiclient.model.querying.LatestItemsQuery;
 import org.jellyfin.apiclient.model.querying.NextUpQuery;
 import org.jellyfin.apiclient.model.results.TimerInfoDtoResult;
+import org.jellyfin.sdk.model.constant.CollectionType;
+import org.jellyfin.sdk.model.constant.ItemSortBy;
 import org.koin.java.KoinJavaComponent;
 
 import java.util.ArrayList;
@@ -57,7 +57,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
     protected void setupQueries(final RowLoader rowLoader) {
         String type = mFolder.getCollectionType() != null ? mFolder.getCollectionType().toLowerCase() : "";
         switch (type) {
-            case "movies":
+            case CollectionType.Movies:
                 itemTypeString = "Movie";
 
                 //Resume
@@ -128,7 +128,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
 
                 rowLoader.loadRows(mRows);
                 break;
-            case "tvshows":
+            case CollectionType.TvShows:
                 itemTypeString = "Series";
 
                 //Next up
@@ -197,8 +197,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
 
                 rowLoader.loadRows(mRows);
                 break;
-            case "music":
-
+            case CollectionType.Music:
                 //Latest
                 LatestItemsQuery latestAlbums = new LatestItemsQuery();
                 latestAlbums.setFields(new ItemFields[]{
@@ -251,7 +250,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
 
                 rowLoader.loadRows(mRows);
                 break;
-            case "livetv":
+            case CollectionType.LiveTv:
                 isLiveTvLibrary = true;
                 showViews = true;
 
@@ -372,10 +371,6 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                                     recordings.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                                     recordings.setEnableImages(true);
                                     mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_recent_recordings), recordings, 50));
-                                    //All Recordings by group - will only be there for non-internal TV
-                                    RecordingGroupQuery recordingGroups = new RecordingGroupQuery();
-                                    recordingGroups.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
-                                    mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_all_recordings), recordingGroups));
                                     rowLoader.loadRows(mRows);
 
                                     //Now insert our smart rows

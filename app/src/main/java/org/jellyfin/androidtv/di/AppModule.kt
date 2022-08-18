@@ -11,6 +11,7 @@ import org.jellyfin.androidtv.data.repository.NotificationsRepositoryImpl
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepositoryImpl
 import org.jellyfin.androidtv.data.service.BackgroundService
+import org.jellyfin.androidtv.ui.picture.PictureViewerViewModel
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.ui.playback.PlaybackControllerContainer
 import org.jellyfin.androidtv.ui.playback.nextup.NextUpViewModel
@@ -21,7 +22,6 @@ import org.jellyfin.androidtv.util.MarkdownRenderer
 import org.jellyfin.androidtv.util.sdk.legacy
 import org.jellyfin.apiclient.AppInfo
 import org.jellyfin.apiclient.android
-import org.jellyfin.apiclient.interaction.ApiEventListener
 import org.jellyfin.apiclient.logging.AndroidLogger
 import org.jellyfin.apiclient.serialization.GsonJsonSerializer
 import org.jellyfin.sdk.android.androidDevice
@@ -74,8 +74,7 @@ val appModule = module {
 
 	single {
 		get<JellyfinApiClient>().createApi(
-			device = get<DeviceInfo>(defaultDeviceInfo).legacy(),
-			eventListener = ApiEventListener()
+			device = get<DeviceInfo>(defaultDeviceInfo).legacy()
 		)
 	}
 
@@ -93,6 +92,7 @@ val appModule = module {
 	viewModel { UserLoginViewModel(get(), get(), get()) }
 	viewModel { ServerAddViewModel(get()) }
 	viewModel { NextUpViewModel(get(), get(), get(), get()) }
+	viewModel { PictureViewerViewModel(get()) }
 
 	single { BackgroundService(get(), get(), get(), get()) }
 

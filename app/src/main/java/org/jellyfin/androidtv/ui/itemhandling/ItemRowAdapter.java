@@ -26,29 +26,26 @@ import org.jellyfin.androidtv.data.querying.TrailersQuery;
 import org.jellyfin.androidtv.data.querying.ViewQuery;
 import org.jellyfin.androidtv.data.repository.UserViewsRepository;
 import org.jellyfin.androidtv.ui.GridButton;
-import org.jellyfin.androidtv.ui.GridFragment;
+import org.jellyfin.androidtv.ui.browsing.BrowseGridFragment;
 import org.jellyfin.androidtv.ui.browsing.EnhancedBrowseFragment;
 import org.jellyfin.androidtv.ui.browsing.GenericGridActivity;
 import org.jellyfin.androidtv.ui.livetv.TvManager;
 import org.jellyfin.androidtv.ui.presentation.PositionableListRowPresenter;
 import org.jellyfin.androidtv.ui.presentation.TextItemPresenter;
 import org.jellyfin.androidtv.util.Utils;
+import org.jellyfin.androidtv.util.sdk.compat.ModelCompat;
 import org.jellyfin.apiclient.interaction.ApiClient;
 import org.jellyfin.apiclient.interaction.EmptyResponse;
 import org.jellyfin.apiclient.interaction.Response;
 import org.jellyfin.apiclient.model.dto.BaseItemDto;
-import org.jellyfin.apiclient.model.dto.BaseItemPerson;
-import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.livetv.ChannelInfoDto;
 import org.jellyfin.apiclient.model.livetv.LiveTvChannelQuery;
 import org.jellyfin.apiclient.model.livetv.RecommendedProgramQuery;
-import org.jellyfin.apiclient.model.livetv.RecordingGroupQuery;
 import org.jellyfin.apiclient.model.livetv.RecordingQuery;
 import org.jellyfin.apiclient.model.livetv.SeriesTimerInfoDto;
 import org.jellyfin.apiclient.model.livetv.SeriesTimerQuery;
 import org.jellyfin.apiclient.model.querying.ArtistsQuery;
 import org.jellyfin.apiclient.model.querying.ItemQuery;
-import org.jellyfin.apiclient.model.querying.ItemSortBy;
 import org.jellyfin.apiclient.model.querying.ItemsResult;
 import org.jellyfin.apiclient.model.querying.LatestItemsQuery;
 import org.jellyfin.apiclient.model.querying.NextUpQuery;
@@ -61,7 +58,9 @@ import org.jellyfin.apiclient.model.results.SeriesTimerInfoDtoResult;
 import org.jellyfin.apiclient.model.search.SearchHint;
 import org.jellyfin.apiclient.model.search.SearchHintResult;
 import org.jellyfin.apiclient.model.search.SearchQuery;
+import org.jellyfin.sdk.model.api.BaseItemPerson;
 import org.jellyfin.sdk.model.api.UserDto;
+import org.jellyfin.sdk.model.constant.ItemSortBy;
 import org.koin.java.KoinJavaComponent;
 
 import java.util.Calendar;
@@ -86,7 +85,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
     private LiveTvChannelQuery mTvChannelQuery;
     private RecommendedProgramQuery mTvProgramQuery;
     private RecordingQuery mTvRecordingQuery;
-    private RecordingGroupQuery mTvRecordingGroupQuery;
     private ArtistsQuery mArtistsQuery;
     private LatestItemsQuery mLatestQuery;
     private SeriesTimerQuery mSeriesTimerQuery;
@@ -329,14 +327,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         staticHeight = true;
     }
 
-    public ItemRowAdapter(Context context, RecordingGroupQuery query, Presenter presenter, ArrayObjectAdapter parent) {
-        super(presenter);
-        this.context = context;
-        mParent = parent;
-        mTvRecordingGroupQuery = query;
-        queryType = QueryType.LiveTvRecordingGroup;
-    }
-
     public ItemRowAdapter(Context context, SimilarItemsQuery query, QueryType queryType, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
@@ -412,7 +402,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         return totalItems;
     }
 
-    public void setSortBy(GridFragment.SortOption option) {
+    public void setSortBy(BrowseGridFragment.SortOption option) {
         if (!option.value.equals(mSortBy)) {
             mSortBy = option.value;
             switch (queryType) {
@@ -672,9 +662,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
             case LiveTvRecording:
                 retrieve(mTvRecordingQuery);
                 break;
-            case LiveTvRecordingGroup:
-                retrieve(mTvRecordingGroupQuery);
-                break;
             case StaticPeople:
                 loadPeople();
                 break;
@@ -822,7 +809,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     for (SearchHint item : response.getSearchHints()) {
                         if (userViewsRepository.getValue().isSupported(item.getType())) {
                             i++;
-                            adapter.add(new BaseRowItem(item));
+                            adapter.add(new BaseRowItem(ModelCompat.asSdk(item)));
                         }
                     }
                     totalItems = response.getTotalRecordCount();
@@ -1176,47 +1163,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
             }
         });
 
-    }
-
-    private void retrieve(final RecordingGroupQuery query) {
-        final ItemRowAdapter adapter = this;
-        apiClient.getValue().GetLiveTvRecordingGroupsAsync(query, new Response<ItemsResult>() {
-            @Override
-            public void onResponse(ItemsResult response) {
-                if (response.getItems() != null && response.getItems().length > 0) {
-                    int i = 0;
-                    int prevItems = Math.max(adapter.size(), 0);
-                    for (BaseItemDto item : response.getItems()) {
-                        item.setBaseItemType(BaseItemType.RecordingGroup); // the API does not fill this in
-                        item.setIsFolder(true); // nor this
-                        adapter.add(new BaseRowItem(item));
-                        i++;
-                    }
-                    totalItems = response.getTotalRecordCount();
-                    setItemsLoaded(itemsLoaded + i);
-                    if (i == 0) {
-                        removeRow();
-                    } else if (prevItems > 0) {
-                        // remove previous items as we re-retrieved
-                        // this is done this way instead of clearing the adapter to avoid bugs in the framework elements
-                        removeItems(0, prevItems);
-                    }
-                } else {
-                    // no results - don't show us
-                    removeRow();
-                }
-
-                notifyRetrieveFinished();
-
-            }
-
-            @Override
-            public void onError(Exception exception) {
-                Timber.e(exception, "Error retrieving live tv recording groups");
-                removeRow();
-                notifyRetrieveFinished(exception);
-            }
-        });
     }
 
     private void retrieve(final SeriesTimerQuery query) {

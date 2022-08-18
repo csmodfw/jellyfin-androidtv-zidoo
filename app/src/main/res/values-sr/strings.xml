@@ -103,7 +103,6 @@
     <string name="episode_missing_message_2">Ова епизода недостаје у вашој библиотеци. Репродукција ће се зауставити.</string>
     <string name="episode_missing_message">Ова епизода недостаје у вашој библиотеци. Да ли бисте желели да га прескочите и наставите на следећи\?</string>
     <string name="episode_missing">Недостаје епизода</string>
-    <string name="delete_warning">Ово ће ТРАЈНО ИЗБРИСАТИ %1$s из ваше библиотеке. Да ли сте СИГУРНИ\?</string>
     <string name="clear_expanded">Очисти тренутни ред видео записа\?</string>
     <string name="lbl_clear">Очисти</string>
     <string name="no_player_message">Изгледа да немате инсталирану апликацију за видео. Ова опција захтева инсталирање независне апликације за репродукцију видео садржаја.</string>
@@ -360,8 +359,8 @@
     <string name="lbl_manage_servers">Управљање серверима</string>
     <string name="server_issue_ssl_handshake">SSL руковање није успело</string>
     <string name="server_issue_timeout">Веза је истекла</string>
-    <string name="server_issue_outdated_version">Сервер користи верзију $1%s али му треба $2%s или новију</string>
-    <string name="server_issue_unsupported_version">Сервер користи верзију $1%s која није подржана</string>
+    <string name="server_issue_outdated_version">Сервер користи верзију %1$s али му треба %2$s или новију</string>
+    <string name="server_issue_unsupported_version">Сервер користи верзију %1$s која није подржана</string>
     <string name="server_issue_missing_version">Није могуће утврдити верзију сервера</string>
     <string name="server_issue_invalid_product">Серверски софтвер је некомпатибилан</string>
     <string name="server_issue_unable_to_connect">Повезивање није успело</string>

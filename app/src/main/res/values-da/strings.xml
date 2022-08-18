@@ -296,7 +296,6 @@
     <string name="episode_missing_message_2">Dette afsnit mangler fra dit bibliotek. Afspilningen stopper.</string>
     <string name="episode_missing_message">Dette afsnit mangler fra dit bibliotek. Vil du springe den over og fortsætte til den næste\?</string>
     <string name="episode_missing">Afsnit mangler</string>
-    <string name="delete_warning">Dette vil PERMANENT SLETTE %1$s fra dit bibliotek. Er du HELT sikker\?</string>
     <string name="clear_expanded">Ryd nuværende video kø\?</string>
     <string name="lbl_clear">Ryd</string>
     <string name="no_player_message">Det ser ikke ud til at du har en app der understøtter video afspilning. Denne handling kræver en tredjeparts applikation for at kunne afspille videoindhold.</string>
@@ -404,7 +403,7 @@
     <string name="pref_crash_reports">Send nedbrud rapporter til serveren</string>
     <string name="pref_telemetry_description">Send nedbrud rapporter, inkluder logfiler</string>
     <string name="pref_telemetry_category">Rapportering ved nedbrud</string>
-    <string name="server_unsupported_notification">Denne server bruger Jellyfin version %1$s som ikke er understøttet. Venligst opdater til Jellyfin %2$s for at bruge appen</string>
+    <string name="server_unsupported_notification">Denne server bruger Jellyfin version %1$s som ikke er understøttet. Venligst opdater til Jellyfin %2$s for at bruge appen.</string>
     <string name="app_notification_uimode_invalid">Denne app er optimeret til fjernsyn. Vi anbefaler at du bruger vores mobile app på andre enheder.</string>
     <string name="live_tv_preferences">Live TV muligheder</string>
     <string name="action_connect">Forbind</string>

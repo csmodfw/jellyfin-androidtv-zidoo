@@ -240,7 +240,6 @@
     <string name="episode_missing_message_2">Bu bölüm kütüphanenizde eksik. Oynatma duracak.</string>
     <string name="episode_missing_message">Bu bölüm kütüphanenizde eksil. Bunu atlayıp bir sonrakine geçmek ister misiniz\?</string>
     <string name="episode_missing">Bölüm Eksik</string>
-    <string name="delete_warning">Bu KALICI OLARAK %1$s öğesini kütüphanenizden silecektir. EMİN MİSİNİZ\?</string>
     <string name="clear_expanded">Mevcut video kuruğunu temizle\?</string>
     <string name="lbl_clear">Temizle</string>
     <string name="no_player_message">Yüklü video oynatma özellikli bir uygulamanız olmadığı görülüyor. Bu seçenek, video içeriğini oynatmak için 3. taraf bir uygulama yüklemenizi gerektirir.</string>
@@ -313,7 +312,7 @@
     <string name="login_server_unavailable">Sunucuya bağlanılamadı</string>
     <string name="login_invalid_credentials">Geçersiz kullanıcı adı veya şifre</string>
     <string name="server_field_empty">Adres boş olamaz</string>
-    <string name="server_connection_failed">Sunucuya bağlanamadı: %1$s</string>
+    <string name="server_connection_failed">Sunucuya bağlanamadı</string>
     <string name="server_connecting">%1$s-ya bağlanılıyor</string>
     <string name="pref_clock_display_playback">Oynatma sırasında</string>
     <string name="lbl_always">Her zaman</string>

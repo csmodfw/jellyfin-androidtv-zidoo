@@ -45,8 +45,8 @@ import org.jellyfin.androidtv.util.InfoLayoutHelper;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
 import org.jellyfin.androidtv.util.apiclient.PlaybackHelper;
+import org.jellyfin.androidtv.util.sdk.compat.ModelCompat;
 import org.jellyfin.apiclient.interaction.ApiClient;
-import org.jellyfin.apiclient.interaction.EmptyResponse;
 import org.jellyfin.apiclient.interaction.Response;
 import org.jellyfin.apiclient.model.dto.BaseItemDto;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
@@ -55,12 +55,14 @@ import org.jellyfin.apiclient.model.library.PlayAccess;
 import org.jellyfin.apiclient.model.playlists.PlaylistItemQuery;
 import org.jellyfin.apiclient.model.querying.ItemFields;
 import org.jellyfin.apiclient.model.querying.ItemFilter;
-import org.jellyfin.apiclient.model.querying.ItemSortBy;
 import org.jellyfin.apiclient.model.querying.ItemsResult;
+import org.jellyfin.sdk.model.constant.ItemSortBy;
+import org.jellyfin.sdk.model.constant.MediaType;
 import org.koin.java.KoinJavaComponent;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -221,7 +223,7 @@ public class ItemListActivity extends FragmentActivity {
                         }
                     }
                 }, 750);
-            } else if ("Video".equals(mBaseItem.getMediaType())) {
+            } else if (MediaType.Video.equals(mBaseItem.getMediaType())) {
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
@@ -298,10 +300,13 @@ public class ItemListActivity extends FragmentActivity {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
                 switch (row.getItem().getMediaType()) {
-                    case "Video":
+                    case MediaType.Video:
                         mediaManager.getValue().addToVideoQueue(row.getItem());
                         break;
-                    case "Audio":
+                    case MediaType.Audio:
+                        PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
+                        if (playbackLauncher.interceptPlayRequest(ItemListActivity.this, row.getItem())) break;
+
                         mediaManager.getValue().queueAudioItem(row.getItem());
                         break;
                 }
@@ -332,7 +337,7 @@ public class ItemListActivity extends FragmentActivity {
                 item.setName(getString(R.string.lbl_favorites));
                 item.setOverview(getString(R.string.desc_automatic_fav_songs));
                 item.setPlayAccess(PlayAccess.Full);
-                item.setMediaType("Audio");
+                item.setMediaType(MediaType.Audio);
                 item.setBaseItemType(BaseItemType.Playlist);
                 item.setIsFolder(true);
                 setBaseItem(item);
@@ -343,7 +348,7 @@ public class ItemListActivity extends FragmentActivity {
                 queue.setName(getString(R.string.lbl_current_queue));
                 queue.setOverview(getString(R.string.desc_current_video_queue));
                 queue.setPlayAccess(PlayAccess.Full);
-                queue.setMediaType("Video");
+                queue.setMediaType(MediaType.Video);
                 queue.setBaseItemType(BaseItemType.Playlist);
                 queue.setIsFolder(true);
                 if (mediaManager.getValue().getCurrentVideoQueue() != null) {
@@ -374,7 +379,7 @@ public class ItemListActivity extends FragmentActivity {
 
         LinearLayout mainInfoRow = (LinearLayout)findViewById(R.id.fdMainInfoRow);
 
-        InfoLayoutHelper.addInfoRow(this, item, mainInfoRow, false, false);
+        InfoLayoutHelper.addInfoRow(this, ModelCompat.asSdk(item), mainInfoRow, false, false);
         addGenres(mGenreRow);
         addButtons(BUTTON_SIZE);
         mSummary.setText(mBaseItem.getOverview());
@@ -499,16 +504,22 @@ public class ItemListActivity extends FragmentActivity {
         PlaybackLauncher playbackLauncher = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class);
         if (playbackLauncher.interceptPlayRequest(this, items.size() > 0 ? items.get(0) : null)) return;
 
-        if ("Video".equals(mBaseItem.getMediaType())) {
+        Timber.d("play items: %d, ndx: %d, shuffle: %b", items.size(), ndx, shuffle);
+
+        if (MediaType.Video.equals(mBaseItem.getMediaType())) {
+            if (shuffle) {
+                Collections.shuffle(items);
+            }
             Class activity = KoinJavaComponent.<PlaybackLauncher>get(PlaybackLauncher.class).getPlaybackActivityClass(mBaseItem.getBaseItemType());
             Intent intent = new Intent(mActivity, activity);
-            //Resume first item if needed
-            BaseItemDto first = items.size() > 0 ? items.get(0) : null;
-            if (first != null && first.getUserData() != null) {
-                Long pos = first.getUserData().getPlaybackPositionTicks() / 10000;
+            //Resume item if needed
+            BaseItemDto item = items.size() > 0 ? items.get(ndx) : null;
+            if (item != null && item.getUserData() != null) {
+                Long pos = item.getUserData().getPlaybackPositionTicks() / 10000;
                 intent.putExtra("Position", pos.intValue());
             }
             mediaManager.getValue().setCurrentVideoQueue(items);
+            mediaManager.getValue().setCurrentMediaPosition(ndx);
             startActivity(intent);
         } else {
             mediaManager.getValue().playNow(this, items, ndx, shuffle);
@@ -631,10 +642,10 @@ public class ItemListActivity extends FragmentActivity {
                     }));
                 }
 
-                TextUnderButton delete = TextUnderButton.create(this, R.drawable.ic_trash, buttonSize, 0, getString(R.string.lbl_delete), new View.OnClickListener() {
-                    @Override
-                    public void onClick(final View v) {
-                        if (mBaseItem.getId().equals(VIDEO_QUEUE)) {
+                if (mBaseItem.getId().equals(VIDEO_QUEUE)) {
+                    TextUnderButton delete = TextUnderButton.create(this, R.drawable.ic_trash, buttonSize, 0, getString(R.string.lbl_delete), new View.OnClickListener() {
+                        @Override
+                        public void onClick(final View v) {
                             new AlertDialog.Builder(mActivity)
                                     .setTitle(R.string.lbl_clear_queue)
                                     .setMessage(R.string.clear_expanded)
@@ -643,41 +654,18 @@ public class ItemListActivity extends FragmentActivity {
                                         dataRefreshService.getValue().setLastVideoQueueChange(System.currentTimeMillis());
                                         finish();
                                     })
-                                    .setNegativeButton(R.string.btn_cancel, (dialog, which) -> {})
+                                    .setNegativeButton(R.string.btn_cancel, (dialog, which) -> {
+                                    })
                                     .show()
                                     .getButton(AlertDialog.BUTTON_NEGATIVE).requestFocus();
-                        } else {
-                            new AlertDialog.Builder(mActivity)
-                                    .setTitle(R.string.lbl_delete)
-                                    .setMessage(getString(R.string.delete_warning, mBaseItem.getName()))
-                                    .setPositiveButton(R.string.lbl_delete,
-                                            (dialog, whichButton) -> apiClient.getValue().DeleteItem(mBaseItem.getId(), new EmptyResponse() {
-                                                @Override
-                                                public void onResponse() {
-                                                    Utils.showToast(mActivity, getString(R.string.lbl_deleted, mBaseItem.getName()));
-                                                    dataRefreshService.getValue().setLastDeletedItemId(mBaseItem.getId());
-                                                    finish();
-                                                }
-
-                                                @Override
-                                                public void onError(Exception ex) {
-                                                    Utils.showToast(mActivity, ex.getLocalizedMessage());
-                                                }
-                                            }))
-                                    .setNegativeButton(R.string.btn_cancel,
-                                            (dialog, which) -> Utils.showToast(mActivity, R.string.not_deleted))
-                                    .show()
-                                    .getButton(AlertDialog.BUTTON_NEGATIVE).requestFocus();
-
-
                         }
-                    }
-                });
+                    });
 
-                mButtonRow.addView(delete);
-                delete.setOnFocusChangeListener((v, hasFocus) -> {
-                    if (hasFocus) mScrollView.smoothScrollTo(0, 0);
-                });
+                    mButtonRow.addView(delete);
+                    delete.setOnFocusChangeListener((v, hasFocus) -> {
+                        if (hasFocus) mScrollView.smoothScrollTo(0, 0);
+                    });
+                }
             }
         }
 

@@ -891,33 +891,6 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
         mActivity.startActivity(intent);
     }
 
-    private void deleteItem() {
-        final MediaSourceInfo info = getMediaSourceSafe(mBaseItem, selectedVersionPopupIndex);
-        final String itemId = (info != null && isNonEmpty(info.getId())) ? info.getId() : mBaseItem.getId();
-        final String versionSuffix = (info != null && isNonEmpty(info.getName()) && !info.getName().equals(mBaseItem.getName())) ? info.getName() : null;
-        final String name = versionSuffix != null ? mBaseItem.getName() + " - " + versionSuffix : mBaseItem.getName();
-        new AlertDialog.Builder(mActivity)
-                .setTitle(R.string.lbl_delete)
-                .setMessage("This will PERMANENTLY DELETE <" + name + "> from your library.  Are you VERY sure?")
-                .setPositiveButton("Delete",
-                        (dialog, whichButton) -> apiClient.getValue().DeleteItem(itemId, new EmptyResponse() {
-                            @Override
-                            public void onResponse() {
-                                Utils.showToast(mActivity, name + " Deleted");
-                                dataRefreshService.getValue().setLastDeletedItemId(itemId);
-                                finish();
-                            }
-
-                            @Override
-                            public void onError(Exception ex) {
-                                Utils.showToast(mActivity, ex.getLocalizedMessage());
-                            }
-                        }))
-                .setNegativeButton("Cancel", (dialog, which) -> Utils.showToast(mActivity, "Item NOT Deleted"))
-                .show()
-                .getButton(AlertDialog.BUTTON_NEGATIVE).requestFocus();
-    }
-
     private TextUnderButton favButton = null;
     private TextUnderButton shuffleButton = null;
     private TextUnderButton goToSeriesButton = null;

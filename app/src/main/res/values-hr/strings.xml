@@ -184,7 +184,6 @@
     <string name="episode_missing_message_2">Ova epizoda nedostaje u vašoj biblioteci. Reprodukcija će stati.</string>
     <string name="episode_missing_message">Ova epizoda nedostaje u vašoj biblioteci. Želite li ju preskočiti i nastaviti s idućom\?</string>
     <string name="episode_missing">Epizoda nedostaje</string>
-    <string name="delete_warning">Ovo je TRAJNO OBRISATI %1$s iz vaše biblioteke. Jeste li ZAISTA sigurni\?</string>
     <string name="clear_expanded">Očisti trenutni red videozapisa\?</string>
     <string name="lbl_clear">Očisti</string>
     <string name="no_player_message">Čini se da nemate instaliranu aplikaciju za reproduciranje videozapisa. Ova opcija zahtijeva instalaciju aplikacije treće strane za reprodukciju video sadržaja.</string>
@@ -351,7 +350,7 @@
     <string name="pref_developer_link">Opcije za programere</string>
     <string name="image_size_large">Veliko</string>
     <string name="lbl_server">Poslužitelj</string>
-    <string name="server_connection_failed">Ne mogu se povezati s poslužiteljem: %1$s</string>
+    <string name="server_connection_failed">Ne mogu se povezati s poslužiteljem</string>
     <string name="lbl_community_rating">Ocjena zajednice</string>
     <string name="advanced_settings">Postavke (napredno)</string>
     <string name="always_authenticate_description">Omogućavanjem ove funkcije onemogućuje se automatska prijava</string>

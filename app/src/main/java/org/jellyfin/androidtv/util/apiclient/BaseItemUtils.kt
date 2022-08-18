@@ -14,7 +14,6 @@ import org.jellyfin.androidtv.util.sdk.getDisplayName
 import org.jellyfin.apiclient.model.dto.BaseItemDto
 import org.jellyfin.apiclient.model.dto.BaseItemType
 import org.jellyfin.apiclient.model.entities.LocationType
-import org.jellyfin.apiclient.model.entities.PersonType
 import org.jellyfin.apiclient.model.library.PlayAccess
 import org.jellyfin.apiclient.model.livetv.SeriesTimerInfoDto
 import org.jellyfin.sdk.api.client.ApiClient
@@ -38,14 +37,22 @@ fun BaseItemDto?.canPlay() = this != null
 	&& (!isFolderItem || childCount == null || childCount > 0)
 
 fun BaseItemDto.getFullName(context: Context): String? = when (baseItemType) {
-	BaseItemType.Episode -> listOfNotNull(
-		seriesName,
-		parentIndexNumber?.let { context.getString(R.string.lbl_season_number, it) },
-		indexNumber?.let { start ->
-			indexNumberEnd?.let { end -> context.getString(R.string.lbl_episode_range, start, end) }
-				?: context.getString(R.string.lbl_episode_number, start)
+	BaseItemType.Episode -> buildList {
+		add(seriesName)
+
+		if (parentIndexNumber == 0) {
+			add(context.getString(R.string.episode_name_special))
+		} else {
+			if (parentIndexNumber != null)
+				add(context.getString(R.string.lbl_season_number, parentIndexNumber))
+
+			if (indexNumber != null && indexNumberEnd != null)
+				add(context.getString(R.string.lbl_episode_range, indexNumber, indexNumberEnd))
+			else if (indexNumber != null)
+				add(context.getString(R.string.lbl_episode_number, indexNumber))
+
 		}
-	).filter { it.isNotEmpty() }.joinToString(" ")
+	}.filterNot { it.isNullOrBlank() }.joinToString(" ")
 	// we actually want the artist name if available
 	BaseItemType.Audio,
 	BaseItemType.MusicAlbum -> listOfNotNull(albumArtist, name)
@@ -87,34 +94,31 @@ fun BaseItemDto.getSubName(context: Context): String? = when (baseItemType) {
 	}
 }
 
-fun BaseItemDto.getProgramUnknownChannelName(): String? =
-	TvManager.getChannel(TvManager.getAllChannelsIndex(channelId)).name
+fun org.jellyfin.sdk.model.api.BaseItemDto.getProgramUnknownChannelName(): String? =
+	TvManager.getChannel(TvManager.getAllChannelsIndex(channelId?.toString())).name
 
-fun BaseItemDto.getProgramSubText(context: Context) = buildString {
+fun org.jellyfin.sdk.model.api.BaseItemDto.getProgramSubText(context: Context) = buildString {
 	// Add the channel name if set
 	channelName?.let { append(channelName, " - ") }
 
 	// Add the episode title if set
 	episodeTitle?.let { append(episodeTitle, " ") }
 
-	val startTime = Calendar.getInstance()
-	startTime.time = TimeUtils.convertToLocalDate(startDate)
-
 	// If the start time is on a different day, add the date
-	if (startTime[Calendar.DAY_OF_YEAR] != Calendar.getInstance()[Calendar.DAY_OF_YEAR])
-		append(TimeUtils.getFriendlyDate(context, startTime.time), " ")
+	if (startDate?.dayOfYear != Calendar.getInstance()[Calendar.DAY_OF_YEAR])
+		append(TimeUtils.getFriendlyDate(context, TimeUtils.getDate(startDate)), " ")
 
 	// Add the start and end time
 	val dateFormat = DateFormat.getTimeFormat(context)
 	append(context.getString(
 		R.string.lbl_time_range,
-		dateFormat.format(startTime.time),
-		dateFormat.format(TimeUtils.convertToLocalDate(endDate))
+		dateFormat.format(startDate),
+		dateFormat.format(endDate)
 	))
 }
 
-fun BaseItemDto.getFirstPerson(searchedType: PersonType) =
-	people?.find { it.personType == searchedType }
+fun BaseItemDto.getFirstPerson(searchedType: String) =
+	people?.asSdk()?.firstOrNull { it.type == searchedType }
 
 fun BaseItemDto.buildChapterItems(): List<ChapterItemInfo> {
 	val apiClient by inject<ApiClient>(ApiClient::class.java)
@@ -137,7 +141,7 @@ fun BaseItemDto.buildChapterItems(): List<ChapterItemInfo> {
 	}
 }
 
-fun BaseItemDto.isNew() = isSeries == true && isNews != true && isRepeat != true
+fun org.jellyfin.sdk.model.api.BaseItemDto.isNew() = isSeries == true && isNews != true && isRepeat != true
 
 fun SeriesTimerInfoDto.getSeriesOverview(context: Context) = buildString {
 	if (recordNewOnly) appendLine(context.getString(R.string.lbl_record_only_new))

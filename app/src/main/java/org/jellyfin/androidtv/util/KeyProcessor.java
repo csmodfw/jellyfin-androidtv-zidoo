@@ -30,8 +30,9 @@ import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.dto.UserItemDataDto;
 import org.jellyfin.apiclient.model.entities.SortOrder;
 import org.jellyfin.apiclient.model.querying.ItemFilter;
-import org.jellyfin.apiclient.model.querying.ItemSortBy;
 import org.jellyfin.apiclient.model.querying.ItemsResult;
+import org.jellyfin.sdk.model.constant.ItemSortBy;
+import org.jellyfin.sdk.model.constant.MediaType;
 import org.koin.java.KoinJavaComponent;
 
 import java.util.List;
@@ -88,7 +89,6 @@ public class KeyProcessor {
                             case TvChannel:
                             case Video:
                             case Program:
-                            case ChannelVideoItem:
                             case Trailer:
                                 // retrieve full item and play
                                 PlaybackHelper.retrieveAndPlay(item.getId(), false, activity);
@@ -174,7 +174,6 @@ public class KeyProcessor {
                             case TvChannel:
                             case Video:
                             case Program:
-                            case ChannelVideoItem:
                             case Series:
                             case Season:
                             case BoxSet:
@@ -253,9 +252,8 @@ public class KeyProcessor {
                         && userData.getUnplayedItemCount() > 0) {
                     menu.getMenu().add(0, MENU_PLAY_FIRST_UNWATCHED, order++, R.string.lbl_play_first_unwatched);
                 }
-                boolean isSeries = item.getBaseItemType() == BaseItemType.Series || item.getBaseItemType() == BaseItemType.Season;
                 menu.getMenu().add(0, MENU_PLAY, order++, item.getIsFolderItem() ? R.string.lbl_play_all : R.string.lbl_play);
-                if (!isSeries && item.getIsFolderItem()) {
+                if (item.getIsFolderItem()) {
                     menu.getMenu().add(0, MENU_PLAY_SHUFFLE, order++, R.string.lbl_shuffle_all);
                 }
             }
@@ -263,7 +261,7 @@ public class KeyProcessor {
             isMusic = item.getBaseItemType() == BaseItemType.MusicAlbum
                     || item.getBaseItemType() == BaseItemType.MusicArtist
                     || item.getBaseItemType() == BaseItemType.Audio
-                    || (item.getBaseItemType() == BaseItemType.Playlist && "Audio".equals(item.getMediaType()));
+                    || (item.getBaseItemType() == BaseItemType.Playlist && MediaType.Audio.equals(item.getMediaType()));
 
             if (isMusic) {
                 menu.getMenu().add(0, MENU_ADD_QUEUE, order++, R.string.lbl_add_to_queue);
@@ -380,17 +378,15 @@ public class KeyProcessor {
                     query.setSortBy(new String[]{ItemSortBy.SortName});
                     query.setSortOrder(SortOrder.Ascending);
                     query.setLimit(1);
-                    // NOTE: exclude filters seem broken?
-//                    query.setExcludeItemTypes(new String[]{"Series", "Season", "Folder", "MusicAlbum", "Playlist", "BoxSet"});
-                    query.setIncludeItemTypes(new String[]{"Episode", "Movie", "Video"});
+                    query.setExcludeItemTypes(new String[] {"Series","Season","Folder","MusicAlbum","Playlist","BoxSet"});
                     query.setFilters(new ItemFilter[] {ItemFilter.IsUnplayed});
                     KoinJavaComponent.<ApiClient>get(ApiClient.class).GetItemsAsync(query, new Response<ItemsResult>() {
                         @Override
                         public void onResponse(ItemsResult response) {
-                            if (response.getItems() != null && response.getItems().length > 0) {
-                                PlaybackHelper.retrieveAndPlay(response.getItems()[0].getId(), false, mCurrentActivity);
-                            } else {
+                            if (response.getTotalRecordCount() == 0) {
                                 Utils.showToast(mCurrentActivity, R.string.msg_no_items);
+                            } else {
+                                PlaybackHelper.retrieveAndPlay(response.getItems()[0].getId(), false, mCurrentActivity);
                             }
                         }
 

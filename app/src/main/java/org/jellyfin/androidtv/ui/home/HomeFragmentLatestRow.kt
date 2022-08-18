@@ -10,6 +10,7 @@ import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.apiclient.model.querying.ItemFields
 import org.jellyfin.apiclient.model.querying.ItemsResult
 import org.jellyfin.apiclient.model.querying.LatestItemsQuery
+import org.jellyfin.sdk.model.constant.CollectionType
 import org.jellyfin.sdk.model.api.BaseItemKind
 
 class HomeFragmentLatestRow(
@@ -56,7 +57,12 @@ class HomeFragmentLatestRow(
 
 	companion object {
 		// Collections excluded from latest row based on app support and common sense
-		private val EXCLUDED_COLLECTION_TYPES = arrayOf("playlists", "livetv", "boxsets", "channels", "books")
+		private val EXCLUDED_COLLECTION_TYPES = arrayOf(
+			CollectionType.Playlists,
+			CollectionType.LiveTv,
+			CollectionType.BoxSets,
+			CollectionType.Books,
+		)
 
 		// Maximum amount of items loaded for a row
 		private const val ITEM_LIMIT = 50

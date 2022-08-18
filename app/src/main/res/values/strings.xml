@@ -336,7 +336,6 @@
     <string name="zidoo_player_notfound_message">Can\'t find compatible Zidoo player on device!</string>
     <string name="lbl_clear">Clear</string>
     <string name="clear_expanded">Clear current video queue?</string>
-    <string name="delete_warning">This will PERMANENTLY DELETE %1$s from your library. Are you VERY sure?</string>
     <string name="episode_missing">Episode Missing</string>
     <string name="episode_missing_message">This episode is missing from your library.  Would you like to skip it and continue to the next one?</string>
     <string name="episode_missing_message_2">This episode is missing from your library.  Playback will stop.</string>
@@ -543,4 +542,6 @@
     <string name="crash_report_toast">Oops! Something went wrong, a crash report was sent to your Jellyfin server.</string>
     <string name="server_setup_incomplete">The setup of this server has not been completed. Open Jellyfin in a web browser to finish setup before signing in.</string>
     <string name="exit_app_back_info">Please press BACK again to exit</string>
+    <string name="enable_picture_viewer_title">Enable new picture viewer</string>
+    <string name="episode_name_special">special</string>
 </resources>

@@ -1,5 +1,3 @@
-import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
-
 plugins {
 	id("com.android.application")
 	kotlin("android")
@@ -111,6 +109,11 @@ android {
 	testOptions.unitTests.all {
 		it.useJUnitPlatform()
 	}
+}
+
+aboutLibraries {
+	// Remove the "generated" timestamp to allow for reproducible builds
+	excludeFields = arrayOf("generated")
 }
 
 val versionTxt by tasks.registering {

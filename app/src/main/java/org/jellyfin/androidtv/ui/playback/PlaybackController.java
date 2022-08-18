@@ -34,6 +34,7 @@ import org.jellyfin.androidtv.util.apiclient.ReportingHelper;
 import org.jellyfin.androidtv.util.apiclient.StreamHelper;
 import org.jellyfin.androidtv.util.profile.ExoPlayerProfile;
 import org.jellyfin.androidtv.util.profile.LibVlcProfile;
+import org.jellyfin.androidtv.util.sdk.ModelUtils;
 import org.jellyfin.androidtv.util.sdk.compat.ModelCompat;
 import org.jellyfin.apiclient.interaction.ApiClient;
 import org.jellyfin.apiclient.interaction.Response;
@@ -119,7 +120,15 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     private RefreshRateSwitchingBehavior refreshRateSwitchingBehavior = RefreshRateSwitchingBehavior.DISABLED;
 
     public PlaybackController(List<BaseItemDto> items, CustomPlaybackOverlayFragment fragment) {
+        this(items, fragment, 0);
+    }
+
+    public PlaybackController(List<BaseItemDto> items, CustomPlaybackOverlayFragment fragment, int startIndex) {
         mItems = items;
+        mCurrentIndex = 0;
+        if (items != null && startIndex > 0 && startIndex < items.size()) {
+            mCurrentIndex = startIndex;
+        }
         mFragment = fragment;
         mHandler = new Handler();
 
@@ -258,6 +267,14 @@ public class PlaybackController implements PlaybackControllerNotifiable {
 
     public BaseItemDto getNextItem() {
         return hasNextItem() ? mItems.get(mCurrentIndex + 1) : null;
+    }
+
+    public boolean hasPreviousItem() {
+        return mItems != null && mCurrentIndex - 1 >= 0;
+    }
+
+    public BaseItemDto getPreviousItem() {
+        return hasPreviousItem() ? mItems.get(mCurrentIndex - 1) : null;
     }
 
     public boolean isPlaying() {
@@ -997,7 +1014,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             return;
         }
 
-        MediaStream stream = StreamHelper.getMediaStream(getCurrentMediaSource(), index);
+        org.jellyfin.sdk.model.api.MediaStream stream = StreamHelper.getMediaStream(ModelCompat.asSdk(getCurrentMediaSource()), index);
         if (stream == null) {
             if (mFragment != null)
                 Utils.showToast(mFragment.getContext(), mFragment.getString(R.string.subtitle_error));
@@ -1039,8 +1056,18 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 // not using vlc - fall through to external handling
             case External:
                 if (mFragment != null) mFragment.showSubLoadingMsg(true);
-                stream.setDeliveryMethod(SubtitleDeliveryMethod.External);
-                stream.setDeliveryUrl(String.format("%1$s/Videos/%2$s/%3$s/Subtitles/%4$s/0/Stream.JSON", apiClient.getValue().getApiUrl(), mCurrentStreamInfo.getItemId(), mCurrentStreamInfo.getMediaSourceId(), String.valueOf(stream.getIndex())));
+
+                stream = ModelUtils.withDelivery(
+                        stream,
+                        org.jellyfin.sdk.model.api.SubtitleDeliveryMethod.EXTERNAL,
+                        String.format(
+                                "%1$s/Videos/%2$s/%3$s/Subtitles/%4$s/0/Stream.JSON",
+                                apiClient.getValue().getApiUrl(),
+                                mCurrentStreamInfo.getItemId(),
+                                mCurrentStreamInfo.getMediaSourceId(),
+                                String.valueOf(stream.getIndex())
+                        )
+                );
                 apiClient.getValue().getSubtitles(stream.getDeliveryUrl(), new Response<SubtitleTrackInfo>() {
 
                     @Override
@@ -1135,7 +1162,6 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     public void endPlayback(Boolean closeActivity) {
         if (closeActivity) mFragment.getActivity().finish();
         stop();
-        removePreviousQueueItems();
         if (mVideoManager != null)
             mVideoManager.destroy();
         mFragment = null;
@@ -1169,6 +1195,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             stop();
             resetPlayerErrors();
             mCurrentIndex++;
+            mediaManager.getValue().setCurrentMediaPosition(mCurrentIndex);
             Timber.d("Moving to index: %d out of %d total items.", mCurrentIndex, mItems.size());
             spinnerOff = false;
             play(0);
@@ -1181,6 +1208,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
             stop();
             resetPlayerErrors();
             mCurrentIndex--;
+            mediaManager.getValue().setCurrentMediaPosition(mCurrentIndex);
             Timber.d("Moving to index: %d out of %d total items.", mCurrentIndex, mItems.size());
             spinnerOff = false;
             play(0);
@@ -1406,56 +1434,29 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         });
     }
 
-    public void removePreviousQueueItems() {
-        DataRefreshService dataRefreshService = KoinJavaComponent.<DataRefreshService>get(DataRefreshService.class);
-        dataRefreshService.setLastVideoQueueChange(System.currentTimeMillis());
-        if (isLiveTv || !mediaManager.getValue().isVideoQueueModified()) {
-            mediaManager.getValue().clearVideoQueue();
-            return;
-        }
-
-        if (mCurrentIndex < 0) return;
-
-        // removing from mItems doesn't work properly when using remote control - modify via mediaManager instead
-        for (int i = 0; i < mCurrentIndex && i < mediaManager.getValue().getCurrentVideoQueue().size(); i++) {
-            mediaManager.getValue().getCurrentVideoQueue().remove(0);
-        }
-
-        //Now - look at last item played and, if beyond default resume point, remove it too
-        Long duration = mCurrentStreamInfo != null ? mCurrentStreamInfo.getRunTimeTicks() : null;
-        if (duration != null && mediaManager.getValue().getCurrentVideoQueue().size() > 0) {
-            if (duration < 300000 || mCurrentPosition * 10000 > Math.floor(.90 * duration))
-                mediaManager.getValue().getCurrentVideoQueue().remove(0);
-        } else if (duration == null) mediaManager.getValue().getCurrentVideoQueue().remove(0);
-        setItems(mediaManager.getValue().getCurrentVideoQueue());
-    }
-
     private void itemComplete() {
         stop();
         resetPlayerErrors();
 
         BaseItemDto nextItem = getNextItem();
-        if (nextItem != null) {
-            Timber.d("Moving to next queue item. Index: %s", (mCurrentIndex + 1));
+        BaseItemDto curItem = getCurrentlyPlayingItem();
+        if (nextItem == null || curItem == null) {
+            endPlayback(true);
+            return;
+        }
 
-            BaseItemDto curItem = getCurrentlyPlayingItem();
+        Timber.d("Moving to next queue item. Index: %s", (mCurrentIndex + 1));
+        if (userPreferences.getValue().get(UserPreferences.Companion.getNextUpBehavior()) != NextUpBehavior.DISABLED
+                && curItem.getBaseItemType() != BaseItemType.Trailer) {
+            mCurrentIndex++;
+            mediaManager.getValue().setCurrentMediaPosition(mCurrentIndex);
+            spinnerOff = false;
 
-            if (userPreferences.getValue().get(UserPreferences.Companion.getNextUpBehavior()) != NextUpBehavior.DISABLED
-                    && (curItem == null || curItem.getBaseItemType() != BaseItemType.Trailer)) {
-                // Show "Next Up" fragment
-                spinnerOff = false;
-                mediaManager.getValue().setCurrentVideoQueue(mItems);
-                mediaManager.getValue().setVideoQueueModified(true);
-                if (mFragment != null) mFragment.showNextUp(nextItem.getId());
-                endPlayback();
-            } else {
-                mCurrentIndex++;
-                play(0);
-            }
+            // Show "Next Up" fragment
+            if (mFragment != null) mFragment.showNextUp(nextItem.getId());
+            endPlayback();
         } else {
-            // exit activity
-            Timber.d("Last item completed. Finishing activity.");
-            if (mFragment != null) mFragment.finish();
+            next();
         }
     }
 

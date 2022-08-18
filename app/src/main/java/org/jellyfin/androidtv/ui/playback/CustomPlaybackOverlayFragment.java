@@ -69,6 +69,7 @@ import org.jellyfin.androidtv.util.TextUtilsKt;
 import org.jellyfin.androidtv.util.TimeUtils;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.BaseItemUtils;
+import org.jellyfin.androidtv.util.sdk.compat.ModelCompat;
 import org.jellyfin.apiclient.interaction.ApiClient;
 import org.jellyfin.apiclient.interaction.EmptyResponse;
 import org.jellyfin.apiclient.interaction.Response;
@@ -86,6 +87,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 import kotlin.Lazy;
 import timber.log.Timber;
@@ -171,7 +173,9 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
             return;
         }
 
-        playbackControllerContainer.getValue().setPlaybackController(new PlaybackController(mItemsToPlay, this));
+        int mediaPosition = mediaManager.getValue().getCurrentMediaPosition();
+
+        playbackControllerContainer.getValue().setPlaybackController(new PlaybackController(mItemsToPlay, this, mediaPosition));
         mPlaybackController = playbackControllerContainer.getValue().getPlaybackController();
 
         // setup fade task
@@ -902,6 +906,8 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
 
             do {
                 BaseItemDto empty = new BaseItemDto();
+                empty.setId(UUID.randomUUID().toString());
+                empty.setType("FOLDER");
                 empty.setName(getString(R.string.no_program_data));
                 empty.setChannelId(channelId);
                 empty.setStartDate(TimeUtils.convertToUtcDate(new Date(mCurrentLocalGuideStart + ((30*slot) * 60000))));
@@ -930,6 +936,8 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
             if (start > prevEnd) {
                 // fill empty time slot
                 BaseItemDto empty = new BaseItemDto();
+                empty.setId(UUID.randomUUID().toString());
+                empty.setType("FOLDER");
                 empty.setName(getString(R.string.no_program_data));
                 empty.setChannelId(channelId);
                 empty.setStartDate(TimeUtils.convertToUtcDate(new Date(prevEnd)));
@@ -1015,7 +1023,7 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
         tvGuideBinding.guideTitle.setText(mSelectedProgram.getName());
         tvGuideBinding.summary.setText(mSelectedProgram.getOverview());
         //info row
-        InfoLayoutHelper.addInfoRow(requireContext(), mSelectedProgram, tvGuideBinding.guideInfoRow, false, false);
+        InfoLayoutHelper.addInfoRow(requireContext(), ModelCompat.asSdk(mSelectedProgram), tvGuideBinding.guideInfoRow, false, false);
         if (mSelectedProgram.getId() != null) {
             tvGuideBinding.displayDate.setText(TimeUtils.getFriendlyDate(requireContext(), TimeUtils.convertToLocalDate(mSelectedProgram.getStartDate())));
         }
