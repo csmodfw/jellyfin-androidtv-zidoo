@@ -45,7 +45,7 @@ class ZidooPlayerProfile(
 		Codec.Audio.WAV,
 		Codec.Audio.WMA,
 		Codec.Audio.WMAV2,
-		Codec.Audio.DSD,
+//		Codec.Audio.DSD,
 		Codec.Audio.MLP,
 	)
 
@@ -56,7 +56,7 @@ class ZidooPlayerProfile(
 		musicStreamingTranscodingBitrate = 3_584_000 // max server flac bitrate
 
 		directPlayProfiles = arrayOf(
-			DirectPlayProfile().apply {
+		DirectPlayProfile().apply {
 				type = DlnaProfileType.Video
 				container = arrayOf(
 					Codec.Container.`3GP`,
@@ -94,7 +94,28 @@ class ZidooPlayerProfile(
 					addAll(codecsDolby + codecsCommon + codecsPcm + codecsRare)
 					if (isDTSEnabled) addAll(codecsDTS)
 				}.joinToString(",")
-			}
+			},
+			// Audio direct play
+			ProfileHelper.audioDirectPlayProfile(arrayOf(
+					Codec.Audio.APE,
+					Codec.Audio.AAC,
+//						Codec.Audio.DFF,
+//						Codec.Audio.DSF,
+					Codec.Audio.FLAC,
+					Codec.Audio.MP2,
+					Codec.Audio.MP3,
+					Codec.Audio.MPA,
+					Codec.Audio.OGA,
+					Codec.Audio.OGG,
+					Codec.Audio.OPUS,
+					Codec.Audio.SPX,
+					Codec.Audio.PCM,
+					Codec.Audio.WAV,
+					Codec.Audio.WEBMA,
+					Codec.Audio.WMA,
+			)),
+			// Photo direct play
+			ProfileHelper.photoDirectPlayProfile
 		)
 
 		// NOTE: We get major issues in HLS mode, subs/seek crash the dvd-player
@@ -142,12 +163,12 @@ class ZidooPlayerProfile(
 				copyTimestamps = false
 				maxAudioChannels = forceNumChannels?.toString() ?: "8"
 			},
-			// MP3 audio profile
+			// FLAC transcode audio profile
 			TranscodingProfile().apply {
 				type = DlnaProfileType.Audio
 				context = EncodingContext.Streaming
-				container = Codec.Container.MP3
-				audioCodec = Codec.Audio.MP3
+				container = Codec.Container.FLAC
+				audioCodec = Codec.Audio.FLAC
 			}
 		)
 

@@ -10,15 +10,7 @@ import org.jellyfin.androidtv.util.profile.ProfileHelper.h264VideoProfileConditi
 import org.jellyfin.androidtv.util.profile.ProfileHelper.maxAudioChannelsCodecProfile
 import org.jellyfin.androidtv.util.profile.ProfileHelper.photoDirectPlayProfile
 import org.jellyfin.androidtv.util.profile.ProfileHelper.subtitleProfile
-import org.jellyfin.apiclient.model.dlna.CodecProfile
-import org.jellyfin.apiclient.model.dlna.CodecType
-import org.jellyfin.apiclient.model.dlna.ContainerProfile
-import org.jellyfin.apiclient.model.dlna.DirectPlayProfile
-import org.jellyfin.apiclient.model.dlna.DlnaProfileType
-import org.jellyfin.apiclient.model.dlna.ProfileCondition
-import org.jellyfin.apiclient.model.dlna.ProfileConditionType
-import org.jellyfin.apiclient.model.dlna.ProfileConditionValue
-import org.jellyfin.apiclient.model.dlna.SubtitleDeliveryMethod
+import org.jellyfin.apiclient.model.dlna.*
 
 class LibVlcProfile(
 	context: Context,
@@ -75,20 +67,45 @@ class LibVlcProfile(
 			},
 			// Audio direct play
 			audioDirectPlayProfile(arrayOf(
-				Codec.Audio.FLAC,
+				Codec.Audio.APE,
 				Codec.Audio.AAC,
+				Codec.Audio.FLAC,
+				Codec.Audio.MP2,
 				Codec.Audio.MP3,
 				Codec.Audio.MPA,
-				Codec.Audio.WAV,
-				Codec.Audio.WMA,
-				Codec.Audio.MP2,
-				Codec.Audio.OGG,
 				Codec.Audio.OGA,
+				Codec.Audio.OGG,
+				Codec.Audio.OPUS,
+				Codec.Audio.SPX,
+				Codec.Audio.PCM,
+				Codec.Audio.WAV,
 				Codec.Audio.WEBMA,
-				Codec.Audio.APE
+				Codec.Audio.WMA,
 			)),
 			// Photo direct play
 			photoDirectPlayProfile
+		)
+
+		transcodingProfiles = arrayOf(
+			// TS video profile
+			TranscodingProfile().apply {
+				type = DlnaProfileType.Video
+				this.context = EncodingContext.Streaming
+				container = Codec.Container.MKV
+				videoCodec = buildList {
+					if (deviceHevcCodecProfile?.ContainsCodec(Codec.Video.HEVC, Codec.Container.MKV) == true) add(Codec.Video.HEVC)
+					add(Codec.Video.H264)
+				}.joinToString(",")
+				audioCodec = arrayOf(Codec.Audio.AAC, Codec.Audio.MP3).joinToString(",")
+				copyTimestamps = true
+			},
+			// FLAC audio profile
+			TranscodingProfile().apply {
+				type = DlnaProfileType.Audio
+				this.context = EncodingContext.Streaming
+				container = Codec.Audio.FLAC
+				audioCodec = Codec.Audio.FLAC
+			}
 		)
 
 		codecProfiles = arrayOf(

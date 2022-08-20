@@ -73,12 +73,12 @@ class ExoPlayerProfile(
 				protocol = "hls"
 				copyTimestamps = false
 			},
-			// MP3 audio profile
+			// FLAC audio profile
 			TranscodingProfile().apply {
 				type = DlnaProfileType.Audio
 				this.context = EncodingContext.Streaming
-				container = Codec.Container.MP3
-				audioCodec = Codec.Audio.MP3
+				container = Codec.Container.FLAC
+				audioCodec = Codec.Audio.FLAC
 			}
 		)
 
