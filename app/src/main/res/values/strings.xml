@@ -65,7 +65,6 @@
     <string name="lbl_min">" min"</string>
     <string name="lbl_ends">"Ends"</string>
     <string name="lbl_directed_by">"Directed By"</string>
-    <string name="lbl_last_played">"Last Played "</string>
     <string name="lbl_other_options">Other Options</string>
     <string name="lbl_people">People</string>
     <string name="lbl_videos">Videos</string>
@@ -124,6 +123,7 @@
     <string name="lbl_audio_output">Audio output</string>
     <string name="lbl_goto_series">Go to Series</string>
     <string name="lbl_enable_debug">Debug options</string>
+    <string name="lbl_show_zidoo_playback_popup">Show debug playback popup</string>
     <string name="desc_debug">Provide extra information for debugging</string>
     <string name="lbl_showing">Showing</string>
     <string name="lbl_all_items">All Items</string>
@@ -131,10 +131,12 @@
     <string name="lbl_from">from</string>
     <string name="lbl_name">Name</string>
     <string name="lbl_date_added">Date Added</string>
+    <string name="lbl_date_played">Date Played</string>
+    <string name="lbl_date_latest">New Content</string>
     <string name="lbl_premier_date">Premier Date</string>
     <string name="lbl_critic_rating">Critic Rating</string>
     <string name="lbl_community_rating">Community Rating</string>
-    <string name="lbl_rating">Rating</string>
+    <string name="lbl_parental_rating">Parental Rating</string>
     <string name="lbl_starting_with">beginning with those whose name starts with</string>
     <string name="btn_done">Done</string>
     <string name="lbl_display_preferences">Display</string>
@@ -367,8 +369,8 @@
     <string name="lbl_stars">Stars</string>
     <string name="lbl_tomatoes">Tomatoes</string>
     <string name="pref_default_rating">Default rating type</string>
-    <string name="pref_hide_age_ratings">Hide age rating\'s</string>
-    <string name="pref_hide_ratings">Hide rating\'s</string>
+    <string name="pref_hide_parental_ratings">Hide parental rating\'s</string>
+    <string name="pref_hide_card_ratings">Hide rating\'s on card\'s</string>
     <string name="pref_clock_display">Show clock</string>
     <string name="lbl_always">Always</string>
     <string name="pref_clock_display_browsing">While browsing</string>
@@ -541,7 +543,8 @@
     <string name="pref_crash_report_logs_disabled">Logs will not be included in crash reports</string>
     <string name="crash_report_toast">Oops! Something went wrong, a crash report was sent to your Jellyfin server.</string>
     <string name="server_setup_incomplete">The setup of this server has not been completed. Open Jellyfin in a web browser to finish setup before signing in.</string>
-    <string name="exit_app_back_info">Please press BACK again to exit</string>
+    <string name="exit_app_back_info">Press BACK again to exit</string>
+    <string name="pref_clear_audio_queue_on_exit">Clear audio queue on app exit</string>
     <string name="enable_picture_viewer_title">Enable new picture viewer</string>
     <string name="episode_name_special">special</string>
 </resources>

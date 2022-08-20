@@ -87,7 +87,7 @@ public class ProgramGridCell extends RelativeLayout implements RecordingIndicato
             InfoLayoutHelper.addBlockText(context, mInfoRow, context.getString(R.string.lbl_repeat), 10, Color.GRAY, R.color.lb_default_brand_color);
         }
 
-        if (!KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getHideAgeRatings())) {
+        if (!KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getHideParentalRatings())) {
             if (program.getOfficialRating() != null && !program.getOfficialRating().equals("0")) {
                 InfoLayoutHelper.addBlockText(context, mInfoRow, program.getOfficialRating(), 10);
             }

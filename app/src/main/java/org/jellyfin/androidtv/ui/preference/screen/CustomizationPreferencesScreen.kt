@@ -44,26 +44,30 @@ class CustomizationPreferencesScreen : OptionsFragment() {
 				bind(userPreferences, UserPreferences.backdropEnabled)
 			}
 
-			checkbox {
-				setTitle(R.string.lbl_use_series_thumbnails)
-				setContent(R.string.lbl_use_series_thumbnails_description)
-				bind(userPreferences, UserPreferences.seriesThumbnailsEnabled)
-			}
-
 			enum<RatingType> {
 				setTitle(R.string.pref_default_rating)
 				bind(userPreferences, UserPreferences.defaultRatingType)
 			}
 
 			checkbox {
-				setTitle(R.string.pref_hide_age_ratings)
-				bind(userPreferences, UserPreferences.hideAgeRatings)
+				setTitle(R.string.pref_hide_card_ratings)
+				bind(userPreferences, UserPreferences.hideCardRatings)
+			}
+
+			checkbox {
+				setTitle(R.string.pref_hide_parental_ratings)
+				bind(userPreferences, UserPreferences.hideParentalRatings)
 			}
 
 			checkbox {
 				setTitle(R.string.lbl_show_premieres)
 				setContent(R.string.desc_premieres)
 				bind(userPreferences, UserPreferences.premieresEnabled)
+			}
+
+			checkbox {
+				setTitle(R.string.pref_clear_audio_queue_on_exit)
+				bind(userPreferences, UserPreferences.clearAudioQueueOnExit)
 			}
 		}
 

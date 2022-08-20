@@ -327,7 +327,7 @@ public class InfoLayoutHelper {
     }
 
     private static void addRatingAndRes(Context context, BaseItemDto item, LinearLayout layout) {
-        if (!KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getHideAgeRatings())) {
+        if (!KoinJavaComponent.<UserPreferences>get(UserPreferences.class).get(UserPreferences.Companion.getHideParentalRatings())) {
             if (item.getOfficialRating() != null && !item.getOfficialRating().equals("0")) {
                 addBlockText(context, layout, item.getOfficialRating());
                 addSpacer(context, layout, "  ");

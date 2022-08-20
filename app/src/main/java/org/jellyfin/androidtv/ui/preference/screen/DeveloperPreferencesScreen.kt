@@ -15,6 +15,11 @@ class DeveloperPreferencesScreen : OptionsFragment() {
 		setTitle(R.string.pref_developer_link)
 
 		category {
+			checkbox {
+				setTitle(R.string.lbl_show_zidoo_playback_popup)
+				bind(userPreferences, UserPreferences.showZidooPlaybackPopup)
+			}
+
 			// Legacy debug flag
 			// Not in use by much components anymore
 			checkbox {

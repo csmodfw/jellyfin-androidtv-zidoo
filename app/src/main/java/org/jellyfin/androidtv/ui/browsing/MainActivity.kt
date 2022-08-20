@@ -8,9 +8,12 @@ import androidx.fragment.app.add
 import androidx.fragment.app.replace
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.BackgroundService
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.home.HomeFragment
 import org.jellyfin.androidtv.ui.home.HomeToolbarFragment
+import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.ui.shared.BaseActivity
+import org.koin.android.ext.android.get
 import org.koin.android.ext.android.inject
 
 class MainActivity : BaseActivity(R.layout.fragment_content_view) {
@@ -29,8 +32,12 @@ class MainActivity : BaseActivity(R.layout.fragment_content_view) {
 	}
 
 	private var doubleBackToExitPressedOnce = false
+
+	@Deprecated("Deprecated in Java")
 	override fun onBackPressed() {
 		if (doubleBackToExitPressedOnce) {
+			if (get<UserPreferences>()[UserPreferences.clearAudioQueueOnExit])
+				get<MediaManager>().clearAudioQueue(true)
 			super.onBackPressed()
 			return
 		}

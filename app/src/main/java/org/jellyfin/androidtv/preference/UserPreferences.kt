@@ -146,6 +146,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 
 		/* Developer options */
 		/**
+		 * Show playback toast/popup
+		 */
+		var showZidooPlaybackPopup = booleanPreference("prewf_show_zidoo_playback_popup", false)
+
+		/**
 		 * Show additional debug information
 		 */
 		var debuggingEnabled = booleanPreference("pref_enable_debug", false)
@@ -171,9 +176,19 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var defaultRatingType = enumPreference("pref_rating_type", RatingType.RATING_STARS)
 
 		/**
+		 * Disable display of Ratings for Card's only (Icons, text)
+		 */
+		val hideCardRatings = booleanPreference("pref_hide_card_ratings", false)
+
+		/**
 		 * Disable display of Age-Restriction information (Text, Tags)
 		 */
-		var hideAgeRatings = booleanPreference("pref_hide_age_ratings", false)
+		var hideParentalRatings = booleanPreference("pref_hide_parental_ratings", false)
+
+		/**
+		 * Clear audio queue on App exit.
+		 */
+		var clearAudioQueueOnExit = booleanPreference("pref_clear_audio_queue_on_exit", false)
 
 		/**
 		 * Set when watched indicators should show on MyImageCardViews
@@ -290,8 +305,7 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 				this[premieresEnabled].hashCode() +
 				this[clockBehavior].hashCode() +
 				this[defaultRatingType].hashCode() +
-				this[hideAgeRatings].hashCode() +
-				this[watchedIndicatorBehavior].hashCode() +
-				this[seriesThumbnailsEnabled].hashCode()
+				this[hideParentalRatings].hashCode() +
+				this[watchedIndicatorBehavior].hashCode()
 	}
 }

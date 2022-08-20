@@ -89,7 +89,7 @@ fun BaseItemDto.getSubName(context: Context): String? = when (baseItemType) {
 	}
 	BaseItemType.Audio -> name
 	else -> when {
-		get<UserPreferences>(UserPreferences::class.java)[UserPreferences.hideAgeRatings] -> ""
+		get<UserPreferences>(UserPreferences::class.java)[UserPreferences.hideParentalRatings] -> ""
 		else -> officialRating
 	}
 }

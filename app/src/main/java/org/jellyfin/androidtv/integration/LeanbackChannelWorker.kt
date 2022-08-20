@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.startup.StartupActivity
 import org.jellyfin.androidtv.util.ImageUtils
 import org.jellyfin.androidtv.util.dp
@@ -63,7 +64,7 @@ class LeanbackChannelWorker(
 	}
 
 	private val api by inject<ApiClient>()
-	private val userPreferences by inject<UserPreferences>()
+	private val userSettingPreferences by inject<UserSettingPreferences>()
 	private val userViewsRepository by inject<UserViewsRepository>()
 
 	/**
@@ -250,7 +251,7 @@ class LeanbackChannelWorker(
 	 */
 	@Suppress("RestrictedApi")
 	private fun updateNextUp(nextUpItems: List<BaseItemDto>) {
-		val preferParentThumb = userPreferences[UserPreferences.seriesThumbnailsEnabled]
+		val preferParentThumb = userSettingPreferences[UserSettingPreferences.seriesThumbnailsEnabled]
 
 		// Get channel
 		val channelUri = getChannelUri("next_up", Channel.Builder()
@@ -309,7 +310,7 @@ class LeanbackChannelWorker(
 	 */
 	@Suppress("RestrictedApi")
 	private fun getBaseItemAsWatchNextProgram(item: BaseItemDto) = WatchNextProgram.Builder().apply {
-		val preferParentThumb = userPreferences[UserPreferences.seriesThumbnailsEnabled]
+		val preferParentThumb = userSettingPreferences[UserSettingPreferences.seriesThumbnailsEnabled]
 
 		setInternalProviderId(item.id.toString())
 
@@ -334,7 +335,7 @@ class LeanbackChannelWorker(
 
 		when {
 			// User has started playing the episode
-			item.userData?.playbackPositionTicks ?: 0 > 0 -> {
+			(item.userData?.playbackPositionTicks ?: 0) > 0 -> {
 				setWatchNextType(WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE)
 				setLastPlaybackPositionMillis((item.userData!!.playbackPositionTicks / TICKS_IN_MILLISECOND).toInt())
 				// Use last played date to prioritze

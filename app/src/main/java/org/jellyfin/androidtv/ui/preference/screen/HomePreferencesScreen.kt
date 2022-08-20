@@ -3,9 +3,9 @@ package org.jellyfin.androidtv.ui.preference.screen
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.preference.UserSettingPreferences
-import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.hideRatings
 import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactor
 import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactorMyMedia
+import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.seriesThumbnailsEnabled
 import org.jellyfin.androidtv.ui.preference.custom.DurationSeekBarPreference
 import org.jellyfin.androidtv.ui.preference.dsl.*
 import org.jellyfin.preference.store.PreferenceStore
@@ -22,6 +22,12 @@ class HomePreferencesScreen : OptionsFragment() {
 
 		category {
 			setTitle(R.string.home_section_settings)
+
+			checkbox {
+				setTitle(R.string.lbl_use_series_thumbnails)
+				setContent(R.string.lbl_use_series_thumbnails_description)
+				bind(userSettingPreferences, seriesThumbnailsEnabled)
+			}
 
 			@Suppress("MagicNumber")
 			seekbar {
@@ -45,11 +51,6 @@ class HomePreferencesScreen : OptionsFragment() {
 					override fun display(value: Int) = "${value}%"
 				}
 				bind(userSettingPreferences, homeScalingFactorMyMedia)
-			}
-
-			checkbox {
-				setTitle(R.string.pref_hide_ratings)
-				bind(userSettingPreferences, hideRatings)
 			}
 		}
 

@@ -18,10 +18,10 @@ class UserSettingPreferences(
 		val skipBackLength = intPreference("skipBackLength", 10000)
 		val skipForwardLength = intPreference("skipForwardLength", 30000)
 
+		var seriesThumbnailsEnabled = booleanPreference("pref_enable_series_thumbnails", true)
+
 		val homeScalingFactor = intPreference("homeScalingFactor", 100)
 		val homeScalingFactorMyMedia = intPreference("homeScalingFactorMyMedia", 100)
-
-		val hideRatings = booleanPreference("hideRatings", false)
 
 		val homesection0 = enumPreference("homesection0", HomeSectionType.LIBRARY_TILES_SMALL)
 		val homesection1 = enumPreference("homesection1", HomeSectionType.RESUME)
@@ -41,8 +41,8 @@ class UserSettingPreferences(
 		return homesections.hashCode() +
 				this[skipBackLength].hashCode() +
 				this[skipForwardLength].hashCode() +
+				this[seriesThumbnailsEnabled].hashCode() +
 				this[homeScalingFactor].hashCode() +
-				this[homeScalingFactorMyMedia].hashCode() +
-				this[hideRatings].hashCode()
+				this[homeScalingFactorMyMedia].hashCode()
 	}
 }

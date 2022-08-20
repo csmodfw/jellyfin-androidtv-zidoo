@@ -22,6 +22,7 @@ import android.os.Handler;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.util.Pair;
 import androidx.fragment.app.FragmentActivity;
 
@@ -40,6 +41,7 @@ import org.jellyfin.androidtv.preference.constant.LanguagesAudio;
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior;
 import org.jellyfin.androidtv.preference.constant.PreferredVideoPlayer;
 import org.jellyfin.androidtv.ui.AudioSubtitleHelper;
+import org.jellyfin.androidtv.ui.itemhandling.BaseRowItem;
 import org.jellyfin.androidtv.ui.playback.nextup.NextUpActivity;
 import org.jellyfin.androidtv.util.ImageHelper;
 import org.jellyfin.androidtv.util.Utils;
@@ -62,7 +64,10 @@ import org.koin.java.KoinJavaComponent;
 
 import java.io.File;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import kotlin.Lazy;
 import timber.log.Timber;
@@ -608,13 +613,50 @@ public class ExternalPlayerActivity extends FragmentActivity {
         return info;
     }
 
+    private static final Pattern RegExTagPattern = Pattern.compile("TranscodeReasons=([0-9a-zA-z]*)");
+
+    @NonNull
+    private String getTranscodeReason() {
+        String reason = "";
+        try {
+            Matcher matcher = RegExTagPattern.matcher(mCurrentStreamInfo.getMediaUrl());
+            if (matcher.find()) {
+                String found = matcher.group(1);
+                if (isNonEmpty(found)) {
+                    reason = found;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return reason;
+    }
+
+    private void showPlaybackInfoPopup() {
+        if (!userPreferences.getValue().get(UserPreferences.Companion.getShowZidooPlaybackPopup()))
+            return;
+        if (mCurrentStreamInfo.getPlayMethod() == PlayMethod.Transcode) {
+            Utils.showToast(ExternalPlayerActivity.this, String.format(Locale.US, "%s\n\n%s\n%s",
+                    getDisplayTitle(),
+                    mCurrentStreamInfo.getPlayMethod().toString(),
+                    getTranscodeReason()
+                    )
+            );
+        } else {
+            Utils.showToast(ExternalPlayerActivity.this, String.format(Locale.US, "%s\n\n%s",
+                    getDisplayTitle(),
+                    mCurrentStreamInfo.getPlayMethod().toString()
+                    )
+            );
+        }
+    }
+
     protected void launchExternalPlayer() {
         isLiveTv = mCurrentItem.getBaseItemType() == BaseItemType.TvChannel;
         if (!isLiveTv && mUseSendPath && !mAllowTranscoding) {
             // build fake streamInfo so report logic can work
             mCurrentStreamInfo = buildStreamInfoSendPath();
             // Just pass the path directly
-            Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle() + "\n\n" + PlayMethod.DirectPlay);
+            showPlaybackInfoPopup();
             Uri uri = getSendPathUri(mCurrentItem, mCurrentMediaSource);
             if (mUseLegacySendPath) {
                 startExternalZidooZDMCActivity(uri);
@@ -635,7 +677,7 @@ public class ExternalPlayerActivity extends FragmentActivity {
                         mCurrentStreamInfo = response;
                         mCurrentMediaSource = response.getMediaSource();
 
-                        Utils.showToast(ExternalPlayerActivity.this, getDisplayTitle() + "\n\n" + mCurrentStreamInfo.getPlayMethod().toString());
+                        showPlaybackInfoPopup();
                         if (mUseSendPath && mCurrentStreamInfo.getPlayMethod() == PlayMethod.DirectPlay) {
                             Uri uri = getSendPathUri(mCurrentItem, mCurrentMediaSource);
                             if (mUseLegacySendPath) {
