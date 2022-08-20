@@ -416,10 +416,10 @@ public class AudioNowPlayingActivity extends BaseActivity {
     private void updatePoster() {
         if (isFinishing()) return;
         // Figure image size
-        Double aspect = ImageUtils.getImageAspectRatio(mBaseItem, false);
+        Double aspect = ImageUtils.getImageAspectRatio(mBaseItem);
         int posterHeight = aspect > 1 ? Utils.convertDpToPixel(mActivity, 150) : Utils.convertDpToPixel(mActivity, 250);
 
-        String primaryImageUrl = ImageUtils.getPrimaryImageUrl(this, mBaseItem, false, posterHeight);
+        String primaryImageUrl = ImageUtils.getPrimaryImageUrl(mBaseItem, posterHeight);
         Timber.d("Audio Poster url: %s", primaryImageUrl);
         mPoster.load(primaryImageUrl, null, ContextCompat.getDrawable(this, R.drawable.ic_album), aspect, 0);
     }

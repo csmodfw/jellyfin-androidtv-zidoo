@@ -66,6 +66,7 @@ import org.jellyfin.androidtv.ui.presentation.InfoCardPresenter;
 import org.jellyfin.androidtv.ui.presentation.MyDetailsOverviewRowPresenter;
 import org.jellyfin.androidtv.ui.shared.BaseActivity;
 import org.jellyfin.androidtv.ui.shared.MessageListener;
+import org.jellyfin.androidtv.util.ImageHelper;
 import org.jellyfin.androidtv.util.ImageUtils;
 import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.MarkdownRenderer;
@@ -97,6 +98,7 @@ import org.jellyfin.apiclient.model.querying.UpcomingEpisodesQuery;
 import org.jellyfin.apiclient.serialization.GsonJsonSerializer;
 import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.jellyfin.sdk.model.api.BaseItemPerson;
+import org.jellyfin.sdk.model.api.ImageType;
 import org.jellyfin.sdk.model.constant.ItemSortBy;
 import org.jellyfin.sdk.model.constant.MediaType;
 import org.jellyfin.sdk.model.constant.PersonType;
@@ -409,9 +411,6 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
         if (mRecordButton != null) mRecordButton.setActivated(id != null);
     }
 
-    private int posterWidth;
-    private int posterHeight;
-
     @Override
     public void setRecSeriesTimer(String id) {
         if (mProgramInfo != null) mProgramInfo.setSeriesTimerId(id);
@@ -427,16 +426,13 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
             BaseItemDto item = params[0];
 
             // Figure image size
-            Double aspect = ImageUtils.getImageAspectRatio(item, false);
-            posterHeight = aspect > 1 ? Utils.convertDpToPixel(mActivity, 160) : Utils.convertDpToPixel(mActivity, item.getBaseItemType() == BaseItemType.Person || item.getBaseItemType() == BaseItemType.MusicArtist ? 300 : 200);
-            posterWidth = (int)((aspect) * posterHeight);
-            if (posterHeight < 10) posterWidth = Utils.convertDpToPixel(mActivity, 150);  //Guard against zero size images causing picasso to barf
-
+            Double aspect = ImageUtils.getImageAspectRatio(item);
+            int posterHeight = aspect > 1 ? Utils.convertDpToPixel(mActivity, 160) : Utils.convertDpToPixel(mActivity, item.getBaseItemType() == BaseItemType.Person || item.getBaseItemType() == BaseItemType.MusicArtist ? 300 : 200);
             mDetailsOverviewRow = new MyDetailsOverviewRow(ModelCompat.asSdk(item));
 
-            String primaryImageUrl = ImageUtils.getLogoImageUrl(mBaseItem, 600, true);
-            if (primaryImageUrl == null) {
-                primaryImageUrl = ImageUtils.getPrimaryImageUrl(mActivity, mBaseItem, false, posterHeight);
+            String imageUrl = KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(ModelCompat.asSdk(mBaseItem), ImageType.LOGO, true, null, 600, true, false, false);
+            if (imageUrl == null) {
+                imageUrl = ImageUtils.getPrimaryImageUrl(mBaseItem, posterHeight);
                 if (item.getRunTimeTicks() != null && item.getRunTimeTicks() > 0 && item.getUserData() != null && item.getUserData().getPlaybackPositionTicks() > 0)
                     mDetailsOverviewRow.setProgress(((int) (item.getUserData().getPlaybackPositionTicks() * 100.0 / item.getRunTimeTicks())));
             }
@@ -477,7 +473,7 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
 
             }
 
-            mDetailsOverviewRow.setImageBitmap(primaryImageUrl);
+            mDetailsOverviewRow.setImageBitmap(imageUrl);
 
             return mDetailsOverviewRow;
         }
@@ -564,7 +560,6 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                         ItemFields.PrimaryImageAspectRatio,
                         ItemFields.ChildCount
                 });
-                similar.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 similar.setId(mBaseItem.getId());
                 similar.setLimit(10);
 
@@ -587,7 +582,6 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                         ItemFields.PrimaryImageAspectRatio,
                         ItemFields.ChildCount
                 });
-                similarTrailer.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 similarTrailer.setId(mBaseItem.getId());
                 similarTrailer.setLimit(10);
 
@@ -602,12 +596,11 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                         ItemFields.PrimaryImageAspectRatio,
                         ItemFields.ChildCount
                 });
-                personMovies.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 personMovies.setPersonIds(new String[] {mBaseItem.getId()});
                 personMovies.setRecursive(true);
                 personMovies.setIncludeItemTypes(new String[] {"Movie"});
                 personMovies.setSortBy(new String[] {ItemSortBy.SortName});
-                ItemRowAdapter personMoviesAdapter = new ItemRowAdapter(this, personMovies, 100, false, new CardPresenter(), adapter);
+                ItemRowAdapter personMoviesAdapter = new ItemRowAdapter(this, personMovies, new CardPresenter(), adapter).setChunkSize(100);
                 addItemRow(adapter, personMoviesAdapter, 0, getString(R.string.lbl_movies));
 
                 ItemQuery personSeries = new ItemQuery();
@@ -616,12 +609,11 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                         ItemFields.DisplayPreferencesId,
                         ItemFields.ChildCount
                 });
-                personSeries.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 personSeries.setPersonIds(new String[] {mBaseItem.getId()});
                 personSeries.setRecursive(true);
                 personSeries.setIncludeItemTypes(new String[] {"Series"});
                 personSeries.setSortBy(new String[] {ItemSortBy.SortName});
-                ItemRowAdapter personSeriesAdapter = new ItemRowAdapter(this, personSeries, 100, false, new CardPresenter(), adapter);
+                ItemRowAdapter personSeriesAdapter = new ItemRowAdapter(this, personSeries, new CardPresenter(), adapter).setChunkSize(100);
                 addItemRow(adapter, personSeriesAdapter, 1, getString(R.string.lbl_tv_series));
 
                 ItemQuery personEpisodes = new ItemQuery();
@@ -630,12 +622,11 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                         ItemFields.DisplayPreferencesId,
                         ItemFields.ChildCount
                 });
-                personEpisodes.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 personEpisodes.setPersonIds(new String[] {mBaseItem.getId()});
                 personEpisodes.setRecursive(true);
                 personEpisodes.setIncludeItemTypes(new String[] {"Episode"});
                 personEpisodes.setSortBy(new String[] {ItemSortBy.SeriesSortName, ItemSortBy.SortName});
-                ItemRowAdapter personEpisodesAdapter = new ItemRowAdapter(this, personEpisodes, 100, false, new CardPresenter(), adapter);
+                ItemRowAdapter personEpisodesAdapter = new ItemRowAdapter(this, personEpisodes, new CardPresenter(), adapter).setChunkSize(100);
                 addItemRow(adapter, personEpisodesAdapter, 2, getString(R.string.lbl_episodes));
 
                 break;
@@ -646,28 +637,25 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                         ItemFields.PrimaryImageAspectRatio,
                         ItemFields.ChildCount
                 });
-                artistAlbums.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 artistAlbums.setArtistIds(new String[]{mBaseItem.getId()});
                 artistAlbums.setRecursive(true);
                 artistAlbums.setIncludeItemTypes(new String[]{"MusicAlbum"});
-                ItemRowAdapter artistAlbumsAdapter = new ItemRowAdapter(this, artistAlbums, 100, false, new CardPresenter(), adapter);
+                ItemRowAdapter artistAlbumsAdapter = new ItemRowAdapter(this, artistAlbums, new CardPresenter(), adapter).setChunkSize(100);
                 addItemRow(adapter, artistAlbumsAdapter, 0, getString(R.string.lbl_albums));
 
                 break;
             case Series:
                 NextUpQuery nextUpQuery = new NextUpQuery();
-                nextUpQuery.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 nextUpQuery.setSeriesId(mBaseItem.getId());
                 nextUpQuery.setFields(new ItemFields[]{
                         ItemFields.PrimaryImageAspectRatio,
                         ItemFields.ChildCount
                 });
-                ItemRowAdapter nextUpAdapter = new ItemRowAdapter(this, nextUpQuery, false, new CardPresenter(true, 260), adapter);
+                ItemRowAdapter nextUpAdapter = new ItemRowAdapter(this, nextUpQuery, new CardPresenter(true, 260), adapter);
                 addItemRow(adapter, nextUpAdapter, 0, getString(R.string.lbl_next_up));
 
                 SeasonQuery seasons = new SeasonQuery();
                 seasons.setSeriesId(mBaseItem.getId());
-                seasons.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 seasons.setFields(new ItemFields[] {
                         ItemFields.PrimaryImageAspectRatio,
                         ItemFields.DisplayPreferencesId,
@@ -677,7 +665,6 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                 addItemRow(adapter, seasonsAdapter, 1, getString(R.string.lbl_seasons));
 
                 UpcomingEpisodesQuery upcoming = new UpcomingEpisodesQuery();
-                upcoming.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 upcoming.setParentId(mBaseItem.getId());
                 upcoming.setFields(new ItemFields[]{
                         ItemFields.PrimaryImageAspectRatio,
@@ -698,7 +685,6 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                         ItemFields.DisplayPreferencesId,
                         ItemFields.ChildCount
                 });
-                similarSeries.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 similarSeries.setId(mBaseItem.getId());
                 similarSeries.setLimit(20);
                 ItemRowAdapter similarAdapter = new ItemRowAdapter(this, similarSeries, QueryType.SimilarSeries, new CardPresenter(), adapter);
@@ -712,7 +698,7 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                     nextEpisodes.setIncludeItemTypes(new String[]{"Episode"});
                     nextEpisodes.setStartIndex(mBaseItem.getIndexNumber()); // query index is zero-based but episode no is not
                     nextEpisodes.setLimit(20);
-                    ItemRowAdapter nextAdapter = new ItemRowAdapter(this, nextEpisodes, 0 , false, true, new CardPresenter(true, 240), adapter);
+                    ItemRowAdapter nextAdapter = new ItemRowAdapter(this, nextEpisodes, new CardPresenter(true, 240), adapter);
                     addItemRow(adapter, nextAdapter, 5, getString(R.string.lbl_next_episode));
                 }
 

@@ -8,6 +8,7 @@ import androidx.leanback.widget.ListRow;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.auth.repository.UserRepository;
+import org.jellyfin.androidtv.constant.QueryType;
 import org.jellyfin.androidtv.ui.GridButton;
 import org.jellyfin.androidtv.ui.itemhandling.ItemRowAdapter;
 import org.jellyfin.androidtv.ui.presentation.GridButtonPresenter;
@@ -50,7 +51,7 @@ public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
         recordings.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
         recordings.setEnableImages(true);
         recordings.setLimit(40);
-        mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_recent_recordings), recordings, 40));
+        mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_recent_recordings), recordings).setChunkSize(40));
 
         //Movies
         RecordingQuery movies = new RecordingQuery();
@@ -62,7 +63,7 @@ public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
         movies.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
         movies.setEnableImages(true);
         movies.setIsMovie(true);
-        BrowseRowDef moviesDef = new BrowseRowDef(mActivity.getString(R.string.lbl_movies), movies, 60);
+        BrowseRowDef moviesDef = new BrowseRowDef(mActivity.getString(R.string.lbl_movies), movies).setChunkSize(60);
 
         //Shows
         RecordingQuery shows = new RecordingQuery();
@@ -74,7 +75,7 @@ public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
         shows.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
         shows.setEnableImages(true);
         shows.setIsSeries(true);
-        BrowseRowDef showsDef = new BrowseRowDef(mActivity.getString(R.string.lbl_tv_series), shows, 60);
+        BrowseRowDef showsDef = new BrowseRowDef(mActivity.getString(R.string.lbl_tv_series), shows).setChunkSize(60);
 
         mRows.add(showsDef);
         mRows.add(moviesDef);
@@ -89,7 +90,7 @@ public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
         sports.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
         sports.setEnableImages(true);
         sports.setIsSports(true);
-        mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_sports), sports, 60));
+        mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_sports), sports).setChunkSize(60));
 
         //Kids
         RecordingQuery kids = new RecordingQuery();
@@ -101,7 +102,7 @@ public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
         kids.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
         kids.setEnableImages(true);
         kids.setIsKids(true);
-        mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_kids), kids, 60));
+        mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_kids), kids).setChunkSize(60));
 
         rowLoader.loadRows(mRows);
         addNext24Timers();
@@ -136,7 +137,7 @@ public class BrowseRecordingsFragment extends EnhancedBrowseFragment {
                     }
                 }
                 if (nearTimers.size() > 0) {
-                    ItemRowAdapter scheduledAdapter = new ItemRowAdapter(requireContext(), nearTimers, mCardPresenter, mRowsAdapter, true);
+                    ItemRowAdapter scheduledAdapter = new ItemRowAdapter(requireContext(), nearTimers, QueryType.StaticItems, mCardPresenter, mRowsAdapter);
                     scheduledAdapter.Retrieve();
                     ListRow scheduleRow = new ListRow(new HeaderItem("Scheduled in Next 24 Hours"), scheduledAdapter);
                     mRowsAdapter.add(0, scheduleRow);

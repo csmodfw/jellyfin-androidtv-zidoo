@@ -133,7 +133,7 @@ class PictureViewerFragment : Fragment(), View.OnKeyListener {
 		load(
 			url = url,
 			blurHash = item.imageBlurHashes?.get(ImageType.PRIMARY)?.get(item.imageTags?.get(ImageType.PRIMARY)),
-			aspectRatio = item.primaryImageAspectRatio ?: 1.0,
+			blurAspectRatio = item.primaryImageAspectRatio ?: 1.0,
 		)
 	}
 }

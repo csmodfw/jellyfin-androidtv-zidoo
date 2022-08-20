@@ -117,46 +117,7 @@ public class StdRowsFragment extends RowsSupportFragment implements RowLoader {
 
         for (BrowseRowDef def : rows) {
             HeaderItem header = new HeaderItem(def.getHeaderText());
-            ItemRowAdapter rowAdapter;
-            switch (def.getQueryType()) {
-                case NextUp:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getNextUpQuery(), true, mCardPresenter, mRowsAdapter);
-                    break;
-                case LatestItems:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getLatestItemsQuery(), true, mCardPresenter, mRowsAdapter);
-                    break;
-                case Season:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getSeasonQuery(), mCardPresenter, mRowsAdapter);
-                    break;
-                case Upcoming:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getUpcomingQuery(), mCardPresenter, mRowsAdapter);
-                    break;
-                case Views:
-                    rowAdapter = new ItemRowAdapter(requireContext(), new ViewQuery(), mCardPresenter, mRowsAdapter);
-                    break;
-                case SimilarSeries:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getSimilarQuery(), QueryType.SimilarSeries, mCardPresenter, mRowsAdapter);
-                    break;
-                case SimilarMovies:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getSimilarQuery(), QueryType.SimilarMovies, mCardPresenter, mRowsAdapter);
-                    break;
-                case Persons:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getPersonsQuery(), def.getChunkSize(), mCardPresenter, mRowsAdapter);
-                    break;
-                case LiveTvChannel:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getTvChannelQuery(), 40, mCardPresenter, mRowsAdapter);
-                    break;
-                case LiveTvProgram:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getProgramQuery(), mCardPresenter, mRowsAdapter);
-                    break;
-                case LiveTvRecording:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getRecordingQuery(), def.getChunkSize(), mCardPresenter, mRowsAdapter);
-                    break;
-                default:
-                    rowAdapter = new ItemRowAdapter(requireContext(), def.getQuery(), def.getChunkSize(), def.getPreferParentThumb(), def.isStaticHeight(), mCardPresenter, mRowsAdapter, def.getQueryType());
-                    break;
-            }
-
+            ItemRowAdapter rowAdapter = ItemRowAdapter.buildItemRowAdapter(requireContext(), def, mCardPresenter, mRowsAdapter);
             rowAdapter.setReRetrieveTriggers(def.getChangeTriggers());
 
             ListRow row = new ListRow(header, rowAdapter);

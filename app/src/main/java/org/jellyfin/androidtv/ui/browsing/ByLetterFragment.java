@@ -18,7 +18,7 @@ public class ByLetterFragment extends BrowseFolderFragment {
             if (includeType != null) numbers.setIncludeItemTypes(new String[]{includeType});
             numbers.setNameLessThan(letters.substring(0, 1));
             numbers.setRecursive(true);
-            mRows.add(new BrowseRowDef("#", numbers, 40));
+            mRows.add(new BrowseRowDef("#", numbers).setChunkSize(40));
 
             //Then all the defined letters
             for (Character letter : letters.toCharArray()) {
@@ -28,7 +28,7 @@ public class ByLetterFragment extends BrowseFolderFragment {
                 if (includeType != null) letterQuery.setIncludeItemTypes(new String[]{includeType});
                 letterQuery.setNameStartsWith(letter.toString());
                 letterQuery.setRecursive(true);
-                mRows.add(new BrowseRowDef(letter.toString(), letterQuery, 40));
+                mRows.add(new BrowseRowDef(letter.toString(), letterQuery).setChunkSize(40));
             }
 
             if (mRows.size() < 2) setHeadersState(HEADERS_DISABLED);

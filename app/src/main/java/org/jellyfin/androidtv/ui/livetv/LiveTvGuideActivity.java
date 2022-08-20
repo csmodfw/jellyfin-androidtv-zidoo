@@ -774,7 +774,9 @@ public class LiveTvGuideActivity extends BaseActivity implements LiveTvGuide {
 
         if (mSelectedProgram.getId() != null) {
             mDisplayDate.setText(TimeUtils.getFriendlyDate(this, TimeUtils.convertToLocalDate(mSelectedProgram.getStartDate())));
-            String url = ImageUtils.getPrimaryImageUrl(mSelectedProgram);
+            String url = ImageUtils.getThumbImageUrl(mSelectedProgram, ImageUtils.MAX_PRIMARY_IMAGE_HEIGHT);
+            if (Utils.isEmpty(url))
+                url = ImageUtils.getPrimaryImageUrl(mSelectedProgram);
             int imageSize = Utils.convertDpToPixel(this, 150);
             Glide.with(mActivity)
                     .load(url)

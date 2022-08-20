@@ -33,7 +33,7 @@ public class ByGenreFragment extends BrowseFolderFragment {
                             genreQuery.setIncludeItemTypes(new String[]{includeType});
                         genreQuery.setGenres(new String[]{genre.getName()});
                         genreQuery.setRecursive(true);
-                        mRows.add(new BrowseRowDef(genre.getName(), genreQuery, 40));
+                        mRows.add(new BrowseRowDef(genre.getName(), genreQuery).setChunkSize(40));
                     }
 
                     if (mRows.size() < 2) setHeadersState(HEADERS_DISABLED);

@@ -80,7 +80,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 resumeMovies.setFilters(new ItemFilter[]{ItemFilter.IsResumable});
                 resumeMovies.setSortBy(new String[]{ItemSortBy.DatePlayed});
                 resumeMovies.setSortOrder(SortOrder.Descending);
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_continue_watching), resumeMovies, 0, new ChangeTriggerType[]{ChangeTriggerType.MoviePlayback}));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_continue_watching), resumeMovies, new ChangeTriggerType[]{ChangeTriggerType.MoviePlayback}));
 
                 //Latest
                 LatestItemsQuery latestMovies = new LatestItemsQuery();
@@ -112,7 +112,9 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 favorites.setImageTypeLimit(1);
                 favorites.setFilters(new ItemFilter[]{ItemFilter.IsFavorite});
                 favorites.setSortBy(new String[]{ItemSortBy.SortName});
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorites), favorites, 60, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated, ChangeTriggerType.FavoriteUpdate}));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorites), favorites, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated, ChangeTriggerType.FavoriteUpdate})
+                        .setChunkSize(60)
+                );
 
                 //Collections
                 StdItemQuery collections = new StdItemQuery();
@@ -124,7 +126,9 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 collections.setImageTypeLimit(1);
                 //collections.setParentId(mFolder.getId());
                 collections.setSortBy(new String[]{ItemSortBy.SortName});
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_collections), collections, 60, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated}));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_collections), collections, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated})
+                        .setChunkSize(60)
+                );
 
                 rowLoader.loadRows(mRows);
                 break;
@@ -166,7 +170,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                     newQuery.setSortOrder(SortOrder.Descending);
                     newQuery.setEnableTotalRecordCount(false);
                     newQuery.setLimit(300);
-                    mRows.add(new BrowseRowDef(getString(R.string.lbl_new_premieres), newQuery, 0, true, true, new ChangeTriggerType[]{ChangeTriggerType.TvPlayback}, QueryType.Premieres));
+                    mRows.add(new BrowseRowDef(getString(R.string.lbl_new_premieres), newQuery, QueryType.Premieres, new ChangeTriggerType[]{ChangeTriggerType.TvPlayback}));
                 }
 
                 //Latest content added
@@ -193,7 +197,9 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 tvFavorites.setImageTypeLimit(1);
                 tvFavorites.setFilters(new ItemFilter[]{ItemFilter.IsFavorite});
                 tvFavorites.setSortBy(new String[]{ItemSortBy.SortName});
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorites), tvFavorites, 60, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated, ChangeTriggerType.FavoriteUpdate}));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorites), tvFavorites, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated, ChangeTriggerType.FavoriteUpdate})
+                        .setChunkSize(60)
+                );
 
                 rowLoader.loadRows(mRows);
                 break;
@@ -223,7 +229,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 lastPlayed.setSortOrder(SortOrder.Descending);
                 lastPlayed.setEnableTotalRecordCount(false);
                 lastPlayed.setLimit(50);
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_last_played), lastPlayed, 0, false, true, new ChangeTriggerType[]{ChangeTriggerType.MusicPlayback, ChangeTriggerType.LibraryUpdated}));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_date_played), lastPlayed, new ChangeTriggerType[]{ChangeTriggerType.MusicPlayback, ChangeTriggerType.LibraryUpdated}));
 
                 //Favorites
                 StdItemQuery favAlbums = new StdItemQuery();
@@ -233,7 +239,9 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 favAlbums.setImageTypeLimit(1);
                 favAlbums.setFilters(new ItemFilter[]{ItemFilter.IsFavorite});
                 favAlbums.setSortBy(new String[]{ItemSortBy.SortName});
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorites), favAlbums, 60, false, true, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated, ChangeTriggerType.FavoriteUpdate}));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorites), favAlbums, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated, ChangeTriggerType.FavoriteUpdate})
+                        .setChunkSize(60)
+                );
 
                 //AudioPlaylists
                 StdItemQuery playlists = new StdItemQuery(new ItemFields[]{
@@ -246,7 +254,9 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 playlists.setRecursive(true);
                 playlists.setSortBy(new String[]{ItemSortBy.DateCreated});
                 playlists.setSortOrder(SortOrder.Descending);
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_playlists), playlists, 60, false, true, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated}, QueryType.AudioPlaylists));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_playlists), playlists, QueryType.AudioPlaylists, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated})
+                        .setChunkSize(60)
+                );
 
                 rowLoader.loadRows(mRows);
                 break;
@@ -290,13 +300,13 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                 favTv.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 favTv.setEnableFavoriteSorting(true);
                 favTv.setIsFavorite(true);
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorite_channels), favTv));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_favorite_channels), favTv).setChunkSize(40));
 
                 //Other Channels
                 LiveTvChannelQuery otherTv = new LiveTvChannelQuery();
                 otherTv.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                 otherTv.setIsFavorite(false);
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_other_channels), otherTv));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_other_channels), otherTv).setChunkSize(40));
 
                 //Latest Recordings
                 RecordingQuery recordings = new RecordingQuery();
@@ -370,24 +380,24 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                                     });
                                     recordings.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
                                     recordings.setEnableImages(true);
-                                    mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_recent_recordings), recordings, 50));
+                                    mRows.add(new BrowseRowDef(mActivity.getString(R.string.lbl_recent_recordings), recordings).setChunkSize(50));
                                     rowLoader.loadRows(mRows);
 
                                     //Now insert our smart rows
                                     if (weekItems.size() > 0) {
-                                        ItemRowAdapter weekAdapter = new ItemRowAdapter(requireContext(), weekItems, mCardPresenter, mRowsAdapter, true);
+                                        ItemRowAdapter weekAdapter = new ItemRowAdapter(requireContext(), weekItems, QueryType.StaticItems, mCardPresenter, mRowsAdapter);
                                         weekAdapter.Retrieve();
                                         ListRow weekRow = new ListRow(new HeaderItem("Past Week"), weekAdapter);
                                         mRowsAdapter.add(0, weekRow);
                                     }
                                     if (nearTimers.size() > 0) {
-                                        ItemRowAdapter scheduledAdapter = new ItemRowAdapter(requireContext(), nearTimers, mCardPresenter, mRowsAdapter, true);
+                                        ItemRowAdapter scheduledAdapter = new ItemRowAdapter(requireContext(), nearTimers, QueryType.StaticItems, mCardPresenter, mRowsAdapter);
                                         scheduledAdapter.Retrieve();
                                         ListRow scheduleRow = new ListRow(new HeaderItem("Scheduled in Next 24 Hours"), scheduledAdapter);
                                         mRowsAdapter.add(0, scheduleRow);
                                     }
                                     if (dayItems.size() > 0) {
-                                        ItemRowAdapter dayAdapter = new ItemRowAdapter(requireContext(), dayItems, mCardPresenter, mRowsAdapter, true);
+                                        ItemRowAdapter dayAdapter = new ItemRowAdapter(requireContext(), dayItems, QueryType.StaticItems, mCardPresenter, mRowsAdapter);
                                         dayAdapter.Retrieve();
                                         ListRow dayRow = new ListRow(new HeaderItem("Past 24 Hours"), dayAdapter);
                                         mRowsAdapter.add(0, dayRow);
@@ -397,7 +407,7 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                                     // no recordings
                                     rowLoader.loadRows(mRows);
                                     if (nearTimers.size() > 0) {
-                                        ItemRowAdapter scheduledAdapter = new ItemRowAdapter(requireContext(), nearTimers, mCardPresenter, mRowsAdapter, true);
+                                        ItemRowAdapter scheduledAdapter = new ItemRowAdapter(requireContext(), nearTimers, QueryType.StaticItems, mCardPresenter, mRowsAdapter);
                                         scheduledAdapter.Retrieve();
                                         ListRow scheduleRow = new ListRow(new HeaderItem("Scheduled in Next 24 Hours"), scheduledAdapter);
                                         mRowsAdapter.add(0, scheduleRow);
@@ -441,7 +451,9 @@ public class BrowseViewFragment extends EnhancedBrowseFragment {
                                 ItemQuery rowQuery = new StdItemQuery();
                                 rowQuery.setParentId(item.getId());
                                 rowQuery.setUserId(userId.toString());
-                                rows.add(new BrowseRowDef(item.getName(), rowQuery, 60, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated}));
+                                rows.add(new BrowseRowDef(item.getName(), rowQuery, new ChangeTriggerType[]{ChangeTriggerType.LibraryUpdated})
+                                        .setChunkSize(60)
+                                );
                             }
                         }
 

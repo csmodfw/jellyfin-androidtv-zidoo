@@ -37,7 +37,7 @@ public class GenericFolderFragment extends EnhancedBrowseFragment {
                     resume.setFilters(new ItemFilter[]{ItemFilter.IsResumable});
                     resume.setSortBy(new String[]{ItemSortBy.DatePlayed});
                     resume.setSortOrder(SortOrder.Descending);
-                    mRows.add(new BrowseRowDef(getString(R.string.lbl_continue_watching), resume, 0));
+                    mRows.add(new BrowseRowDef(getString(R.string.lbl_continue_watching), resume));
                 }
 
                 StdItemQuery latest = new StdItemQuery();
@@ -46,14 +46,14 @@ public class GenericFolderFragment extends EnhancedBrowseFragment {
                 latest.setFilters(new ItemFilter[]{ItemFilter.IsUnplayed});
                 latest.setSortBy(new String[]{ItemSortBy.DateCreated});
                 latest.setSortOrder(SortOrder.Descending);
-                mRows.add(new BrowseRowDef(getString(R.string.lbl_latest_additions), latest, 0));
+                mRows.add(new BrowseRowDef(getString(R.string.lbl_latest_additions), latest));
 
             }
 
             StdItemQuery byName = new StdItemQuery();
             byName.setParentId(mFolder.getId());
             String header = (mFolder.getBaseItemType() == BaseItemType.Season) ? mFolder.getName() : getString(R.string.lbl_by_name);
-            mRows.add(new BrowseRowDef(header, byName, 100));
+            mRows.add(new BrowseRowDef(header, byName).setChunkSize(100));
 
             rowLoader.loadRows(mRows);
         }

@@ -52,8 +52,8 @@ class AsyncImageView @JvmOverloads constructor(
 		url: String? = null,
 		blurHash: String? = null,
 		placeholder: Drawable? = null,
-		aspectRatio: Double = 1.0,
-		blurHashResolution: Int = 32,
+		blurAspectRatio: Double = 1.0,
+		blurResolution: Int = 32,
 	) = doOnAttach {
 		lifeCycleOwner?.lifecycleScope?.launch {
 			var placeholderOrBlurHash = placeholder
@@ -62,8 +62,8 @@ class AsyncImageView @JvmOverloads constructor(
 			if (url != null && blurHash != null) withContext(Dispatchers.IO) {
 				val blurHashBitmap = BlurHashDecoder.decode(
 					blurHash,
-					if (aspectRatio > 1) round(blurHashResolution * aspectRatio).toInt() else blurHashResolution,
-					if (aspectRatio >= 1) blurHashResolution else round(blurHashResolution / aspectRatio).toInt(),
+					if (blurAspectRatio > 1) round(blurResolution * blurAspectRatio).toInt() else blurResolution,
+					if (blurAspectRatio >= 1) blurResolution else round(blurResolution / blurAspectRatio).toInt(),
 				)
 				if (blurHashBitmap != null) placeholderOrBlurHash = blurHashBitmap.toDrawable(resources)
 			}

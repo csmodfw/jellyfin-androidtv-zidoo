@@ -37,12 +37,12 @@ class NextUpFragment : Fragment() {
 					binding.logo.load(
 						url = data.logo.url,
 						blurHash = data.logo.blurHash,
-						aspectRatio = data.logo.aspectRatio
+						blurAspectRatio = data.logo.aspectRatio
 					)
 					binding.image.load(
 						url = data.thumbnail.url,
 						blurHash = data.thumbnail.blurHash,
-						aspectRatio = data.thumbnail.aspectRatio
+						blurAspectRatio = data.thumbnail.aspectRatio
 					)
 					binding.title.text = data.title
 				}

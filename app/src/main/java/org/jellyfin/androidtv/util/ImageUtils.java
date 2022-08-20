@@ -8,39 +8,37 @@ import androidx.annotation.AnyRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.util.sdk.compat.ModelCompat;
 import org.jellyfin.apiclient.interaction.ApiClient;
 import org.jellyfin.apiclient.model.dto.BaseItemDto;
 import org.jellyfin.apiclient.model.dto.BaseItemType;
 import org.jellyfin.apiclient.model.dto.ImageOptions;
-import org.jellyfin.apiclient.model.dto.UserItemDataDto;
 import org.jellyfin.apiclient.model.entities.ImageType;
 import org.jellyfin.apiclient.model.livetv.ChannelInfoDto;
 import org.jellyfin.sdk.model.api.BaseItemPerson;
+import org.jellyfin.sdk.model.api.SearchHint;
 import org.jellyfin.sdk.model.api.UserDto;
 import org.koin.java.KoinJavaComponent;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 public class ImageUtils {
     public static final double ASPECT_RATIO_2_3 = 2.0 / 3.0;
-    public static final double ASPECT_RATIO_16_9 = 16.0 / 9.0;
     public static final double ASPECT_RATIO_7_9 = 7.0 / 9.0;
+    public static final double ASPECT_RATIO_16_9 = 16.0 / 9.0;
+
+    public static final double ASPECT_RATIO_POSTER = ASPECT_RATIO_2_3; // NOTE: TV primary is 680 / 1000 so make sure we centerCrop
+    public static final double ASPECT_RATIO_POSTER_WIDE = ASPECT_RATIO_7_9;
+    public static final double ASPECT_RATIO_THUMB = ASPECT_RATIO_16_9;
+    public static final double ASPECT_RATIO_BANNER = 1000.0 / 185.0;
+    public static final double ASPECT_RATIO_SQUARE = 1.0;
 
     public static final int MAX_PRIMARY_IMAGE_HEIGHT = 370;
 
     private static final List<BaseItemType> THUMB_FALLBACK_TYPES = Collections.singletonList(BaseItemType.Episode);
-    private static final List<BaseItemType> PROGRESS_INDICATOR_TYPES = Arrays.asList(BaseItemType.Episode, BaseItemType.Movie, BaseItemType.MusicVideo, BaseItemType.Video);
 
-    public static Double getImageAspectRatio(BaseItemDto item, boolean preferParentThumb) {
-        if (preferParentThumb &&
-                (item.getParentThumbItemId() != null || item.getSeriesThumbImageTag() != null)) {
-            return ASPECT_RATIO_16_9;
-        }
-
+    public static Double getImageAspectRatio(@NonNull BaseItemDto item) {
         if (THUMB_FALLBACK_TYPES.contains(item.getBaseItemType())) {
             if (item.getPrimaryImageAspectRatio() != null) {
                 return item.getPrimaryImageAspectRatio();
@@ -50,28 +48,39 @@ public class ImageUtils {
             }
         }
 
-        if (item.getBaseItemType() == BaseItemType.UserView && item.getHasPrimaryImage())
-            return ImageUtils.ASPECT_RATIO_16_9;
+        if ((BaseItemType.UserView.equals(item.getBaseItemType()) || BaseItemType.CollectionFolder.equals(item.getBaseItemType())) && item.getHasPrimaryImage())
+            return ASPECT_RATIO_16_9;
 
         return item.getPrimaryImageAspectRatio() != null ? item.getPrimaryImageAspectRatio() : ASPECT_RATIO_7_9;
     }
 
-    public static String getPrimaryImageUrl(@NonNull BaseItemPerson item, @Nullable int maxHeight) {
+    @Nullable
+    public static String getPrimaryImageUrl(@NonNull BaseItemPerson item, int maxHeight) {
+        if (Utils.isEmpty(item.getPrimaryImageTag())) {
+            return null;
+        }
         return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(item, maxHeight);
     }
 
+    @Nullable
+    public static String getPrimaryImageUrl(@NonNull SearchHint item, int maxHeight) {
+        if (Utils.isEmpty(item.getPrimaryImageTag())) {
+            return null;
+        }
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(item.getItemId(), org.jellyfin.sdk.model.api.ImageType.PRIMARY, item.getPrimaryImageTag(), maxHeight);
+    }
+
+    @Nullable
     public static String getPrimaryImageUrl(@NonNull UserDto item) {
         return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(item);
     }
 
-    public static String getPrimaryImageUrl(@NonNull BaseItemDto item) {
-        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(ModelCompat.asSdk(item), null, MAX_PRIMARY_IMAGE_HEIGHT);
-    }
-
+    @Nullable
     public static String getPrimaryImageUrl(ChannelInfoDto item, ApiClient apiClient) {
         if (!item.getHasPrimaryImage()) {
             return null;
         }
+
         ImageOptions options = new ImageOptions();
         options.setTag(item.getImageTags().get(ImageType.Primary));
         options.setMaxHeight(MAX_PRIMARY_IMAGE_HEIGHT);
@@ -79,47 +88,44 @@ public class ImageUtils {
         return apiClient.GetImageUrl(item, options);
     }
 
-    public static String getImageUrl(@NonNull String itemId, @NonNull ImageType imageType, @NonNull String imageTag) {
-        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(itemId, ModelCompat.asSdk(imageType), imageTag);
+    @Nullable
+    public static String getPrimaryImageUrl(@NonNull BaseItemDto item) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(ModelCompat.asSdk(item), MAX_PRIMARY_IMAGE_HEIGHT);
     }
 
-    public static String getBannerImageUrl(Context context, BaseItemDto item, ApiClient apiClient, int maxHeight) {
-        if (!item.getHasBanner()) {
-            return getPrimaryImageUrl(context, item, false, maxHeight);
-        }
-
-        ImageOptions options = new ImageOptions();
-        options.setTag(item.getImageTags().get(ImageType.Banner));
-        options.setImageType(ImageType.Banner);
-
-        UserItemDataDto userData = item.getUserData();
-        if (userData != null && item.getBaseItemType() != BaseItemType.MusicArtist && item.getBaseItemType() != BaseItemType.MusicAlbum) {
-            if (PROGRESS_INDICATOR_TYPES.contains(item.getBaseItemType()) &&
-                    userData.getPlayedPercentage() != null &&
-                    userData.getPlayedPercentage() > 0 &&
-                    userData.getPlayedPercentage() < 99) {
-                Double pct = userData.getPlayedPercentage();
-                options.setPercentPlayed(pct.intValue());
-            }
-        }
-
-        return apiClient.GetImageUrl(item.getId(), options);
+    @Nullable
+    public static String getPrimaryImageUrl(@NonNull BaseItemDto item, int maxHeight) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(ModelCompat.asSdk(item), maxHeight);
     }
 
-    public static String getThumbImageUrl(@NonNull BaseItemDto item, boolean preferParentThumb, int maxHeight) {
-        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getThumbImageUrl(ModelCompat.asSdk(item), preferParentThumb, maxHeight);
+    @Nullable
+    public static String getImageUrl(@NonNull String itemId, @NonNull ImageType imageType, @NonNull String imageTag, Integer maxHeight) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(itemId, ModelCompat.asSdk(imageType), imageTag, maxHeight);
     }
 
-    public static String getPrimaryImageUrl(@NonNull Context context, @NonNull BaseItemDto item, boolean preferParentThumb, int maxHeight) {
-        if (item.getBaseItemType() == BaseItemType.SeriesTimer) {
-            return getResourceUrl(context, R.drawable.tile_land_series_timer);
-        }
-
-        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getPrimaryImageUrl(ModelCompat.asSdk(item), preferParentThumb, maxHeight);
+    @Nullable
+    public static String getBannerImageUrl(@NonNull BaseItemDto item, int maxHeight) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(ModelCompat.asSdk(item), org.jellyfin.sdk.model.api.ImageType.BANNER, true, maxHeight, null);
     }
 
-    public static String getLogoImageUrl(@NonNull BaseItemDto item, int maxWidth, boolean useSeriesFallback) {
-        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getLogoImageUrl(ModelCompat.asSdk(item), maxWidth, useSeriesFallback);
+    @Nullable
+    public static String getThumbImageUrl(@NonNull BaseItemDto item, int maxHeight) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(ModelCompat.asSdk(item), org.jellyfin.sdk.model.api.ImageType.THUMB, true, maxHeight, null);
+    }
+
+    @Nullable
+    public static String getThumbImageUrl(@NonNull BaseItemDto item, int maxHeight, boolean requireImageTag, boolean preferSeries, boolean preferSeason) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(ModelCompat.asSdk(item), org.jellyfin.sdk.model.api.ImageType.THUMB, requireImageTag, maxHeight, null, false, preferSeries, preferSeason);
+    }
+
+    @Nullable
+    public static String getBackdropImageUrl(@NonNull BaseItemDto item, int maxHeight) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(ModelCompat.asSdk(item), org.jellyfin.sdk.model.api.ImageType.BACKDROP, true, maxHeight, null);
+    }
+
+    @Nullable
+    public static String getLogoImageUrl(@NonNull BaseItemDto item, @Nullable Integer maxWidth) {
+        return KoinJavaComponent.<ImageHelper>get(ImageHelper.class).getImageUrl(ModelCompat.asSdk(item), org.jellyfin.sdk.model.api.ImageType.LOGO, true, null, maxWidth, false, false, false);
     }
 
     /**

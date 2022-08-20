@@ -53,7 +53,7 @@ class NextUpViewModel(
 			else -> null
 		}
 		val thumbnailBlurhash = item.imageBlurHashes?.get(ImageType.PRIMARY)?.get(item.imageTags?.get(ImageType.PRIMARY))
-		val logo = imageHelper.getLogoImageUrl(item)
+		val logo = imageHelper.getImageUrl(item, ImageType.LOGO, false, null, 600)
 		val title = item.getDisplayName(context)
 
 		NextUpItemData(

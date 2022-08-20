@@ -5,6 +5,7 @@ import static org.koin.java.KoinJavaComponent.inject;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import org.jellyfin.androidtv.R;
@@ -44,27 +45,19 @@ public class BaseRowItem {
     private SeriesTimerInfoDto seriesTimerInfo;
     private GridButton gridButton;
     private ItemType type;
-    private boolean preferParentThumb = false;
-    protected boolean staticHeight = false;
     private SelectAction selectAction = SelectAction.ShowDetails;
     private boolean isPlaying;
 
     private Lazy<ApiClient> apiClient = inject(ApiClient.class);
 
     public BaseRowItem(int index, BaseItemDto item) {
-        this(index, item, false, false);
+        this(index, item, SelectAction.ShowDetails);
     }
 
-    public BaseRowItem(int index, BaseItemDto item, boolean preferParentThumb, boolean staticHeight) {
-        this(index, item, preferParentThumb, staticHeight, SelectAction.ShowDetails);
-    }
-
-    public BaseRowItem(int index, BaseItemDto item, boolean preferParentThumb, boolean staticHeight, SelectAction selectAction) {
+    public BaseRowItem(int index, BaseItemDto item, SelectAction selectAction) {
         this.index = index;
         this.baseItem = item;
         this.type = item.getBaseItemType() == BaseItemType.Program ? ItemType.LiveTvProgram : item.getBaseItemType() == BaseItemType.Recording ? ItemType.LiveTvRecording : ItemType.BaseItem;
-        this.preferParentThumb = preferParentThumb;
-        this.staticHeight = staticHeight;
         this.selectAction = selectAction;
     }
 
@@ -72,10 +65,6 @@ public class BaseRowItem {
         this.index = index;
         this.channelInfo = channel;
         this.type = ItemType.LiveTvChannel;
-    }
-
-    public BaseRowItem(BaseItemDto program, boolean staticHeight) {
-        this(0, program, false, staticHeight);
     }
 
     public BaseRowItem(BaseItemDto program) {
@@ -89,7 +78,6 @@ public class BaseRowItem {
 
     public BaseRowItem(BaseItemPerson person) {
         this.person = person;
-        this.staticHeight = true;
         this.type = ItemType.Person;
     }
 
@@ -100,14 +88,12 @@ public class BaseRowItem {
 
     public BaseRowItem(ChapterItemInfo chapter) {
         this.chapterInfo = chapter;
-        this.staticHeight = true;
         this.type = ItemType.Chapter;
     }
 
     public BaseRowItem(GridButton button) {
         this.gridButton = button;
         this.type = ItemType.GridButton;
-        this.staticHeight = true;
     }
 
     public int getIndex() {
@@ -166,10 +152,6 @@ public class BaseRowItem {
         return type == ItemType.BaseItem;
     }
 
-    public boolean getPreferParentThumb() {
-        return preferParentThumb;
-    }
-
     public ItemType getItemType() {
         return type;
     }
@@ -200,50 +182,6 @@ public class BaseRowItem {
                 // compatibility
                 return true;
         }
-    }
-
-    public String getImageUrl(Context context, org.jellyfin.androidtv.constant.ImageType imageType, int maxHeight) {
-        switch (type) {
-            case BaseItem:
-            case LiveTvProgram:
-            case LiveTvRecording:
-                switch (imageType) {
-                    case BANNER:
-                        return ImageUtils.getBannerImageUrl(context, baseItem, apiClient.getValue(), maxHeight);
-                    case THUMB:
-                        return ImageUtils.getThumbImageUrl(baseItem, false, maxHeight);
-                    default:
-                        return getPrimaryImageUrl(context, maxHeight);
-                }
-            default:
-                return getPrimaryImageUrl(context, maxHeight);
-        }
-    }
-
-    public String getPrimaryImageUrl(Context context, int maxHeight) {
-        switch (type) {
-            case BaseItem:
-            case LiveTvProgram:
-            case LiveTvRecording:
-                return ImageUtils.getPrimaryImageUrl(context, baseItem, preferParentThumb, maxHeight);
-            case Person:
-                return ImageUtils.getPrimaryImageUrl(person, maxHeight);
-            case Chapter:
-                return chapterInfo.getImagePath();
-            case LiveTvChannel:
-                return ImageUtils.getPrimaryImageUrl(channelInfo, apiClient.getValue());
-            case GridButton:
-                return ImageUtils.getResourceUrl(context, gridButton.getImageRes());
-            case SeriesTimer:
-                return ImageUtils.getResourceUrl(context, R.drawable.tile_land_series_timer);
-            case SearchHint:
-                if (Utils.isNonEmpty(searchHint.getPrimaryImageTag())) {
-                    return ImageUtils.getImageUrl(searchHint.getItemId().toString(), ImageType.Primary, searchHint.getPrimaryImageTag());
-                } else if (Utils.isNonEmpty(searchHint.getThumbImageItemId())) {
-                    return ImageUtils.getImageUrl(searchHint.getThumbImageItemId(), ImageType.Thumb, searchHint.getThumbImageTag());
-                }
-        }
-        return null;
     }
 
     public boolean isFavorite() {
@@ -457,6 +395,30 @@ public class BaseRowItem {
         }
     }
 
+    @Nullable
+    public String getPrimaryImageUrl(Context context, int maxHeight) {
+        switch (type) {
+            case BaseItem:
+            case LiveTvProgram:
+            case LiveTvRecording:
+                return ImageUtils.getPrimaryImageUrl(baseItem, maxHeight);
+            case Person:
+                return ImageUtils.getPrimaryImageUrl(person, maxHeight);
+            case Chapter:
+                return chapterInfo.getImagePath();
+            case SearchHint:
+                return ImageUtils.getPrimaryImageUrl(searchHint, maxHeight);
+            case LiveTvChannel:
+                return ImageUtils.getPrimaryImageUrl(channelInfo, apiClient.getValue());
+            case GridButton:
+                return ImageUtils.getResourceUrl(context, gridButton.getImageRes());
+            case SeriesTimer:
+                return ImageUtils.getResourceUrl(context, R.drawable.tile_land_series_timer);
+            default:
+                return null;
+        }
+    }
+
     public Drawable getBadgeImage(Context context) {
         if (baseItem != null) {
             switch (type) {
@@ -510,10 +472,6 @@ public class BaseRowItem {
 
     public SelectAction getSelectAction() {
         return selectAction;
-    }
-
-    public boolean isStaticHeight() {
-        return staticHeight;
     }
 
     public boolean isPlaying() {

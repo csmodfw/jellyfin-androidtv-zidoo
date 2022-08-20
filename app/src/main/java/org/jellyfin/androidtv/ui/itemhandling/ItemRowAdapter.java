@@ -4,12 +4,14 @@ import static org.koin.java.KoinJavaComponent.inject;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.leanback.widget.ArrayObjectAdapter;
 import androidx.leanback.widget.HeaderItem;
 import androidx.leanback.widget.ListRow;
 import androidx.leanback.widget.Presenter;
 import androidx.leanback.widget.PresenterSelector;
+import androidx.leanback.widget.SinglePresenterSelector;
 
 import org.jellyfin.androidtv.R;
 import org.jellyfin.androidtv.auth.repository.UserRepository;
@@ -27,6 +29,7 @@ import org.jellyfin.androidtv.data.querying.ViewQuery;
 import org.jellyfin.androidtv.data.repository.UserViewsRepository;
 import org.jellyfin.androidtv.ui.GridButton;
 import org.jellyfin.androidtv.ui.browsing.BrowseGridFragment;
+import org.jellyfin.androidtv.ui.browsing.BrowseRowDef;
 import org.jellyfin.androidtv.ui.browsing.EnhancedBrowseFragment;
 import org.jellyfin.androidtv.ui.browsing.GenericGridActivity;
 import org.jellyfin.androidtv.ui.livetv.TvManager;
@@ -64,6 +67,7 @@ import org.jellyfin.sdk.model.api.UserDto;
 import org.jellyfin.sdk.model.constant.ItemSortBy;
 import org.koin.java.KoinJavaComponent;
 
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.List;
@@ -115,9 +119,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
     private final Object currentlyRetrievingSemaphore = new Object();
     private boolean currentlyRetrieving = false;
 
-    private boolean preferParentThumb = false;
-    private boolean staticHeight = false;
-
     private final Lazy<ApiClient> apiClient = inject(ApiClient.class);
     private final Lazy<UserViewsRepository> userViewsRepository = inject(UserViewsRepository.class);
     private Context context;
@@ -132,14 +133,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         synchronized (currentlyRetrievingSemaphore) {
             this.currentlyRetrieving = currentlyRetrieving;
         }
-    }
-
-    public boolean getPreferParentThumb() {
-        return preferParentThumb;
-    }
-
-    public boolean isStaticHeight() {
-        return staticHeight;
     }
 
     public QueryType getQueryType() {
@@ -158,67 +151,44 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         this.reRetrieveTriggers = reRetrieveTriggers;
     }
 
-    public ItemRowAdapter(Context context, ItemQuery query, int chunkSize, boolean preferParentThumb, Presenter presenter, ArrayObjectAdapter parent) {
-        this(context, query, chunkSize, preferParentThumb, false, presenter, parent);
+    public ItemRowAdapter(Context context, ItemQuery query, Presenter presenter, ArrayObjectAdapter parent) {
+        this(context, query, QueryType.Items, presenter, parent);
     }
 
-    public ItemRowAdapter(Context context, ItemQuery query, int chunkSize, boolean preferParentThumb, boolean staticHeight, Presenter presenter, ArrayObjectAdapter parent, QueryType queryType) {
+    public ItemRowAdapter(Context context, ItemQuery query, QueryType queryType, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mQuery = query;
         mQuery.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
-        this.chunkSize = chunkSize;
-        this.preferParentThumb = preferParentThumb;
-        this.staticHeight = staticHeight;
-        if (chunkSize > 0) {
-            mQuery.setLimit(chunkSize);
-        }
         this.queryType = queryType;
     }
 
-    public ItemRowAdapter(Context context, ItemQuery query, int chunkSize, boolean preferParentThumb, boolean staticHeight, PresenterSelector presenter, ArrayObjectAdapter parent, QueryType queryType) {
-        super(presenter);
+    public ItemRowAdapter(Context context, ItemQuery query, QueryType queryType, PresenterSelector presenterSelector, ArrayObjectAdapter parent) {
+        super(presenterSelector);
         this.context = context;
         mParent = parent;
         mQuery = query;
         mQuery.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
-        this.chunkSize = chunkSize;
-        this.preferParentThumb = preferParentThumb;
-        this.staticHeight = staticHeight;
-        if (chunkSize > 0) {
-            mQuery.setLimit(chunkSize);
-        }
         this.queryType = queryType;
     }
 
-    public ItemRowAdapter(Context context, ItemQuery query, int chunkSize, boolean preferParentThumb, boolean staticHeight, Presenter presenter, ArrayObjectAdapter parent) {
-        this(context, query, chunkSize, preferParentThumb, staticHeight, presenter, parent, QueryType.Items);
-    }
-
-    public ItemRowAdapter(Context context, ArtistsQuery query, int chunkSize, Presenter presenter, ArrayObjectAdapter parent) {
+    public ItemRowAdapter(Context context, ArtistsQuery query, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mArtistsQuery = query;
         mArtistsQuery.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
-        staticHeight = true;
-        this.chunkSize = chunkSize;
-        if (chunkSize > 0) {
-            mArtistsQuery.setLimit(chunkSize);
-        }
         queryType = QueryType.AlbumArtists;
     }
 
-    public ItemRowAdapter(Context context, NextUpQuery query, boolean preferParentThumb, Presenter presenter, ArrayObjectAdapter parent) {
+    public ItemRowAdapter(Context context, NextUpQuery query, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mNextUpQuery = query;
         mNextUpQuery.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
         queryType = QueryType.NextUp;
-        this.preferParentThumb = preferParentThumb;
-        this.staticHeight = true;
     }
 
     public ItemRowAdapter(Context context, SeriesTimerQuery query, Presenter presenter, ArrayObjectAdapter parent) {
@@ -229,15 +199,13 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         queryType = QueryType.SeriesTimer;
     }
 
-    public ItemRowAdapter(Context context, LatestItemsQuery query, boolean preferParentThumb, Presenter presenter, ArrayObjectAdapter parent) {
+    public ItemRowAdapter(Context context, LatestItemsQuery query, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mLatestQuery = query;
         mLatestQuery.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
         queryType = QueryType.LatestItems;
-        this.preferParentThumb = preferParentThumb;
-        staticHeight = true;
     }
 
     public ItemRowAdapter(Context context, BaseItemPerson[] people, Presenter presenter, ArrayObjectAdapter parent) {
@@ -245,7 +213,6 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         this.context = context;
         mParent = parent;
         mPersons = people;
-        staticHeight = true;
         queryType = QueryType.StaticPeople;
     }
 
@@ -254,24 +221,15 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         this.context = context;
         mParent = parent;
         mChapters = chapters;
-        staticHeight = true;
         queryType = QueryType.StaticChapters;
     }
 
-    public ItemRowAdapter(Context context, List<BaseItemDto> items, Presenter presenter, ArrayObjectAdapter parent, QueryType queryType) {
+    public ItemRowAdapter(Context context, List<BaseItemDto> items, QueryType queryType, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mItems = items;
         this.queryType = queryType;
-    }
-
-    public ItemRowAdapter(Context context, List<BaseItemDto> items, Presenter presenter, ArrayObjectAdapter parent, boolean staticItems) { // last param is just for sig
-        super(presenter);
-        this.context = context;
-        mParent = parent;
-        mItems = items;
-        queryType = QueryType.StaticItems;
     }
 
     public ItemRowAdapter(Context context, SpecialsQuery query, Presenter presenter, ArrayObjectAdapter parent) {
@@ -298,15 +256,11 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         queryType = QueryType.Trailers;
     }
 
-    public ItemRowAdapter(Context context, LiveTvChannelQuery query, int chunkSize, Presenter presenter, ArrayObjectAdapter parent) {
+    public ItemRowAdapter(Context context, LiveTvChannelQuery query, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mTvChannelQuery = query;
-        this.chunkSize = chunkSize;
-        if (chunkSize > 0) {
-            mTvChannelQuery.setLimit(chunkSize);
-        }
         queryType = QueryType.LiveTvChannel;
     }
 
@@ -316,17 +270,14 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         mParent = parent;
         mTvProgramQuery = query;
         queryType = QueryType.LiveTvProgram;
-        staticHeight = true;
     }
 
-    public ItemRowAdapter(Context context, RecordingQuery query, int chunkSize, Presenter presenter, ArrayObjectAdapter parent) {
+    public ItemRowAdapter(Context context, RecordingQuery query, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mTvRecordingQuery = query;
-        this.chunkSize = chunkSize;
         queryType = QueryType.LiveTvRecording;
-        staticHeight = true;
     }
 
     public ItemRowAdapter(Context context, SimilarItemsQuery query, QueryType queryType, Presenter presenter, ArrayObjectAdapter parent) {
@@ -356,16 +307,12 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         queryType = QueryType.Season;
     }
 
-    public ItemRowAdapter(Context context, PersonsQuery query, int chunkSize, Presenter presenter, ArrayObjectAdapter parent) {
+    public ItemRowAdapter(Context context, PersonsQuery query, Presenter presenter, ArrayObjectAdapter parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
-        this.chunkSize = chunkSize;
         mPersonsQuery = query;
         mPersonsQuery.setUserId(KoinJavaComponent.<UserRepository>get(UserRepository.class).getCurrentUser().getValue().getId().toString());
-        if (chunkSize > 0) {
-            mPersonsQuery.setLimit(chunkSize);
-        }
         queryType = QueryType.Persons;
     }
 
@@ -384,7 +331,64 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         this.context = context;
         mParent = parent;
         queryType = QueryType.Views;
-        staticHeight = true;
+    }
+
+    @NonNull
+    public static ItemRowAdapter buildItemRowAdapter(@NonNull Context context, @NonNull BrowseRowDef def, @NonNull Presenter presenter, @Nullable ArrayObjectAdapter parent) {
+        final PresenterSelector presenterSelector = new SinglePresenterSelector(presenter);
+        return ItemRowAdapter.buildItemRowAdapter(context, def, presenter, presenterSelector, parent);
+    }
+
+    @NonNull
+    public static ItemRowAdapter buildItemRowAdapter(@NonNull Context context, @NonNull BrowseRowDef def, @NonNull Presenter presenter, @NonNull PresenterSelector presenterSelector, @Nullable ArrayObjectAdapter parent) {
+        switch (def.getQueryType()) {
+            case AlbumArtists:
+                return new ItemRowAdapter(context, def.getArtistsQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case NextUp:
+                return new ItemRowAdapter(context, def.getNextUpQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case LatestItems:
+                return new ItemRowAdapter(context, def.getLatestItemsQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case Season:
+                return new ItemRowAdapter(context, def.getSeasonQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case Upcoming:
+                return new ItemRowAdapter(context, def.getUpcomingQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case Views:
+                return new ItemRowAdapter(context, new ViewQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case SimilarSeries:
+                return new ItemRowAdapter(context, def.getSimilarQuery(), QueryType.SimilarSeries, presenter, parent).setChunkSize(def.getChunkSize());
+            case SimilarMovies:
+                return new ItemRowAdapter(context, def.getSimilarQuery(), QueryType.SimilarMovies, presenter, parent).setChunkSize(def.getChunkSize());
+            case Persons:
+                return new ItemRowAdapter(context, def.getPersonsQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case LiveTvChannel:
+                return new ItemRowAdapter(context, def.getTvChannelQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case LiveTvProgram:
+                return new ItemRowAdapter(context, def.getProgramQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case LiveTvRecording:
+                return new ItemRowAdapter(context, def.getRecordingQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            case SeriesTimer:
+                return new ItemRowAdapter(context, def.getSeriesTimerQuery(), presenter, parent).setChunkSize(def.getChunkSize());
+            default:
+                return new ItemRowAdapter(context, def.getQuery(), def.getQueryType(), presenterSelector, parent).setChunkSize(def.getChunkSize());
+        }
+    }
+
+    public ItemRowAdapter setChunkSize(int size) {
+        chunkSize = size;
+        if (chunkSize > 0) {
+            if (mQuery != null) mQuery.setLimit(chunkSize);
+            else if (mNextUpQuery != null) mNextUpQuery.setLimit(chunkSize);
+            else if (mUpcomingQuery != null) mUpcomingQuery.setLimit(chunkSize);
+            else if (mSimilarQuery != null) mSimilarQuery.setLimit(chunkSize);
+            else if (mPersonsQuery != null) mPersonsQuery.setLimit(chunkSize);
+            else if (mSearchQuery != null) mSearchQuery.setLimit(chunkSize);
+            else if (mTvChannelQuery != null) mTvChannelQuery.setLimit(chunkSize);
+            else if (mTvProgramQuery != null) mTvProgramQuery.setLimit(chunkSize);
+            else if (mTvRecordingQuery != null) mTvRecordingQuery.setLimit(chunkSize);
+            else if (mArtistsQuery != null) mArtistsQuery.setLimit(chunkSize);
+            else if (mLatestQuery != null) mLatestQuery.setLimit(chunkSize);
+        }
+        return this;
     }
 
     public void setItemsLoaded(int itemsLoaded) {
@@ -414,8 +418,10 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     mArtistsQuery.setSortOrder(ModelCompat.asLegacy(option.order));
                     break;
                 default:
-                    mQuery.setSortBy(new String[]{mSortBy});
-                    mQuery.setSortOrder(ModelCompat.asLegacy(option.order));
+                    if (mQuery != null) {
+                        mQuery.setSortBy(new String[]{mSortBy});
+                        mQuery.setSortOrder(ModelCompat.asLegacy(option.order));
+                    }
                     break;
             }
             if (!ItemSortBy.SortName.equals(option.value)) {
@@ -443,7 +449,9 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                 mArtistsQuery.setFilters(mFilters != null ? mFilters.getFilters() : null);
                 break;
             default:
-                mQuery.setFilters(mFilters != null ? mFilters.getFilters() : null);
+                if (mQuery != null)
+                    mQuery.setFilters(mFilters != null ? mFilters.getFilters() : null);
+                break;
         }
     }
 
@@ -470,10 +478,11 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                 }
                 break;
             default:
-                if (value != null && value.equals("#")) {
-                    mQuery.setNameStartsWithOrGreater(null);
-                } else {
-                    mQuery.setNameStartsWithOrGreater(value);
+                if (mQuery != null) {
+                    if (value != null && value.equals("#"))
+                        mQuery.setNameStartsWithOrGreater(null);
+                    else
+                        mQuery.setNameStartsWithOrGreater(value);
                 }
                 break;
         }
@@ -634,7 +643,14 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
         itemsLoaded = 0;
         switch (queryType) {
             case Items:
-                retrieve(mQuery);
+                // Fix for https://github.com/jellyfin/jellyfin/issues/8249
+                if (mSortBy != null && mFilters != null && mSortBy.contains(ItemSortBy.SeriesDatePlayed) && mFilters.isUnwatchedOnly()) {
+                    mQuery.setFilters(null);
+                    retrieve(mQuery, true);
+                    setFilters(mFilters);
+                } else {
+                    retrieve(mQuery);
+                }
                 break;
             case NextUp:
                 retrieve(mNextUpQuery);
@@ -775,7 +791,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                         //re-map the display prefs id to our actual id
                         item.setDisplayPreferencesId(item.getId());
                         if (userViewsRepository.getValue().isSupported(item.getCollectionType())) {
-                            adapter.add(new BaseRowItem(i++, item, preferParentThumb, staticHeight));
+                            adapter.add(new BaseRowItem(i++, item));
                         }
                     }
                     totalItems = response.getTotalRecordCount();
@@ -842,16 +858,29 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
     }
 
     private void retrieve(final ItemQuery query) {
+        retrieve(query, false);
+    }
+
+    private void retrieve(final ItemQuery query, final boolean filterPlayed) {
         apiClient.getValue().GetItemsAsync(query, new Response<ItemsResult>() {
             @Override
             public void onResponse(ItemsResult response) {
                 if (response.getItems() != null && response.getItems().length > 0) {
-                    setTotalItems(query.getEnableTotalRecordCount() ? response.getTotalRecordCount() : response.getItems().length);
+                    int totalItems = query.getEnableTotalRecordCount() ? response.getTotalRecordCount() : response.getItems().length;
+                    BaseItemDto[] items = response.getItems();
+                    if (filterPlayed) {
+                        items = Arrays.stream(items).filter(x ->
+                                (x.getUserData() == null) || (!x.getUserData().getPlayed() &&
+                                    x.getUserData().getUnplayedItemCount() != null &&
+                                    x.getUserData().getUnplayedItemCount() > 0)
+                        ).toArray(BaseItemDto[]::new);
+                        totalItems = totalItems - (response.getItems().length - items.length);
+                    }
+                    setTotalItems(totalItems);
                     int i = getItemsLoaded();
                     int prevItems = i == 0 && size() > 0 ? size() : 0;
-                    for (BaseItemDto item : response.getItems()) {
-                        add(new BaseRowItem(i++, item, getPreferParentThumb(), isStaticHeight()));
-
+                    for (BaseItemDto item : items) {
+                        add(new BaseRowItem(i++, item));
                     }
                     setItemsLoaded(i);
                     if (i == 0) {
@@ -897,7 +926,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     int i = getItemsLoaded();
                     int prevItems = i == 0 && size() > 0 ? size() : 0;
                     for (BaseItemDto item : response.getItems()) {
-                        add(new BaseRowItem(i++, item, getPreferParentThumb(), isStaticHeight()));
+                        add(new BaseRowItem(i++, item));
                     }
                     setItemsLoaded(i);
                     if (i == 0) {
@@ -927,7 +956,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     int i = getItemsLoaded();
                     int prevItems = i == 0 && size() > 0 ? size() : 0;
                     for (BaseItemDto item : response) {
-                        add(new BaseRowItem(i++, item, getPreferParentThumb(), isStaticHeight()));
+                        add(new BaseRowItem(i++, item));
                     }
                     setItemsLoaded(i);
                     if (i == 0) {
@@ -995,12 +1024,12 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                                         }
                                         if (existing == null) {
                                             Timber.d("Adding new episode 1 to premieres %s", item.getSeriesName());
-                                            adapter.add(new BaseRowItem(i++, item, preferParentThumb, true));
+                                            adapter.add(new BaseRowItem(i++, item));
 
                                         } else if (existing.getBaseItem().getParentIndexNumber() > item.getParentIndexNumber()) {
                                             //Replace the newer item with the earlier season
                                             Timber.d("Replacing newer episode 1 with an older season for %s", item.getSeriesName());
-                                            adapter.replace(existingPos, new BaseRowItem(i++, item, preferParentThumb, false));
+                                            adapter.replace(existingPos, new BaseRowItem(i++, item));
                                         } // otherwise, just ignore this newer season premiere since we have the older one already
 
                                     } else {
@@ -1036,7 +1065,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     }
                     int i = 0;
                     for (BaseItemDto item : response.getItems()) {
-                        adapter.add(new BaseRowItem(i++, item, preferParentThumb, staticHeight));
+                        adapter.add(new BaseRowItem(i++, item));
                     }
                     totalItems = response.getTotalRecordCount();
                     setItemsLoaded(itemsLoaded + i);
@@ -1058,7 +1087,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                                         if (response.getItems() != null) {
                                             int n = response.getItems().length;
                                             for (BaseItemDto item : innerResponse.getItems()) {
-                                                adapter.add(new BaseRowItem(n++, item, preferParentThumb, false));
+                                                adapter.add(new BaseRowItem(n++, item));
                                             }
                                             totalItems += innerResponse.getTotalRecordCount();
                                             setItemsLoaded(itemsLoaded + n);
@@ -1142,7 +1171,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     int i = 0;
                     int prevItems = Math.max(adapter.size(), 0);
                     for (BaseItemDto item : response.getItems()) {
-                        adapter.add(new BaseRowItem(item, staticHeight));
+                        adapter.add(new BaseRowItem(item));
                         i++;
                     }
                     totalItems = response.getTotalRecordCount();
@@ -1233,7 +1262,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     }
 
                     for (BaseItemDto item : response.getItems()) {
-                        adapter.add(new BaseRowItem(item, staticHeight));
+                        adapter.add(new BaseRowItem(item));
                         i++;
                     }
                     totalItems = response.getTotalRecordCount();
@@ -1274,7 +1303,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                         adapter.clear();
                     }
                     for (BaseItemDto item : response) {
-                        adapter.add(new BaseRowItem(i++, item, preferParentThumb, false));
+                        adapter.add(new BaseRowItem(i++, item));
                     }
                     totalItems = response.length;
                     setItemsLoaded(itemsLoaded + i);
@@ -1346,7 +1375,7 @@ public class ItemRowAdapter extends ArrayObjectAdapter {
                     }
                     for (BaseItemDto item : response) {
                         item.setName(context.getString(R.string.lbl_trailer) + (i + 1));
-                        adapter.add(new BaseRowItem(i++, item, preferParentThumb, false, BaseRowItem.SelectAction.Play));
+                        adapter.add(new BaseRowItem(i++, item, BaseRowItem.SelectAction.Play));
                     }
                     totalItems = response.length;
                     setItemsLoaded(itemsLoaded + i);

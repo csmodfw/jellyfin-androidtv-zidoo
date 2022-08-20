@@ -1,5 +1,9 @@
 package org.jellyfin.androidtv.ui.browsing;
 
+import static org.jellyfin.androidtv.util.ImageUtils.ASPECT_RATIO_BANNER;
+import static org.jellyfin.androidtv.util.ImageUtils.ASPECT_RATIO_POSTER;
+import static org.jellyfin.androidtv.util.ImageUtils.ASPECT_RATIO_SQUARE;
+import static org.jellyfin.androidtv.util.ImageUtils.ASPECT_RATIO_THUMB;
 import static org.koin.java.KoinJavaComponent.inject;
 
 import android.content.Intent;
@@ -38,7 +42,6 @@ import org.jellyfin.androidtv.constant.PosterSize;
 import org.jellyfin.androidtv.constant.QueryType;
 import org.jellyfin.androidtv.data.model.FilterOptions;
 import org.jellyfin.androidtv.data.querying.StdItemQuery;
-import org.jellyfin.androidtv.data.querying.ViewQuery;
 import org.jellyfin.androidtv.data.repository.UserViewsRepository;
 import org.jellyfin.androidtv.data.service.BackgroundService;
 import org.jellyfin.androidtv.databinding.HorizontalGridBrowseBinding;
@@ -57,7 +60,6 @@ import org.jellyfin.androidtv.ui.shared.BaseActivity;
 import org.jellyfin.androidtv.ui.shared.KeyListener;
 import org.jellyfin.androidtv.ui.shared.MessageListener;
 import org.jellyfin.androidtv.util.CoroutineUtils;
-import org.jellyfin.androidtv.util.ImageUtils;
 import org.jellyfin.androidtv.util.InfoLayoutHelper;
 import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.Utils;
@@ -71,8 +73,8 @@ import org.jellyfin.sdk.model.api.SortOrder;
 import org.jellyfin.sdk.model.constant.CollectionType;
 import org.jellyfin.sdk.model.constant.ItemSortBy;
 
-import java.text.MessageFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -143,29 +145,40 @@ public class BrowseGridFragment extends Fragment {
         mGridHeight = display.heightPixels - (int) Math.round(display.density * 130.6); // top + bottom in dp, elements scale with density so adjust accordingly
         mGridWidth = display.widthPixels;
 
+        mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), requireActivity().getIntent().getStringExtra(Extras.Folder));
+        mParentId = mFolder.getId();
+        mainTitle = mFolder.getName();
+
         sortOptions = new HashMap<>();
         {
+            // don't use Descending Name fallbacks for dates/ratings!
             sortOptions.put(0, new SortOption(getString(R.string.lbl_name), ItemSortBy.SortName, SortOrder.ASCENDING));
-            sortOptions.put(1, new SortOption(getString(R.string.lbl_date_added), ItemSortBy.DateCreated + "," + ItemSortBy.SortName, SortOrder.DESCENDING));
-            sortOptions.put(2, new SortOption(getString(R.string.lbl_premier_date), ItemSortBy.PremiereDate + "," + ItemSortBy.SortName, SortOrder.DESCENDING));
-            sortOptions.put(3, new SortOption(getString(R.string.lbl_rating), ItemSortBy.OfficialRating + "," + ItemSortBy.SortName, SortOrder.ASCENDING));
-            sortOptions.put(4, new SortOption(getString(R.string.lbl_community_rating), ItemSortBy.CommunityRating + "," + ItemSortBy.SortName, SortOrder.DESCENDING));
-            sortOptions.put(5, new SortOption(getString(R.string.lbl_critic_rating), ItemSortBy.CriticRating + "," + ItemSortBy.SortName, SortOrder.DESCENDING));
-            sortOptions.put(6, new SortOption(getString(R.string.lbl_last_played), ItemSortBy.DatePlayed + "," + ItemSortBy.SortName, SortOrder.DESCENDING));
+            sortOptions.put(1, new SortOption(getString(R.string.lbl_date_latest), ItemSortBy.DateLastContentAdded + "," + ItemSortBy.DateCreated, SortOrder.DESCENDING));
+            if (mFolder != null && CollectionType.TvShows.equals(mFolder.getCollectionType())) {
+                sortOptions.put(2, new SortOption(getString(R.string.lbl_date_played), ItemSortBy.SeriesDatePlayed + "," + ItemSortBy.DateLastContentAdded + "," + ItemSortBy.PremiereDate, SortOrder.DESCENDING));
+            } else {
+                sortOptions.put(2, new SortOption(getString(R.string.lbl_date_played), ItemSortBy.DatePlayed + "," + ItemSortBy.DateLastContentAdded + "," + ItemSortBy.PremiereDate, SortOrder.DESCENDING));
+            }
+            sortOptions.put(3, new SortOption(getString(R.string.lbl_date_added), ItemSortBy.DateCreated, SortOrder.DESCENDING));
+            sortOptions.put(4, new SortOption(getString(R.string.lbl_premier_date), ItemSortBy.PremiereDate + "," + ItemSortBy.DateCreated, SortOrder.DESCENDING));
+            sortOptions.put(5, new SortOption(getString(R.string.lbl_community_rating), ItemSortBy.CommunityRating + "," + ItemSortBy.PremiereDate, SortOrder.DESCENDING));
+            sortOptions.put(6, new SortOption(getString(R.string.lbl_critic_rating), ItemSortBy.CriticRating + "," + ItemSortBy.PremiereDate, SortOrder.DESCENDING));
         }
 
         if (getActivity() instanceof BaseActivity) mActivity = (BaseActivity) getActivity();
         backgroundService.getValue().attach(requireActivity());
 
-        mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), requireActivity().getIntent().getStringExtra(Extras.Folder));
-        mParentId = mFolder.getId();
-        mainTitle = mFolder.getName();
         mediaManager.getValue().setFolderViewDisplayPreferencesId(mFolder);
         libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()));
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
         mImageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
         mGridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
         mCardFocusScale = getResources().getFraction(R.fraction.card_scale_focus, 1, 1);
+
+        // special audio handling, since there are no Thumbs/Banners
+        if (isSquareCard()) {
+            mImageType = ImageType.POSTER;
+        }
 
         if (mGridDirection.equals(GridDirection.VERTICAL))
             setGridPresenter(new VerticalGridPresenter());
@@ -358,7 +371,7 @@ public class BrowseGridFragment extends Fragment {
 
     public void updateCounter(int position) {
         if (mAdapter != null) {
-            binding.counter.setText(MessageFormat.format("{0} | {1}", position, mAdapter.getTotalItems()));
+            binding.counter.setText(String.format(Locale.US,"%d | %d", position, mAdapter.getTotalItems()));
         }
     }
 
@@ -369,43 +382,48 @@ public class BrowseGridFragment extends Fragment {
         mRowDef = rowDef;
     }
 
-    private double getCardWidthBy(final double cardHeight, ImageType imageType, BaseItemDto folder) {
+    protected boolean isSquareCard() {
+        BaseItemKind fType = mFolder.getType();
+        if (fType == BaseItemKind.AUDIO || fType == BaseItemKind.GENRE || fType == BaseItemKind.MUSIC_ALBUM || fType == BaseItemKind.MUSIC_ARTIST || fType == BaseItemKind.MUSIC_GENRE) {
+            return true;
+        } else if (CollectionType.Music.equals(mFolder.getCollectionType())) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    protected double getCardWidthBy(final double cardHeight, ImageType imageType) {
         switch (imageType) {
             case POSTER:
                 // special handling for square posters
-                BaseItemKind fType = folder.getType();
-                if (fType == BaseItemKind.AUDIO || fType == BaseItemKind.GENRE || fType == BaseItemKind.MUSIC_ALBUM || fType == BaseItemKind.MUSIC_ARTIST || fType == BaseItemKind.MUSIC_GENRE) {
-                    return cardHeight;
-                } else if (fType == BaseItemKind.COLLECTION_FOLDER && CollectionType.Music.equals(folder.getCollectionType())) {
-                    return cardHeight;
+                if (isSquareCard()) {
+                    return cardHeight * ASPECT_RATIO_SQUARE;
                 } else {
-                    return cardHeight * ImageUtils.ASPECT_RATIO_2_3;
+                    return cardHeight * ASPECT_RATIO_POSTER;
                 }
             case THUMB:
-                return cardHeight * ImageUtils.ASPECT_RATIO_16_9;
+                return cardHeight * ASPECT_RATIO_THUMB;
             case BANNER:
-                return cardHeight * CardPresenter.ASPECT_RATIO_BANNER;
+                return cardHeight * ASPECT_RATIO_BANNER;
             default:
                 throw new IllegalStateException("Unexpected value: " + imageType);
         }
     }
 
-    private double getCardHeightBy(final double cardWidth, ImageType imageType, BaseItemDto folder) {
+    protected double getCardHeightBy(final double cardWidth, ImageType imageType) {
         switch (imageType) {
             case POSTER:
                 // special handling for square posters
-                BaseItemKind fType = folder.getType();
-                if (fType == BaseItemKind.AUDIO || fType == BaseItemKind.GENRE || fType == BaseItemKind.MUSIC_ALBUM || fType == BaseItemKind.MUSIC_ARTIST || fType == BaseItemKind.MUSIC_GENRE) {
-                    return cardWidth;
-                } else if (fType == BaseItemKind.COLLECTION_FOLDER && CollectionType.Music.equals(folder.getCollectionType())) {
-                    return cardWidth;
+                if (isSquareCard()) {
+                    return cardWidth / ASPECT_RATIO_SQUARE;
                 } else {
-                    return cardWidth / ImageUtils.ASPECT_RATIO_2_3;
+                    return cardWidth / ASPECT_RATIO_POSTER;
                 }
             case THUMB:
-                return cardWidth / ImageUtils.ASPECT_RATIO_16_9;
+                return cardWidth / ASPECT_RATIO_THUMB;
             case BANNER:
-                return cardWidth / CardPresenter.ASPECT_RATIO_BANNER;
+                return cardWidth / ASPECT_RATIO_BANNER;
             default:
                 throw new IllegalArgumentException("Unexpected value: " + imageType);
         }
@@ -504,7 +522,7 @@ public class BrowseGridFragment extends Fragment {
             if (Math.abs(sumSize - mGridHeight) > 2) {
                 Timber.w("setAutoCardGridValues calculation delta > 2, something is off GridHeight <%s> sumSize <%s>!", mGridHeight, sumSize);
             }
-            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
+            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType);
             paddingLeftInt = (int) Math.round((cardWidthInt * cardScaling) / 2.0);
             spacingHorizontalInt = Math.max((int) (Math.round(paddingLeftInt * CARD_SPACING_PCT)), 0); // round spacing
             if (mImageType == ImageType.BANNER) {
@@ -525,8 +543,8 @@ public class BrowseGridFragment extends Fragment {
             double cardWidth = useableCardSpace / numCols;
 
             // fix any rounding errors and make pixel perfect
-            cardHeightInt = (int) Math.round(getCardHeightBy(cardWidth, mImageType, mFolder));
-            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType, mFolder);
+            cardHeightInt = (int) Math.round(getCardHeightBy(cardWidth, mImageType));
+            int cardWidthInt = (int) getCardWidthBy(cardHeightInt, mImageType);
             double cardPaddingLeftRightAdj = cardWidthInt * cardScaling;
             spacingHorizontalInt = Math.max((int) (Math.round((cardPaddingLeftRightAdj / 2.0) * CARD_SPACING_PCT)), 0); // round spacing
             if (mImageType == ImageType.BANNER) {
@@ -595,7 +613,7 @@ public class BrowseGridFragment extends Fragment {
                                 ItemFields.ChildCount
                         });
                         albumArtists.setParentId(mParentId.toString());
-                        setRowDef(new BrowseRowDef("", albumArtists, CHUNK_SIZE_MINIMUM, new ChangeTriggerType[]{}));
+                        setRowDef(new BrowseRowDef("", albumArtists, new ChangeTriggerType[] {}).setChunkSize(CHUNK_SIZE_MINIMUM));
                         return;
                     }
                     query.setIncludeItemTypes(new String[]{includeType != null ? includeType : "MusicAlbum"});
@@ -604,7 +622,7 @@ public class BrowseGridFragment extends Fragment {
             }
         }
 
-        setRowDef(new BrowseRowDef("", query, CHUNK_SIZE_MINIMUM, false, true));
+        setRowDef(new BrowseRowDef("", query).setChunkSize(CHUNK_SIZE_MINIMUM));
     }
 
     @Override
@@ -615,7 +633,10 @@ public class BrowseGridFragment extends Fragment {
         ImageType imageType = libraryPreferences.get(LibraryPreferences.Companion.getImageType());
         GridDirection gridDirection = libraryPreferences.get(LibraryPreferences.Companion.getGridDirection());
 
-
+        // special audio handling, since there are no Thumbs/Banners
+        if (isSquareCard()) {
+            imageType = ImageType.POSTER;
+        }
         if (mImageType != imageType || mPosterSizeSetting != posterSizeSetting || mGridDirection != gridDirection || mDirty) {
             determiningPosterSize = true;
 
@@ -654,56 +675,16 @@ public class BrowseGridFragment extends Fragment {
     }
 
     private void buildAdapter() {
-        mCardPresenter = new CardPresenter(false, mImageType, mCardHeight);
-        mCardPresenter.setUniformAspect(true); // make grid layouts always uniform
-
-        Timber.d("buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int) getCardWidthBy(mCardHeight, mImageType, mFolder), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
-
+        mCardPresenter = new CardPresenter(false, mCardHeight).setImageType(mImageType).setAllowBackdropFallback(true);
         // adapt chunk size if needed
         int chunkSize = mRowDef.getChunkSize();
         if (mCardsScreenEst > 0 && mCardsScreenEst >= chunkSize) {
             chunkSize = Math.min(mCardsScreenEst + mCardsScreenStride, 150); // cap at 150
+            mRowDef.setChunkSize(chunkSize);
             Timber.d("buildAdapter adjusting chunkSize to <%s> screenEst <%s>", chunkSize, mCardsScreenEst);
         }
-
-        switch (mRowDef.getQueryType()) {
-            case NextUp:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getNextUpQuery(), true, mCardPresenter, null);
-                break;
-            case Season:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getSeasonQuery(), mCardPresenter, null);
-                break;
-            case Upcoming:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getUpcomingQuery(), mCardPresenter, null);
-                break;
-            case Views:
-                mAdapter = new ItemRowAdapter(requireContext(), new ViewQuery(), mCardPresenter, null);
-                break;
-            case SimilarSeries:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getSimilarQuery(), QueryType.SimilarSeries, mCardPresenter, null);
-                break;
-            case SimilarMovies:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getSimilarQuery(), QueryType.SimilarMovies, mCardPresenter, null);
-                break;
-            case Persons:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getPersonsQuery(), chunkSize, mCardPresenter, null);
-                break;
-            case LiveTvChannel:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getTvChannelQuery(), 40, mCardPresenter, null);
-                break;
-            case LiveTvProgram:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getProgramQuery(), mCardPresenter, null);
-                break;
-            case LiveTvRecording:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getRecordingQuery(), chunkSize, mCardPresenter, null);
-                break;
-            case AlbumArtists:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getArtistsQuery(), chunkSize, mCardPresenter, null);
-                break;
-            default:
-                mAdapter = new ItemRowAdapter(requireContext(), mRowDef.getQuery(), chunkSize, mRowDef.getPreferParentThumb(), mRowDef.isStaticHeight(), mCardPresenter, null);
-                break;
-        }
+        Timber.d("buildAdapter cardHeight <%s> getCardWidthBy <%s> chunks <%s> type <%s>", mCardHeight, (int) getCardWidthBy(mCardHeight, mImageType), mRowDef.getChunkSize(), mRowDef.getQueryType().toString());
+        mAdapter = ItemRowAdapter.buildItemRowAdapter(requireContext(), mRowDef, mCardPresenter, null);
         mDirty = false;
 
         FilterOptions filters = new FilterOptions();

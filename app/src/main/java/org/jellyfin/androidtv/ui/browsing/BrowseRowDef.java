@@ -36,52 +36,29 @@ public class BrowseRowDef {
     private QueryType queryType;
 
     private int chunkSize = 0;
-    private boolean staticHeight = false;
-    private boolean preferParentThumb = false;
 
     private ChangeTriggerType[] changeTriggers;
 
-    public BrowseRowDef(String header, ItemQuery query, int chunkSize) {
-        this(header, query, chunkSize, false);
-    }
-    public BrowseRowDef(String header, ItemQuery query, int chunkSize, boolean preferParentThumb) {
-        this(header, query, chunkSize, preferParentThumb, false);
+    public BrowseRowDef(String header, ItemQuery query) {
+        this(header, query, QueryType.Items, null);
     }
 
-    public BrowseRowDef(String header, ItemQuery query, int chunkSize, boolean preferParentThumb, boolean staticHeight) {
+    public BrowseRowDef(String header, ItemQuery query, ChangeTriggerType[] changeTriggers) {
+        this(header, query, QueryType.Items, changeTriggers);
+    }
+
+    public BrowseRowDef(String header, ItemQuery query, QueryType queryType, ChangeTriggerType[] changeTriggers) {
         headerText = header;
         this.query = query;
-        this.chunkSize = chunkSize;
-        this.preferParentThumb = preferParentThumb;
-        this.staticHeight = staticHeight;
-        this.queryType = QueryType.Items;
-    }
-
-    public BrowseRowDef(String header, ItemQuery query, int chunkSize, ChangeTriggerType[] changeTriggers) {
-        this(header, query, chunkSize, false, false, changeTriggers);
-    }
-
-    public BrowseRowDef(String header, ItemQuery query, int chunkSize, boolean preferParentThumb, boolean staticHeight, ChangeTriggerType[] changeTriggers) {
-        this(header,query,chunkSize,preferParentThumb,staticHeight,changeTriggers,QueryType.Items);
-    }
-
-    public BrowseRowDef(String header, ItemQuery query, int chunkSize, boolean preferParentThumb, boolean staticHeight, ChangeTriggerType[] changeTriggers, QueryType queryType) {
-        headerText = header;
-        this.query = query;
-        this.chunkSize = chunkSize;
         this.queryType = queryType;
-        this.staticHeight = staticHeight;
-        this.preferParentThumb = preferParentThumb;
         this.changeTriggers = changeTriggers;
     }
 
-    public BrowseRowDef(String header, ArtistsQuery query, int chunkSize, ChangeTriggerType[] changeTriggers) {
+    public BrowseRowDef(String header, ArtistsQuery query, ChangeTriggerType[] changeTriggers) {
         headerText = header;
         this.artistsQuery = query;
-        this.chunkSize = chunkSize;
         this.queryType = QueryType.AlbumArtists;
         this.changeTriggers = changeTriggers;
-
     }
 
     public BrowseRowDef(String header, NextUpQuery query) {
@@ -93,7 +70,6 @@ public class BrowseRowDef {
     public BrowseRowDef(String header, SeriesTimerQuery query) {
         headerText = header;
         this.seriesTimerQuery = query;
-        this.staticHeight = true;
         this.queryType = QueryType.SeriesTimer;
     }
 
@@ -101,7 +77,6 @@ public class BrowseRowDef {
         headerText = header;
         this.nextUpQuery = query;
         this.queryType = QueryType.NextUp;
-        this.staticHeight = true;
         this.changeTriggers = changeTriggers;
     }
 
@@ -109,7 +84,6 @@ public class BrowseRowDef {
         headerText = header;
         this.latestItemsQuery = query;
         this.queryType = QueryType.LatestItems;
-        this.staticHeight = true;
         this.changeTriggers = changeTriggers;
     }
 
@@ -133,21 +107,15 @@ public class BrowseRowDef {
     }
 
     public BrowseRowDef(String header, RecordingQuery query) {
-        this(header, query, 0);
-    }
-
-    public BrowseRowDef(String header, RecordingQuery query, int chunkSize) {
         headerText = header;
         this.recordingQuery = query;
-        this.chunkSize = chunkSize;
         this.queryType = QueryType.LiveTvRecording;
     }
 
-    public BrowseRowDef(String header, PersonsQuery query, int chunkSize) {
+    public BrowseRowDef(String header, PersonsQuery query) {
         headerText = header;
         this.personsQuery = query;
         this.queryType = QueryType.Persons;
-        this.chunkSize = chunkSize;
     }
 
     public BrowseRowDef(String header, SimilarItemsQuery query, QueryType type) {
@@ -170,15 +138,12 @@ public class BrowseRowDef {
 
     public BrowseRowDef(String header, ViewQuery query) {
         headerText = header;
-        this.staticHeight = true;
         this.queryType = QueryType.Views;
     }
 
     public int getChunkSize() {
         return chunkSize;
     }
-
-    public boolean isStaticHeight() { return staticHeight; }
 
     public String getHeaderText() {
         return headerText;
@@ -220,8 +185,6 @@ public class BrowseRowDef {
 
     public RecordingQuery getRecordingQuery() { return recordingQuery; }
 
-    public boolean getPreferParentThumb() { return preferParentThumb; }
-
     public PersonsQuery getPersonsQuery() {
         return personsQuery;
     }
@@ -232,5 +195,10 @@ public class BrowseRowDef {
 
     public ChangeTriggerType[] getChangeTriggers() {
         return changeTriggers;
+    }
+
+    public BrowseRowDef setChunkSize(int chunkSize) {
+        this.chunkSize = chunkSize;
+        return this;
     }
 }

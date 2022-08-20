@@ -481,7 +481,7 @@ public class ItemListActivity extends FragmentActivity {
                 mPoster.setImageResource(R.drawable.ic_video_queue);
                 break;
             default:
-                Double aspect = ImageUtils.getImageAspectRatio(item, false);
+                Double aspect = ImageUtils.getImageAspectRatio(item);
                 String primaryImageUrl = ImageUtils.getPrimaryImageUrl(item);
                 mPoster.setPadding(0, 0, 0, 0);
                 mPoster.load(primaryImageUrl, null, ContextCompat.getDrawable(this, R.drawable.ic_album), aspect, 0);
