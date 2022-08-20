@@ -97,9 +97,9 @@ import org.jellyfin.apiclient.model.querying.UpcomingEpisodesQuery;
 import org.jellyfin.apiclient.serialization.GsonJsonSerializer;
 import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.jellyfin.sdk.model.api.BaseItemPerson;
-import org.jellyfin.sdk.model.constant.PersonType;
 import org.jellyfin.sdk.model.constant.ItemSortBy;
 import org.jellyfin.sdk.model.constant.MediaType;
+import org.jellyfin.sdk.model.constant.PersonType;
 import org.koin.java.KoinJavaComponent;
 
 import java.util.ArrayList;
@@ -454,7 +454,7 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                     if (item.getBaseItemType() == BaseItemType.Series) {
                         firstRow = new InfoItem(
                                 getString(R.string.lbl_seasons),
-                                Utils.getSafeValue(item.getChildCount(), 0).toString());
+                                String.format("%d", Utils.getSafeValue(item.getChildCount(), 0)));
                     } else {
                         firstRow = new InfoItem(
                                 getString(R.string.lbl_directed_by),
@@ -755,7 +755,7 @@ public class FullDetailsActivity extends BaseActivity implements RecordingIndica
                     HeaderItem header = new HeaderItem("Media Details"+(ms.getContainer() != null ? " (" +ms.getContainer()+")" : ""));
                     ArrayObjectAdapter infoAdapter = new ArrayObjectAdapter(new InfoCardPresenter());
                     for (MediaStream stream : ms.getMediaStreams()) {
-                        infoAdapter.add(stream);
+                        infoAdapter.add(ModelCompat.asSdk(stream));
                     }
 
                     adapter.add(new ListRow(header, infoAdapter));
