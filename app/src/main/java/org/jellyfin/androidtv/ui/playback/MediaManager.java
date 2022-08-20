@@ -70,6 +70,8 @@ public class MediaManager {
     private ItemRowAdapter mCurrentAudioQueue;
     private ItemRowAdapter mManagedAudioQueue;
 
+    private CardPresenter mManagedAudioQueuePresenter;
+
     private List<Integer>  mUnShuffledAudioQueueIndexes;
 
     private int mCurrentAudioQueuePosition = -1;
@@ -162,13 +164,22 @@ public class MediaManager {
 
     public ItemRowAdapter getCurrentAudioQueue() { return mCurrentAudioQueue; }
     public ItemRowAdapter getManagedAudioQueue() {
-        createManagedAudioQueue();
+        createManagedAudioQueue(false);
         return mManagedAudioQueue;
     }
 
+    public void setManagedAudioQueuePresenter(@Nullable CardPresenter presenter)
+    {
+        mManagedAudioQueuePresenter = presenter;
+    }
+
     public void createManagedAudioQueue() {
+        createManagedAudioQueue(false);
+    }
+
+    public void createManagedAudioQueue(boolean reCreate) {
         if (mCurrentAudioQueue != null) {
-            if (mManagedAudioQueue != null) {
+            if (mManagedAudioQueue != null && !reCreate) {
                 //re-create existing one
                 mManagedAudioQueue.clear();
                 for (int i = getCurrentAudioQueuePosition(); i < mCurrentAudioQueue.size(); i++) {
@@ -179,7 +190,8 @@ public class MediaManager {
                 for (int i = getCurrentAudioQueuePosition(); i < mCurrentAudioQueue.size(); i++) {
                     managedItems.add(((BaseRowItem)mCurrentAudioQueue.get(i)).getBaseItem());
                 }
-                mManagedAudioQueue = new ItemRowAdapter(context, managedItems, new CardPresenter(true, Utils.convertDpToPixel(context, 150)), null, QueryType.StaticAudioQueueItems);
+                CardPresenter presenter = mManagedAudioQueuePresenter != null ? mManagedAudioQueuePresenter : new CardPresenter(true, Utils.convertDpToPixel(context, 150));
+                mManagedAudioQueue = new ItemRowAdapter(context, managedItems, QueryType.StaticAudioQueueItems, presenter, null);
                 mManagedAudioQueue.Retrieve();
             }
             if (mManagedAudioQueue.size() > 0 && isPlayingAudio()) {
@@ -421,7 +433,7 @@ public class MediaManager {
     }
 
     private void createAudioQueue(List<BaseItemDto> items) {
-        mCurrentAudioQueue = new ItemRowAdapter(context, items, new CardPresenter(true, Utils.convertDpToPixel(context, 140)), null, QueryType.StaticAudioQueueItems);
+        mCurrentAudioQueue = new ItemRowAdapter(context, items, QueryType.StaticAudioQueueItems, new CardPresenter(true, Utils.convertDpToPixel(context, 140)), null);
         mCurrentAudioQueue.Retrieve();
         mManagedAudioQueue = null;
         fireQueueStatusChange();

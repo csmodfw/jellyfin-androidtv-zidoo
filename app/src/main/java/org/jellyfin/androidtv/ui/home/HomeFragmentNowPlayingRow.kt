@@ -14,6 +14,8 @@ class HomeFragmentNowPlayingRow(
 	private var row: ListRow? = null
 
 	override fun addToRowsAdapter(context: Context, cardPresenter: CardPresenter, rowsAdapter: ArrayObjectAdapter) {
+		mediaManager.setManagedAudioQueuePresenter(cardPresenter)
+		mediaManager.createManagedAudioQueue(true)
 		update(context, rowsAdapter)
 	}
 

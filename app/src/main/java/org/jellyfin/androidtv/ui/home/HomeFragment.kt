@@ -13,7 +13,6 @@ import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
-import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.hideRatings
 import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactor
 import org.jellyfin.androidtv.preference.UserSettingPreferences.Companion.homeScalingFactorMyMedia
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
@@ -26,17 +25,16 @@ import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.PositionableListRowPresenter
 import org.jellyfin.androidtv.util.apiclient.callApi
 import org.jellyfin.apiclient.interaction.ApiClient
-import org.jellyfin.apiclient.model.dto.BaseItemType
 import org.jellyfin.apiclient.model.livetv.RecommendedProgramQuery
 import org.jellyfin.apiclient.model.querying.ItemsResult
 import org.koin.android.ext.android.inject
-import org.koin.java.KoinJavaComponent.get
 import timber.log.Timber
 
 class HomeFragment : StdRowsFragment(), AudioEventListener {
 	private val apiClient by inject<ApiClient>()
 	private val mediaManager by inject<MediaManager>()
 	private val userSettingPreferences by inject<UserSettingPreferences>()
+	private val userPreferences by inject<UserPreferences>()
 	private val userRepository by inject<UserRepository>()
 	private val notificationsRepository by inject<NotificationsRepository>()
 	private val helper by lazy { HomeFragmentHelper(requireContext(), userRepository) }
@@ -45,6 +43,7 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	private val rows = mutableListOf<HomeFragmentRow>()
 	private var views: ItemsResult? = null
 	private var includeLiveTvRows: Boolean = false
+	private var staticHeight: Int = CardPresenter.DEFAULT_STATIC_HEIGHT
 
 	// Special rows
 	private val notificationsRow by lazy { NotificationsHomeFragmentRow(lifecycleScope, notificationsRepository) }
@@ -55,7 +54,7 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		// get relevant settings hash for resume handling
-		homeSettingsUiHash = userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash()
+		homeSettingsUiHash = userSettingPreferences.getUiSettingsHash() + userPreferences.getUiSettingsHash()
 
 		// Create adapter/presenter and set it to parent
 		mRowsAdapter = ArrayObjectAdapter(PositionableListRowPresenter())
@@ -63,18 +62,21 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 
 		// set home scaling
 		val homeScalePct = userSettingPreferences[homeScalingFactor]
-		val staticHeight = when {
-			homeScalePct != 100 && homeScalePct > 0 -> (CardPresenter.DEFAULT_STATIC_HEIGHT * (homeScalePct / 100.0)).toInt()
-			else -> CardPresenter.DEFAULT_STATIC_HEIGHT
+		if (homeScalePct != 100 && homeScalePct > 0) {
+			staticHeight = (CardPresenter.DEFAULT_STATIC_HEIGHT * (homeScalePct / 100.0)).toInt()
 		}
+
 		mCardPresenter = CardPresenter(true, staticHeight)
+			.setAllowBackdropFallback(true)
+			.setAllowParentFallback(userSettingPreferences[UserSettingPreferences.seriesThumbnailsEnabled])
+			.setPreferSeasonForEpisodes(userSettingPreferences[UserSettingPreferences.seriesThumbnailsEnabled])
+			.setPreferSeriesForEpisodes(userSettingPreferences[UserSettingPreferences.seriesThumbnailsEnabled])
 
 		val homeScaleMyMediaPct = userSettingPreferences[homeScalingFactorMyMedia]
 		if (homeScaleMyMediaPct != 100 && homeScaleMyMediaPct > 0) {
-			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.CollectionFolder, (homeScaleMyMediaPct / 100.0))
-			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.UserView, (homeScaleMyMediaPct / 100.0))
+//			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.CollectionFolder, (homeScaleMyMediaPct / 100.0))
+//			mCardPresenter.setStaticHeightScaleFactorForType(BaseItemType.UserView, (homeScaleMyMediaPct / 100.0))
 		}
-		mCardPresenter.setHideRatings(userSettingPreferences[hideRatings])
 
 		super.onCreate(savedInstanceState)
 
@@ -92,12 +94,15 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	override fun onResume() {
 		super.onResume()
 
-		if (homeSettingsUiHash != (userSettingPreferences.getUiSettingsHash() + get<UserPreferences>(UserPreferences::class.java).getUiSettingsHash())) {
+		if (homeSettingsUiHash != (userSettingPreferences.getUiSettingsHash() + userPreferences.getUiSettingsHash())) {
 			val intent = Intent(context, MainActivity::class.java)
 			// Clear navigation history
 			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_TASK_ON_HOME)
 			activity?.startActivity(intent)
 			activity?.finish()
+
+			mediaManager.setManagedAudioQueuePresenter(null)
+			mediaManager.createManagedAudioQueue(true)
 		}
 		// Update audio queue
 		Timber.i("Updating audio queue in HomeFragment (onResume)")
@@ -114,6 +119,8 @@ class HomeFragment : StdRowsFragment(), AudioEventListener {
 	override fun onDestroy() {
 		super.onDestroy()
 
+		mediaManager.setManagedAudioQueuePresenter(null)
+		mediaManager.createManagedAudioQueue(true)
 		mediaManager.removeAudioEventListener(this)
 	}
 

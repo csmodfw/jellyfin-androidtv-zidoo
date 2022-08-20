@@ -68,8 +68,16 @@ public class KeyProcessor {
             case KeyEvent.KEYCODE_MEDIA_PLAY:
             case KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE:
                 if (KoinJavaComponent.<MediaManager>get(MediaManager.class).isPlayingAudio() && (!rowItem.isBaseItem() || rowItem.getBaseItemType() != BaseItemType.Photo)) {
-                    KoinJavaComponent.<MediaManager>get(MediaManager.class).pauseAudio();
-                    return true;
+                    if (rowItem instanceof AudioQueueItem && KoinJavaComponent.<MediaManager>get(MediaManager.class).getCurrentAudioItem() != null) {
+                        if (rowItem.getItemId() != null && !rowItem.getItemId().equals(KoinJavaComponent.<MediaManager>get(MediaManager.class).getCurrentAudioItem().getId())) {
+                            // fall through
+                        } else {
+                            KoinJavaComponent.<MediaManager>get(MediaManager.class).pauseAudio();
+                            return true;
+                        }
+                    } else {
+                        KoinJavaComponent.<MediaManager>get(MediaManager.class).pauseAudio();
+                    }
                 }
 
                 switch (rowItem.getItemType()) {
@@ -80,7 +88,7 @@ public class KeyProcessor {
                         switch (item.getBaseItemType()) {
                             case Audio:
                                 if (rowItem instanceof AudioQueueItem) {
-                                    createItemMenu(rowItem, item.getUserData(), activity);
+                                    KoinJavaComponent.<MediaManager>get(MediaManager.class).playFrom(rowItem.getIndex());
                                     return true;
                                 }
                                 //fall through...
